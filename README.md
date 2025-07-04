@@ -80,34 +80,6 @@ EOF
 docker compose up -d
 ```
 
-## Basic Examples
-
-Here are some common operation examples:
-
-### Add Device
-```bash
-curl -H "Authorization: Bearer $API_KEY" \
-     -H "Content-Type: application/json" \
-     -X POST http://localhost:9000/devices \
-     -d '{
-       "hostname": "192.168.1.1",
-       "username": "admin",
-       "password": "password123",
-       "device_type": "cisco_ios"
-     }'
-```
-
-### Execute Commands
-```bash
-curl -H "Authorization: Bearer $API_KEY" \
-     -H "Content-Type: application/json" \
-     -X POST http://localhost:9000/commands \
-     -d '{
-       "device_id": "dev_1234567890",
-       "commands": ["show version", "show interfaces"]
-     }'
-```
-
 ## Contributing
 
 We welcome all forms of contributions! Here's how you can contribute:
