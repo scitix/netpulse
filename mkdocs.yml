@@ -3,6 +3,8 @@ site_description: NetPulse 分布式网络设备管理API服务器文档
 site_author: NetPulse Team
 site_url: https://netpulse.readthedocs.io/
 
+use_directory_urls: false
+
 # 文档目录配置
 docs_dir: docs
 
