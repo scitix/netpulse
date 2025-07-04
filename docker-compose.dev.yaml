@@ -1,0 +1,33 @@
+version: "3.7"
+
+services:
+
+  redis:
+    image: redis:7-bookworm
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./redis/redis.conf:/etc/redis/redis.conf
+      - ./redis/tls:/etc/redis/tls
+      - ./redis/data:/data
+    command:
+      - redis-server
+      - /etc/redis/redis.conf
+      - --requirepass ${NETPULSE_REDIS__PASSWORD}
+    ports:
+      - 6379:6379
+    networks:
+      - "netpulse-network-dev"
+    restart: always
+
+  cisgo:
+    image: apcela/cisshgo:v0.1.0
+    ports:
+      - "10005:10005"
+    networks:
+      - "netpulse-network-dev"
+
+networks:
+
+  netpulse-network-dev:
+    name: "netpulse-network-dev"

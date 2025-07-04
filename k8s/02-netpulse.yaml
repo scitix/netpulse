@@ -1,0 +1,161 @@
+# 02-netpulse/configmap.yaml
+# ConfigMap for Netpulse non-secret environment variables
+# This ConfigMap contains all non-sensitive configuration options shared by controller and worker
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: netpulse-config
+  labels:
+    app: netpulse
+    component: shared
+# Update these values as needed for your deployment
+# Secrets (passwords, API keys) are NOT included here
+data:
+  NETPULSE_LOG__LEVEL: "INFO"
+  NETPULSE_WORKER__PINNED_PER_NODE: "64" # Max number of connected devices per pod
+  NETPULSE_REDIS__HOST: "redis-nodes-0.redis-nodes" # See 00-redis.yaml for details
+  NETPULSE_REDIS__PORT: "6379"
+  NETPULSE_REDIS__TLS__ENABLED: "false"
+  NETPULSE_REDIS__SENTINEL__ENABLED: "true"
+  NETPULSE_REDIS__SENTINEL__HOST: "redis-sentinel"
+  NETPULSE_REDIS__SENTINEL__PORT: "26379"
+  NETPULSE_REDIS__SENTINEL__MASTER_NAME: "mymaster"
+---
+# 02-netpulse/controller.deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netpulse-controller
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: netpulse
+      component: controller
+  template:
+    metadata:
+      labels:
+        app: netpulse
+        component: controller
+    spec:
+      containers:
+      - name: controller
+        image: localhost/netpulse-controller:latest
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - configMapRef:
+            name: netpulse-config
+        env:
+        - name: NETPULSE_SERVER__API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: netpulse-secrets
+              key: api-key
+        - name: NETPULSE_REDIS__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: netpulse-secrets
+              key: password
+        - name: NETPULSE_REDIS__SENTINEL__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: netpulse-secrets
+              key: password
+        ports:
+        - containerPort: 9000
+---
+# 02-netpulse/node-worker.deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netpulse-node-worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: netpulse
+      component: node-worker
+  template:
+    metadata:
+      labels:
+        app: netpulse
+        component: node-worker
+    spec:
+      containers:
+      - name: node-worker
+        image: localhost/netpulse-node-worker:latest
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - configMapRef:
+            name: netpulse-config
+        env:
+        - name: NETPULSE_SERVER__API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: netpulse-secrets
+              key: api-key
+        - name: NETPULSE_REDIS__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: netpulse-secrets
+              key: password
+        - name: NETPULSE_REDIS__SENTINEL__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: netpulse-secrets
+              key: password
+---
+# 02-netpulse/fifo-worker.deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netpulse-fifo-worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: netpulse
+      component: fifo-worker
+  template:
+    metadata:
+      labels:
+        app: netpulse
+        component: fifo-worker
+    spec:
+      containers:
+      - name: fifo-worker
+        image: localhost/netpulse-fifo-worker:latest
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - configMapRef:
+            name: netpulse-config
+        env:
+        - name: NETPULSE_SERVER__API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: netpulse-secrets
+              key: api-key
+        - name: NETPULSE_REDIS__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: netpulse-secrets
+              key: password
+        - name: NETPULSE_REDIS__SENTINEL__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: netpulse-secrets
+              key: password
+---
+# 02-netpulse/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: netpulse
+spec:
+  selector:
+    app: netpulse
+    component: controller
+  ports:
+  - port: 9000
+    targetPort: 9000
+  type: ClusterIP # Could be LoadBalancer if not using Ingress.

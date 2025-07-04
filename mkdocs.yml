@@ -1,0 +1,162 @@
+site_name: NetPulse 文档
+site_description: NetPulse 分布式网络设备管理API服务器文档
+site_author: NetPulse Team
+site_url: https://netpulse.readthedocs.io/
+
+# 文档目录配置
+docs_dir: docs
+
+# 主题配置
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - navigation.footer
+    - navigation.tracking
+  palette:
+    - media: "(prefers-color-scheme)"
+      scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-auto
+        name: 切换主题
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: 切换主题
+  logo: assets/images/logo.png
+  favicon: assets/images/favicon.ico
+
+# 插件配置
+plugins:
+  - search
+  - i18n:
+      docs_structure: folder
+      languages:
+        - locale: zh
+          name: 中文
+          default: true
+          build: true
+          site_name: NetPulse 文档
+          nav_translations:
+            Home: 首页
+            Getting Started: 快速开始
+            Quick Start: 快速入门
+            First Steps: 第一个API调用
+            Deployment Guide: 部署指南
+            User Guides: 使用指南
+            API Reference: API参考
+            CLI Tools: CLI工具
+            SDK Guide: SDK指南
+            Postman Collection: Postman集合
+            Configuration: 配置管理
+            Advanced Features: 高级功能
+            Batch Operations: 批量操作
+            Template System: 模板系统
+            Webhook Configuration: Webhook配置
+            Performance Tuning: 性能调优
+            Architecture: 系统架构
+            Architecture Overview: 架构概览
+            Architecture Design: 架构设计
+            Long Connection Technology: 长连接技术
+            Task Schedulers: 任务调度器
+            Driver System: 驱动系统
+            Webhook System: Webhook系统
+            Plugin System: 插件系统
+            Reference: 参考文档
+            Environment Variables: 环境变量
+            Error Codes: 错误代码
+            Best Practices: 最佳实践
+            Troubleshooting: 故障排除
+            Log Analysis: 日志分析
+            Development: 开发指南
+            Development Guide: 开发文档
+        - locale: en
+          name: English
+          build: true
+          site_name: NetPulse Documentation
+
+# Markdown扩展
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - tables
+  - attr_list
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.emoji
+  - pymdownx.tabbed
+  - pymdownx.tasklist
+  - pymdownx.caret
+  - pymdownx.smartsymbols
+  - pymdownx.arithmatex:
+      generic: true
+
+# 导航配置
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Quick Start: getting-started/quick-start.md
+      - First Steps: getting-started/first-steps.md
+      - Deployment Guide: getting-started/deployment.md
+  - User Guides:
+      - API Reference: guides/api.md
+      - CLI Tools: guides/cli.md
+      - SDK Guide: guides/sdk-guide.md
+      - Postman Collection: guides/postman-collection.md
+      - Configuration: guides/configuration.md
+  - Advanced Features:
+      - Batch Operations: advanced/batch-operations.md
+      - Template System: advanced/templates.md
+      - Webhook Configuration: advanced/webhooks.md
+      - Performance Tuning: advanced/performance-tuning.md
+  - Architecture:
+      - Architecture Overview: architecture/overview.md
+      - Architecture Design: architecture/architecture.md
+      - Long Connection Technology: architecture/long-connection.md
+      - Task Schedulers: architecture/schedulers.md
+      - Driver System: architecture/drivers.md
+      - Template System: architecture/templates.md
+      - Webhook System: architecture/webhooks.md
+      - Plugin System: architecture/plugins.md
+  - Reference:
+      - Configuration: reference/configuration.md
+      - Environment Variables: reference/environment-variables.md
+      - Error Codes: reference/error-codes.md
+      - Best Practices: reference/best-practices.md
+  - Troubleshooting:
+      - Log Analysis: troubleshooting/log-analysis.md
+  - Development:
+      - Development Guide: development/index.md
+
+# 额外配置
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/netpulse
+    - icon: fontawesome/brands/docker
+      link: https://hub.docker.com/r/netpulse
+  analytics:
+    provider: google
+    property: !ENV GOOGLE_ANALYTICS_KEY
+
+# 版权信息
+copyright: Copyright &copy; 2025 NetPulse Team 

@@ -1,0 +1,8 @@
+Value VERSION (.+)
+Value UPTIME (.+)
+Value HOSTNAME (\S+)
+
+Start
+  ^.*Software.*Version\s+${VERSION}
+  ^.*uptime is ${UPTIME}
+  ^${HOSTNAME}\s+uptime -> Record 

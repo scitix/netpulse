@@ -1,0 +1,189 @@
+# 01-redis/redis.service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-nodes
+  labels: {app: redis}
+spec:
+  clusterIP: None # Headless Service
+  ports:
+  - port: 6379
+    name: redis
+  selector:
+    app: redis
+---
+# 01-redis/redis.stateful.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-nodes
+spec:
+  serviceName: redis-nodes
+  replicas: 3 # redis-0 is initial master
+  selector:
+    matchLabels: {app: redis}
+  template:
+    metadata:
+      labels: {app: redis}
+    spec:
+      terminationGracePeriodSeconds: 30
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector: {matchLabels: {app: redis}}
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: redis
+        image: redis:7-bookworm
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom: {secretKeyRef: {name: netpulse-secrets, key: password}}
+        - name: POD_NAMESPACE
+          valueFrom: {fieldRef: {fieldPath: metadata.namespace}}
+        command: ["sh","-c"]
+        args:
+        - |
+          ORD=$(echo ${HOSTNAME##*-})
+          mkdir -p /etc/redis
+          cat >/etc/redis/redis.conf <<EOF
+          bind 0.0.0.0
+          protected-mode no
+          requirepass ${REDIS_PASSWORD}
+          dir /data
+          appendonly yes
+          appendfsync everysec
+          # replica settings (only for non-zero ordinal)
+          $( [ "$ORD" -ne 0 ] && echo "replicaof redis-nodes-0.redis-nodes.${POD_NAMESPACE}.svc.cluster.local 6379" )
+          masterauth ${REDIS_PASSWORD}
+          EOF
+          exec redis-server /etc/redis/redis.conf
+        ports:
+        - containerPort: 6379
+          name: redis
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        livenessProbe:
+          exec: {command: ["sh","-c","redis-cli -a $REDIS_PASSWORD ping"]}
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        readinessProbe:
+          exec: {command: ["sh","-c","redis-cli -a $REDIS_PASSWORD ping"]}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests: {memory: "256Mi", cpu: "100m"}
+          limits:   {memory: "512Mi", cpu: "500m"}
+  volumeClaimTemplates:
+  - metadata: {name: redis-data}
+    spec:
+      storageClassName: standard
+      accessModes: ["ReadWriteOnce"]
+      resources: {requests: {storage: 1Gi}}
+---
+# 01-redis/redis.sentinel.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-sentinel
+  labels: {app: redis-sentinel}
+spec:
+  ports:
+  - port: 26379
+    name: sentinel
+  selector:
+    app: redis-sentinel
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-sentinel
+spec:
+  serviceName: redis-sentinel
+  replicas: 3
+  selector:
+    matchLabels: {app: redis-sentinel}
+  template:
+    metadata:
+      labels: {app: redis-sentinel}
+    spec:
+      terminationGracePeriodSeconds: 20
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector: {matchLabels: {app: redis-sentinel}}
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: sentinel
+        image: redis:7-bookworm
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom: {secretKeyRef: {name: netpulse-secrets, key: password}}
+        - name: POD_NAMESPACE
+          valueFrom: {fieldRef: {fieldPath: metadata.namespace}}
+        command: ["sh","-c"]
+        args:
+        - |
+          mkdir -p /etc/sentinel
+          cat >/etc/sentinel/sentinel.conf <<EOF
+          bind 0.0.0.0
+          protected-mode no
+          port 26379
+          dir /tmp
+          requirepass ${REDIS_PASSWORD}
+          sentinel resolve-hostnames yes
+          sentinel announce-hostnames yes
+          sentinel announce-port 26379
+          sentinel monitor mymaster redis-nodes-0.redis-nodes.${POD_NAMESPACE}.svc.cluster.local 6379 2
+          sentinel auth-pass mymaster ${REDIS_PASSWORD}
+          sentinel down-after-milliseconds mymaster 5000
+          sentinel failover-timeout mymaster 10000
+          sentinel parallel-syncs mymaster 1
+          EOF
+          exec redis-sentinel /etc/sentinel/sentinel.conf
+        ports:
+        - containerPort: 26379
+          name: sentinel
+        livenessProbe:
+          exec: {command: ["redis-cli","-p","26379","ping"]}
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        readinessProbe:
+          exec: {command: ["redis-cli","-p","26379","ping"]}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests: {memory: "64Mi", cpu: "50m"}
+          limits:   {memory: "128Mi", cpu: "200m"}
+        volumeMounts:
+        - name: sentinel-conf
+          mountPath: /etc/sentinel
+      volumes:
+      - name: sentinel-conf
+        emptyDir: {}
+---
+# 01-redis/redis.pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pdb-redis
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels: {app: redis}
+---
+# 01-redis/redis.sentinel.pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pdb-redis-sentinel
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels: {app: redis-sentinel}

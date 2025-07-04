@@ -1,0 +1,34 @@
+version: 1
+
+filters:
+  scrub:
+    (): netpulse.utils.logger.ScrubFilter
+# This filter is used to scrub sensitive information from logs.
+# e.g., passwords, tokens, etc.
+
+formatters:
+  colorlog:
+    (): colorlog.ColoredFormatter
+    format: "%(log_color)s[%(asctime)s] [%(process)d] [%(levelname)s] [%(name)s|%(filename)s:%(lineno)d] - %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S %z"
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: colorlog
+    stream: ext://sys.stdout
+    filters: [scrub]
+
+loggers:
+  rq.worker:
+    level: INFO
+  netmiko:
+    level: INFO
+  paramiko:
+    level: INFO
+
+root:
+  handlers: [console]
+
+disable_existing_loggers: False

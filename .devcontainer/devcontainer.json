@@ -1,0 +1,29 @@
+// For format details, see https://aka.ms/devcontainer.json
+{
+	"name": "NetPulse",
+	"dockerFile": "Dockerfile",
+	"privileged": false,
+	"runArgs": [
+		"-v",
+		"/var/run/docker.sock:/var/run/docker.sock"
+	],
+	"workspaceFolder": "/code",
+	"workspaceMount": "source=${localWorkspaceFolder},target=/app,type=bind,consistency=cached",
+	"containerEnv": {
+		"TZ": "Asia/Shanghai"
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"ms-python.debugpy",
+				"charliermarsh.ruff",
+				"Gruntfuggly.todo-tree"
+			],
+			"settings": {
+				"python.defaultInterpreterPath": "/usr/local/bin/python3",
+				"python.formatting.provider": "black"
+			}
+		}
+	}
+}

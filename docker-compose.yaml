@@ -1,0 +1,86 @@
+services:
+  controller:
+    image: localhost/netpulse-controller:latest
+    build:
+      context: .
+      dockerfile: ./docker/controller.dockerfile
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - NETPULSE_REDIS__PASSWORD=${NETPULSE_REDIS__PASSWORD}
+      - NETPULSE_SERVER__API_KEY=${NETPULSE_SERVER__API_KEY}
+    volumes:
+      - ./config:/app/config
+      - ./redis/tls:/app/redis/tls:ro
+    ports:
+      - "9000:9000"
+    networks:
+      - "netpulse-network"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  node-worker:
+    image: localhost/netpulse-node-worker:latest
+    build:
+      context: .
+      dockerfile: ./docker/node_worker.dockerfile
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - NETPULSE_REDIS__PASSWORD=${NETPULSE_REDIS__PASSWORD}
+    volumes:
+      - ./config:/app/config
+      - ./redis/tls:/app/redis/tls:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - "netpulse-network"
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+
+  fifo-worker:
+    image: localhost/netpulse-fifo-worker:latest
+    build:
+      context: .
+      dockerfile: docker/fifo_worker.dockerfile
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - NETPULSE_REDIS__PASSWORD=${NETPULSE_REDIS__PASSWORD}
+    volumes:
+      - ./config:/app/config
+      - ./redis/tls:/app/redis/tls:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - "netpulse-network"
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-bookworm
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+    volumes:
+      - ./redis/redis.conf:/etc/redis/redis.conf:ro
+      - ./redis/tls:/etc/redis/tls:ro
+      - redis_data:/data
+    command: redis-server /etc/redis/redis.conf --requirepass "${NETPULSE_REDIS__PASSWORD}"
+    networks:
+      - "netpulse-network"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--tls", "--cert", "/etc/redis/tls/redis.crt", "--key", "/etc/redis/tls/redis.key", "--cacert", "/etc/redis/tls/ca.crt", "-p", "6379", "-a", "${NETPULSE_REDIS__PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  netpulse-network:
+    name: "netpulse-network"
+
+volumes:
+  redis_data:
+    name: "netpulse-redis-data"

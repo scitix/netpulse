@@ -1,0 +1,6 @@
+Selected,Name,Site,Location,Rack,Vendor,Model,IP,Port,Username,Password,Keepalive
+True,Test-Router-1,DataCenter-A,Beijing,R01,Cisco,ISR4331,192.168.1.1,22,admin,admin123,180
+True,Test-Switch-1,DataCenter-A,Beijing,R02,Cisco,Catalyst3750,192.168.1.2,22,admin,admin123,180
+True,Test-Firewall-1,DataCenter-B,Shanghai,R03,Fortinet,FortiGate-60E,192.168.1.3,22,admin,admin123,180
+False,Test-Router-2,DataCenter-C,Guangzhou,R04,Huawei,NE40E,192.168.1.4,22,admin,admin123,180
+True,Test-Switch-2,DataCenter-A,Beijing,R05,H3C,S5500,192.168.1.5,22,admin,admin123,180 

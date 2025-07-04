@@ -1,0 +1,47 @@
+server:
+  host: 0.0.0.0
+  port: 9000
+  api_key: SOME-API-KEY
+  api_key_name: X-API-KEY
+  gunicorn_worker: 4
+
+job:
+  ttl: 1800
+  timeout: 300
+  result_ttl: 300
+
+worker:
+  scheduler: "load_weighted_random"
+  ttl: 300
+  pinned_per_node: 128
+
+redis:
+  host: redis
+  port: 6379
+  password: p@$Sw0rd!
+  timeout: 30
+  keepalive: 30
+  tls:
+    enabled: true
+    ca: redis/tls/ca.crt
+    cert: redis/tls/redis.crt
+    key: redis/tls/redis.key
+  sentinel:
+    enabled: false
+    host: redis-sentinel
+    port: 26379
+    master_name: mymaster
+    password: p@$Sw0rd!
+  key:
+    host_to_node_map: netpulse:host_to_node_map
+    node_info_map: netpulse:node_info_map
+
+plugin:
+  driver: netpulse/plugins/drivers/
+  webhook: netpulse/plugins/webhooks/
+  template: netpulse/plugins/templates/
+  scheduler: netpulse/plugins/schedulers/
+
+log:
+  config: config/log-config.yaml
+  level: INFO
