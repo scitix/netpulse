@@ -27,11 +27,12 @@ classifiers = [
 ]
 keywords = ["network", "api", "netmiko", "napalm", "automation", "fastapi"]
 
-# [project.urls]
-# "Homepage" = "https://github.com/your-org/netpulse"
-# "Documentation" = "https://github.com/your-org/netpulse/docs"
-# "Repository" = "https://github.com/your-org/netpulse"
-# "Bug Tracker" = "https://github.com/your-org/netpulse/issues"
+[project.urls]
+"Homepage" = "https://github.com/scitix/netpulse"
+"Documentation" = "https://netpulse.readthedocs.io"
+"Repository" = "https://github.com/scitix/netpulse"
+"Bug Tracker" = "https://github.com/scitix/netpulse/issues"
+"Changelog" = "https://github.com/scitix/netpulse/blob/master/CHANGELOG.md"
 
 dependencies = [
     # Core
