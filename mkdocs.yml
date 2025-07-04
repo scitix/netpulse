@@ -43,11 +43,12 @@ theme:
 plugins:
   - search
   - i18n:
+      default_language: en
+      default_language_only: true
       docs_structure: folder
       languages:
         - locale: zh
           name: 中文
-          default: true
           build: true
           site_name: NetPulse 文档
           nav_translations:
@@ -85,6 +86,7 @@ plugins:
             Development Guide: 开发文档
         - locale: en
           name: English
+          default: true
           build: true
           site_name: NetPulse Documentation
 
