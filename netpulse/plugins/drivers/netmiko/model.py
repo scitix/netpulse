@@ -42,7 +42,7 @@ class NetmikoConnectionArgs(DriverConnectionArgs):
     auth_timeout: Optional[float] = None
     blocking_timeout: Optional[int] = 20
     banner_timeout: Optional[int] = 15
-    keepalive: Optional[int] = 180 # keepalive (3m) differs from netmiko default (0)
+    keepalive: Optional[int] = 180  # keepalive (3m) differs from netmiko default (0)
     default_enter: Optional[str] = None
     response_return: Optional[str] = None
     serial_settings: Optional[str] = None
