@@ -1,5 +1,4 @@
-import asyncio
-from netpulse_client import NetPulseClient, Device
+from netpulse_client import Device, NetPulseClient
 
 # 配置信息
 ENDPOINT = "http://localhost:9000"
@@ -19,7 +18,7 @@ device = Device(
 
 def basic_operations():
     print("=== 基础操作示例 ===")
-    
+
     with NetPulseClient(ENDPOINT, API_KEY) as np_client:
         # 1. 执行命令
         print("\n1. 执行命令")
@@ -33,7 +32,6 @@ def basic_operations():
         print(result.command)
         print(result.device)
         print(result.request_id)
-
 
 
 if __name__ == "__main__":
