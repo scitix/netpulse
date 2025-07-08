@@ -2,7 +2,7 @@
 NetPulse Client Models
 
 这个模块定义了SDK使用的数据模型。
-为了保持与主程序的一致性，我们直接使用主程序的模型，而不是重新定义。
+为了保持与主程序的一致性, 我们直接使用主程序的模型, 而不是重新定义。
 """
 
 from dataclasses import dataclass
@@ -33,7 +33,7 @@ class ConnectionArgs(BaseModel):
     username: Optional[str] = Field(None, description="设备用户名")
     password: Optional[str] = Field(None, description="设备密码")
 
-    # 允许额外字段，与API保持一致
+    # 允许额外字段, 与API保持一致
     model_config = ConfigDict(extra="allow")
 
     def enforced_field_check(self):
@@ -64,7 +64,7 @@ class PyeapiConnectionArg(ConnectionArgs):
     pass
 
 
-# 为了向后兼容，提供Device别名
+# 为了向后兼容, 提供Device别名
 Device = ConnectionArgs
 
 
@@ -114,14 +114,14 @@ class CommandResult(BaseModel):
 
     @property
     def data(self) -> Dict[str, str]:
-        """直接获取所有命令输出，格式: {命令: 输出}"""
+        """直接获取所有命令输出, 格式: {命令: 输出}"""
         if self.result and self.result.retval:
             return self.result.retval
         return {}
 
     @property
     def results(self) -> List[str]:
-        """获取所有命令输出的列表，格式: [输出1, 输出2, ...]"""
+        """获取所有命令输出的列表, 格式: [输出1, 输出2, ...]"""
         if self.result and self.result.retval:
             return list(self.result.retval.values())
         return []
@@ -155,14 +155,14 @@ class ConfigResult(BaseModel):
 
     @property
     def data(self) -> Dict[str, str]:
-        """直接获取所有命令输出，格式: {命令: 输出}"""
+        """直接获取所有命令输出, 格式: {命令: 输出}"""
         if self.result and self.result.retval:
             return self.result.retval
         return {}
 
     @property
     def results(self) -> List[str]:
-        """获取所有命令输出的列表，格式: [输出1, 输出2, ...]"""
+        """获取所有命令输出的列表, 格式: [输出1, 输出2, ...]"""
         if self.result and self.result.retval:
             return list(self.result.retval.values())
         return []
@@ -303,7 +303,7 @@ def create_device_request(
         else:
             conn_args = ConnectionArgs(**connection_args)
     except ValueError:
-        # 如果driver不是有效的DriverName，直接使用ConnectionArgs
+        # 如果driver不是有效的DriverName, 直接使用ConnectionArgs
         conn_args = ConnectionArgs(**connection_args)
 
     # 构建请求数据

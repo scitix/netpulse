@@ -93,7 +93,7 @@ packages = ["netpulse"]
 [tool.ruff]
 line-length = 100
 respect-gitignore = true
+exclude = ["netpulse-client/*"]
 
-# https://docs.astral.sh/ruff/rules/
 [tool.ruff.lint]
 select = ["E", "F", "W", "RUF", "I"]

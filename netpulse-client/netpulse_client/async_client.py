@@ -181,12 +181,12 @@ class AsyncNetPulseClient:
         callback: Optional[Callable] = None,
     ) -> Union[CommandResult, ConfigResult, AsyncJobHandle]:
         """
-        在设备上执行操作（命令或配置）- 对应 /device/execute 端点
+        在设备上执行操作 (命令或配置) - 对应 /device/execute 端点
 
         Args:
             device: 目标设备
-            command: 要执行的命令（Pull操作）
-            config: 要推送的配置（Push操作）
+            command: 要执行的命令 (Pull操作) 
+            config: 要推送的配置 (Push操作) 
             parse_with: 解析器类型
             save: 是否保存配置
             dry_run: 是否为干运行模式
@@ -317,8 +317,8 @@ class AsyncNetPulseClient:
 
         Args:
             devices: 设备列表
-            command: 要执行的命令（Pull操作）
-            config: 要推送的配置（Push操作）
+            command: 要执行的命令 (Pull操作) 
+            config: 要推送的配置 (Push操作) 
             parse_with: 解析器类型
             save: 是否保存配置
             dry_run: 是否为干运行模式
@@ -464,7 +464,7 @@ class AsyncNetPulseClient:
                     raise JobError(f"Job {handle.job_id} not found")
 
                 if job_info.status in ["finished", "failed"]:
-                    # 任务完成，执行回调
+                    # 任务完成, 执行回调
                     if handle.job_id in self._job_callbacks:
                         for callback in self._job_callbacks[handle.job_id]:
                             try:
@@ -695,25 +695,25 @@ class AsyncNetPulseClient:
     async def execute_command(
         self, device: ConnectionArgs, command: Union[str, List[str]], **kwargs
     ) -> Union[CommandResult, AsyncJobHandle]:
-        """兼容性方法：执行命令"""
+        """兼容性方法: 执行命令"""
         return await self.execute(device, command=command, **kwargs)
 
     async def push_config(
         self, device: ConnectionArgs, config: Union[str, List[str]], **kwargs
     ) -> Union[ConfigResult, AsyncJobHandle]:
-        """兼容性方法：推送配置"""
+        """兼容性方法: 推送配置"""
         return await self.execute(device, config=config, **kwargs)
 
     async def batch_execute(
         self, devices: List[ConnectionArgs], command: Union[str, List[str]], **kwargs
     ) -> AsyncJobHandle:
-        """兼容性方法：批量执行命令"""
+        """兼容性方法: 批量执行命令"""
         return await self.bulk(devices, command=command, **kwargs)
 
     async def batch_config(
         self, devices: List[ConnectionArgs], config: Union[str, List[str]], **kwargs
     ) -> AsyncJobHandle:
-        """兼容性方法：批量推送配置"""
+        """兼容性方法: 批量推送配置"""
         return await self.bulk(devices, config=config, **kwargs)
 
     async def _wait_for_result_with_progressive_retry(
@@ -722,14 +722,14 @@ class AsyncNetPulseClient:
         """
         异步激进递进式重试等待任务结果
 
-        轮询策略：
+        轮询策略: 
         - 初始延迟: 0.4秒
         - 递增步长序列: 0.1s -> 0.2s -> 0.3s -> 0.5s -> 1.5s -> 2.5s -> 4.0s -> 6.0s -> 9.0s -> 13.5s -> 20.0s -> 30.0s
         - 轮询间隔: 0.4s -> 0.5s -> 0.7s -> 1.0s -> 1.5s -> 3.0s -> 5.5s -> 9.5s -> 15.5s -> 24.5s -> 37.5s -> 57.5s
         - 最大间隔: 30秒
         - 最大总时长: 120秒
 
-        示例轮询序列：
+        示例轮询序列: 
         第1次: 0.4s (初始)
         第2次: 0.5s (0.4s + 0.1s)
         第3次: 0.7s (0.5s + 0.2s)
@@ -766,16 +766,16 @@ class AsyncNetPulseClient:
 
                     if status in ["finished", "failed"]:
                         logger.info(
-                            f"任务 {job_id} 完成，总耗时: {total_elapsed:.2f}秒，轮询次数: {attempt}"
+                            f"任务 {job_id} 完成, 总耗时: {total_elapsed:.2f}秒, 轮询次数: {attempt}"
                         )
                         return result
                     elif status == "queued":
                         logger.info(
-                            f"任务 {job_id} 排队中... (第{attempt}次轮询，已耗时{total_elapsed:.2f}秒)"
+                            f"任务 {job_id} 排队中... (第{attempt}次轮询, 已耗时{total_elapsed:.2f}秒)"
                         )
                     elif status == "started":
                         logger.info(
-                            f"任务 {job_id} 执行中... (第{attempt}次轮询，已耗时{total_elapsed:.2f}秒)"
+                            f"任务 {job_id} 执行中... (第{attempt}次轮询, 已耗时{total_elapsed:.2f}秒)"
                         )
 
                 # 激进递进式延迟
@@ -788,7 +788,7 @@ class AsyncNetPulseClient:
                     next_step = step_sequence[step_index]
                     step_index += 1
                 else:
-                    # 如果步长序列用完，使用最后一个步长
+                    # 如果步长序列用完, 使用最后一个步长
                     next_step = step_sequence[-1]
 
                 delay = min(delay + next_step, 30.0)  # 限制最大间隔为30秒
@@ -796,7 +796,7 @@ class AsyncNetPulseClient:
                 # 记录轮询信息
                 if attempt % 3 == 0:  # 每3次轮询记录一次详细信息
                     logger.info(
-                        f"任务 {job_id} 轮询中... 第{attempt}次，当前延迟: {delay:.2f}s，总耗时: {total_elapsed:.2f}s"
+                        f"任务 {job_id} 轮询中... 第{attempt}次, 当前延迟: {delay:.2f}s, 总耗时: {total_elapsed:.2f}s"
                     )
 
             except Exception as e:
@@ -814,7 +814,7 @@ class AsyncNetPulseClient:
                 delay = min(delay + next_step, 30.0)
 
         raise TimeoutError(
-            f"等待任务 {job_id} 完成超时，总耗时: {total_elapsed:.2f}秒，轮询次数: {attempt}"
+            f"等待任务 {job_id} 完成超时, 总耗时: {total_elapsed:.2f}秒, 轮询次数: {attempt}"
         )
 
     # ==================== 异步方法 ====================
@@ -827,8 +827,8 @@ class AsyncNetPulseClient:
         **kwargs,
     ) -> CommandResult:
         """
-        异步执行命令，支持ConnectionArgs实例或dict
-        driver: 可选，临时覆盖实例driver
+        异步执行命令, 支持ConnectionArgs实例或dict
+        driver: 可选, 临时覆盖实例driver
         """
         if hasattr(device, "model_dump"):
             connection_args = device.model_dump()
@@ -860,8 +860,8 @@ class AsyncNetPulseClient:
         **kwargs,
     ) -> ConfigResult:
         """
-        异步推送配置，支持ConnectionArgs实例或dict
-        driver: 可选，临时覆盖实例driver
+        异步推送配置, 支持ConnectionArgs实例或dict
+        driver: 可选, 临时覆盖实例driver
         """
         if hasattr(device, "model_dump"):
             connection_args = device.model_dump()
@@ -888,12 +888,12 @@ class AsyncNetPulseClient:
     async def abulk_command(
         self,
         driver: Optional[str] = None,
-        devices: List[Dict] = None,
-        connection_args: Dict = None,
-        command: Union[str, List[str]] = None,
+        devices: Optional[List[Dict]] = None,
+        connection_args: Optional[Dict] = None,
+        command: Union[None, str, List[str]] = None,
         **kwargs,
     ) -> Dict:
-        """异步批量执行命令，driver可选，默认self.driver"""
+        """异步批量执行命令, driver可选, 默认self.driver"""
         use_driver = driver or self.driver
         data = create_batch_device_request(
             driver=use_driver,
@@ -916,12 +916,12 @@ class AsyncNetPulseClient:
     async def abulk_config(
         self,
         driver: Optional[str] = None,
-        devices: List[Dict] = None,
-        connection_args: Dict = None,
-        config: Union[str, List[str], Dict] = None,
+        devices: Optional[List[Dict]] = None,
+        connection_args: Optional[Dict] = None,
+        config: Union[None, str, List[str], Dict] = None,
         **kwargs,
     ) -> Dict:
-        """异步批量推送配置，driver可选，默认self.driver"""
+        """异步批量推送配置, driver可选, 默认self.driver"""
         use_driver = driver or self.driver
         data = create_batch_device_request(
             driver=use_driver,
@@ -1030,7 +1030,7 @@ class AsyncNetPulseClient:
     async def atest_connection(
         self, device: Union[ConnectionArgs, Dict], driver: Optional[str] = None
     ) -> ConnectionTestResult:
-        """测试设备连接，支持ConnectionArgs实例或dict"""
+        """测试设备连接, 支持ConnectionArgs实例或dict"""
         if hasattr(device, "model_dump"):
             connection_args = device.model_dump()
         else:

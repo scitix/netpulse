@@ -34,7 +34,7 @@ class NetPulseClient:
     def __init__(
         self,
         endpoint: str,
-        api_key: str = None,
+        api_key: Optional[str] = None,
         driver: str = "netmiko",
         timeout: int = 300,
         verify_ssl: bool = True,
@@ -43,8 +43,8 @@ class NetPulseClient:
 
         Args:
             endpoint: API端点URL
-            api_key: API密钥（可选）
-            driver: 默认驱动类型（如netmiko/napalm/pyeapi）
+            api_key: API密钥 (可选)
+            driver: 默认驱动类型 (如netmiko/napalm/pyeapi)
             timeout: 请求超时时间(秒)
             verify_ssl: 是否验证SSL证书
         """
@@ -76,11 +76,11 @@ class NetPulseClient:
             return response.json()
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
-                raise AuthenticationError("Invalid API key")
+                raise AuthenticationError("Invalid API key") from e
             elif e.response.status_code == 404:
-                raise ConnectionError(f"API endpoint not found: {url}")
+                raise ConnectionError(f"API endpoint not found: {url}") from e
             else:
-                raise NetPulseError(f"HTTP error: {e}")
+                raise NetPulseError(f"HTTP error: {e}") from e
         except httpx.ConnectError:
             raise ConnectionError(f"Failed to connect to {url}")
         except httpx.TimeoutException:
@@ -94,14 +94,14 @@ class NetPulseClient:
         """
         使用激进递进式重试等待任务结果
 
-        轮询策略：
+        轮询策略:
         - 初始延迟: 0.4秒
         - 递增步长序列: 0.1s -> 0.2s -> 0.3s -> 0.5s -> 1.5s -> 2.5s -> 4.0s -> 6.0s -> 9.0s -> 13.5s -> 20.0s -> 30.0s
         - 轮询间隔: 0.4s -> 0.5s -> 0.7s -> 1.0s -> 1.5s -> 3.0s -> 5.5s -> 9.5s -> 15.5s -> 24.5s -> 37.5s -> 57.5s
         - 最大间隔: 30秒
         - 最大总时长: 120秒
 
-        示例轮询序列：
+        示例轮询序列:
         第1次: 0.4s (初始)
         第2次: 0.5s (0.4s + 0.1s)
         第3次: 0.7s (0.5s + 0.2s)
@@ -136,16 +136,19 @@ class NetPulseClient:
 
                     if status in ["finished", "failed"]:
                         logger.info(
-                            f"任务 {job_id} 完成，总耗时: {total_elapsed:.2f}秒，轮询次数: {attempt}"
+                            f"任务 {job_id} 完成, "
+                            f"总耗时: {total_elapsed:.2f}秒, 轮询次数: {attempt}"
                         )
                         return result
                     elif status == "queued":
                         logger.info(
-                            f"任务 {job_id} 排队中... (第{attempt}次轮询，已耗时{total_elapsed:.2f}秒)"
+                            f"任务 {job_id} 排队中... "
+                            f"(第{attempt}次轮询, 已耗时{total_elapsed:.2f}秒)"
                         )
                     elif status == "started":
                         logger.info(
-                            f"任务 {job_id} 执行中... (第{attempt}次轮询，已耗时{total_elapsed:.2f}秒)"
+                            f"任务 {job_id} 执行中... "
+                            f"(第{attempt}次轮询, 已耗时{total_elapsed:.2f}秒)"
                         )
 
                 # 激进递进式延迟
@@ -158,7 +161,7 @@ class NetPulseClient:
                     next_step = step_sequence[step_index]
                     step_index += 1
                 else:
-                    # 如果步长序列用完，使用最后一个步长
+                    # 如果步长序列用完, 使用最后一个步长
                     next_step = step_sequence[-1]
 
                 delay = min(delay + next_step, 30.0)  # 限制最大间隔为30秒
@@ -166,7 +169,8 @@ class NetPulseClient:
                 # 记录轮询信息
                 if attempt % 3 == 0:  # 每3次轮询记录一次详细信息
                     logger.info(
-                        f"任务 {job_id} 轮询中... 第{attempt}次，当前延迟: {delay:.2f}s，总耗时: {total_elapsed:.2f}s"
+                        f"任务 {job_id} 轮询中... 第{attempt}次, 当前延迟: {delay:.2f}s, "
+                        f"总耗时: {total_elapsed:.2f}s"
                     )
 
             except Exception as e:
@@ -184,7 +188,7 @@ class NetPulseClient:
                 delay = min(delay + next_step, 30.0)
 
         raise TimeoutError(
-            f"等待任务 {job_id} 完成超时，总耗时: {total_elapsed:.2f}秒，轮询次数: {attempt}"
+            f"等待任务 {job_id} 完成超时, 总耗时: {total_elapsed:.2f}秒, 轮询次数: {attempt}"
         )
 
     # ==================== 同步方法 ====================
@@ -197,8 +201,8 @@ class NetPulseClient:
         **kwargs,
     ) -> CommandResult:
         """
-        同步执行命令，支持ConnectionArgs实例或dict
-        driver: 可选，临时覆盖实例driver
+        同步执行命令, 支持ConnectionArgs实例或dict
+        driver: 可选, 临时覆盖实例driver
         """
         if hasattr(device, "model_dump"):
             connection_args = device.model_dump()
@@ -209,17 +213,17 @@ class NetPulseClient:
             driver=use_driver, connection_args=connection_args, command=command, **kwargs
         )
         result = self._make_request("POST", self._build_url("/device/execute"), json=data)
-        print("[DEBUG] API原始返回:", result)  # 调试用
+        # print("[DEBUG] API原始返回:", result)  # 调试用
         if result.get("code") == 0 and result.get("data"):
             job_id = result["data"]["id"]
             job_result = self._wait_for_result_with_progressive_retry(job_id)
-            print("[DEBUG] job_result:", job_result)  # 调试用
+            # print("[DEBUG] job_result:", job_result)  # 调试用
             job_data = (
                 job_result["data"][0]
                 if isinstance(job_result["data"], list)
                 else job_result["data"]
             )
-            print("[DEBUG] job_data:", job_data)  # 调试用
+            # print("[DEBUG] job_data:", job_data)  # 调试用
 
             # 直接返回API的完整结构
             return CommandResult(**job_data)
@@ -233,8 +237,8 @@ class NetPulseClient:
         **kwargs,
     ) -> ConfigResult:
         """
-        同步推送配置，支持ConnectionArgs实例或dict
-        driver: 可选，临时覆盖实例driver
+        同步推送配置, 支持ConnectionArgs实例或dict
+        driver: 可选, 临时覆盖实例driver
         """
         if hasattr(device, "model_dump"):
             connection_args = device.model_dump()
@@ -267,8 +271,8 @@ class NetPulseClient:
         **kwargs,
     ) -> BatchResult:
         """
-        同步批量执行命令，支持ConnectionArgs实例或dict列表
-        driver: 可选，临时覆盖实例driver
+        同步批量执行命令, 支持ConnectionArgs实例或dict列表
+        driver: 可选, 临时覆盖实例driver
         """
         devices_args = [d.model_dump() if hasattr(d, "model_dump") else d for d in devices]
         use_driver = driver or self.driver
@@ -310,8 +314,8 @@ class NetPulseClient:
         **kwargs,
     ) -> BatchResult:
         """
-        同步批量推送配置，支持ConnectionArgs实例或dict列表
-        driver: 可选，临时覆盖实例driver
+        同步批量推送配置, 支持ConnectionArgs实例或dict列表
+        driver: 可选, 临时覆盖实例driver
         """
         devices_args = [d.model_dump() if hasattr(d, "model_dump") else d for d in devices]
         use_driver = driver or self.driver
@@ -446,7 +450,7 @@ class NetPulseClient:
     def test_connection(
         self, device: Union[ConnectionArgs, Dict], driver: Optional[str] = None
     ) -> ConnectionTestResult:
-        """测试设备连接，支持ConnectionArgs实例或dict"""
+        """测试设备连接, 支持ConnectionArgs实例或dict"""
         if hasattr(device, "model_dump"):
             connection_args = device.model_dump()
         else:
