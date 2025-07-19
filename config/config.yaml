@@ -1,7 +1,7 @@
 server:
   host: 0.0.0.0
   port: 9000
-  api_key: SOME-API-KEY
+  api_key: ${NETPULSE_SERVER__API_KEY}
   api_key_name: X-API-KEY
   gunicorn_worker: 4
 
