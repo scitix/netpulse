@@ -51,6 +51,52 @@ black --check .
 - Use Ruff for linting
 - Add type hints where appropriate
 
+## Git Commit Guidelines
+
+We use a simple commit message format to maintain clear code history.
+
+### Commit Message Format
+
+```
+<type>: <description>
+```
+
+### Types
+
+- **feat**: New feature
+- **fix**: Bug fix
+- **docs**: Documentation changes
+- **style**: Code style changes (formatting, etc.)
+- **refactor**: Code refactoring
+- **test**: Test related changes
+- **chore**: Other changes
+
+### Examples
+
+```
+feat: Add user login functionality
+fix: Fix API response error
+docs: Update README installation guide
+style: Adjust code formatting
+refactor: Refactor user authentication module
+test: Add login functionality tests
+chore: Update dependency versions
+```
+
+### Pre-commit Checklist
+
+- Code passes all tests
+- Code passes linting checks
+- New features include corresponding tests
+
+### Setup Git Commit Template (Optional)
+
+```bash
+bash ./scripts/setup_git_template.sh
+```
+
+After setup, the commit message template will be automatically loaded when running `git commit`.
+
 ## Reporting Issues
 
 Please use GitHub Issues to report bugs or request features.

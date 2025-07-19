@@ -1,0 +1,19 @@
+# <type>: <description>
+#
+# Types:
+#   feat     : New feature
+#   fix      : Bug fix
+#   docs     : Documentation changes
+#   style    : Code style changes
+#   refactor : Code refactoring
+#   test     : Test related changes
+#   chore    : Other changes
+#
+# Examples:
+#   feat: Add xxx functionality
+#   fix: Fix API response error
+#   docs: Update xxx documentation
+#   style: Adjust code formatting
+#   refactor: Refactor xxx module
+#   test: Add xxx functionality tests
+#   chore: Update dependency versions 
