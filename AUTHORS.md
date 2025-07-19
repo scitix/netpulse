@@ -4,7 +4,7 @@
 
 - GitHub: [@tkspuk](https://github.com/tkspuk)  
 - Email: tkspuk@gmail.com  
-- Role: Project Owner, Product Lead & Contributing Developer  
+- Role: Creator & Contributing Developer  
 - Bio: Senior network engineer specializing in AI infrastructure and system architecture. Responsible for product vision, planning, and partial implementation of key features.
 
 ---

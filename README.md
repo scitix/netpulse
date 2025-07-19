@@ -3,10 +3,11 @@
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](https://hub.docker.com)
 [![Python](https://img.shields.io/badge/Python-3.12+-green?logo=python)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+[![Documentation](https://img.shields.io/badge/Docs-ReadTheDocs-blue)](https://netpulse.readthedocs.io/)
 
 [简体中文](README-zh.md) | English
 
-NetPulse is a high-performance distributed network device management API framework. Through innovative persistent connection technology and unified interfaces, it seamlessly integrates with mainstream tools like Netmiko, NAPALM, and vendor APIs to make network device management simple, efficient, and reliable.
+NetPulse is a high-performance distributed network device management API framework designed for modern network automation. It provides unified interfaces through persistent connection technology and seamlessly integrates with mainstream open-source tools like Netmiko, NAPALM, and vendor APIs like PyEAPI, making network device management simple, efficient, and reliable.
 
 ## Why NetPulse?
 
@@ -44,13 +45,13 @@ NetPulse offers a powerful plugin system supporting various functional extension
 
 ## Quick Start
 
-NetPulse provides comprehensive documentation including quick start guides, architecture explanations, API references, and best practices. The complete documentation will be available on readthedocs soon. Currently, you can refer to:
+NetPulse provides comprehensive documentation including quick start guides, architecture explanations, API references, and best practices. Visit our documentation site for complete guides:
 
-* [Quick Start](docs/en/getting-started/quick-start.md) - 5-minute guide
-* [Architecture](docs/en/architecture/overview.md) - System architecture
-* [API Reference](docs/en/guides/api/README.md) - Complete API documentation
-* [Plugin Development](docs/en/development/README.md) - Development guide
-* [Deployment Guide](docs/en/getting-started/deployment.md) - Detailed deployment instructions
+* [📖 Quick Start](https://netpulse.readthedocs.io/en/latest/getting-started/quick-start.html) - Get started in 5 minutes
+* [🏗️ Architecture](https://netpulse.readthedocs.io/en/latest/architecture/overview.html) - System architecture overview
+* [🔌 API Reference](https://netpulse.readthedocs.io/en/latest/guides/api.html) - Complete RESTful API documentation
+* [⚙️ Plugin Development](https://netpulse.readthedocs.io/en/latest/development/index.html) - Build custom drivers and plugins
+* [🚀 Deployment Guide](https://netpulse.readthedocs.io/en/latest/getting-started/deployment.html) - Production deployment instructions
 
 ### Docker Quick Deploy
 
@@ -78,6 +79,29 @@ EOF
 
 # 3. Start the service
 docker compose up -d
+
+### Quick API Test
+
+After deployment, test the API with a simple health check:
+
+```bash
+# Test health endpoint
+curl -H "X-API-KEY: your_secure_api_key" http://localhost:9000/health
+
+# Test device command (replace with your device details)
+curl -X POST http://localhost:9000/device/execute \
+  -H "X-API-KEY: your_secure_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "driver": "netmiko",
+    "connection_args": {
+      "device_type": "cisco_ios",
+      "host": "192.168.1.1",
+      "username": "admin",
+      "password": "admin123"
+    },
+    "command": "show version"
+  }'
 ```
 
 ## Contributing
@@ -92,13 +116,18 @@ We welcome all forms of contributions! Here's how you can contribute:
 
 For more details, please refer to our [Contributing Guide](CONTRIBUTING.md).
 
+## Community & Support
+
+* 📚 **[Documentation](https://netpulse.readthedocs.io/)** - Complete guides and API reference
+* 🐛 **[Issues](https://github.com/scitix/netpulse/issues)** - Report bugs and request features
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Authors
 
-* **Locus Li** – Project Owner
+* **Locus Li** – Creator & Maintainer
 * **Yongkun Li** – Lead Developer
 
 See [AUTHORS.md](AUTHORS.md) for a full list of contributors.
