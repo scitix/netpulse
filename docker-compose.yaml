@@ -4,10 +4,8 @@ services:
     build:
       context: .
       dockerfile: ./docker/controller.dockerfile
-    environment:
-      - TZ=${TZ:-Asia/Shanghai}
-      - NETPULSE_REDIS__PASSWORD=${NETPULSE_REDIS__PASSWORD}
-      - NETPULSE_SERVER__API_KEY=${NETPULSE_SERVER__API_KEY}
+    env_file:
+      - .env
     volumes:
       - ./config:/app/config
       - ./redis/tls:/app/redis/tls:ro
@@ -25,9 +23,8 @@ services:
     build:
       context: .
       dockerfile: ./docker/node_worker.dockerfile
-    environment:
-      - TZ=${TZ:-Asia/Shanghai}
-      - NETPULSE_REDIS__PASSWORD=${NETPULSE_REDIS__PASSWORD}
+    env_file:
+      - .env
     volumes:
       - ./config:/app/config
       - ./redis/tls:/app/redis/tls:ro
@@ -45,9 +42,8 @@ services:
     build:
       context: .
       dockerfile: docker/fifo_worker.dockerfile
-    environment:
-      - TZ=${TZ:-Asia/Shanghai}
-      - NETPULSE_REDIS__PASSWORD=${NETPULSE_REDIS__PASSWORD}
+    env_file:
+      - .env
     volumes:
       - ./config:/app/config
       - ./redis/tls:/app/redis/tls:ro
@@ -60,8 +56,8 @@ services:
 
   redis:
     image: redis:7-bookworm
-    environment:
-      - TZ=${TZ:-Asia/Shanghai}
+    env_file:
+      - .env
     volumes:
       - ./redis/redis.conf:/etc/redis/redis.conf:ro
       - ./redis/tls:/etc/redis/tls:ro
