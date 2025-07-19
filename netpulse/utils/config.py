@@ -108,9 +108,10 @@ class AppConfig(BaseSettings):
         dotenv_settings,
         file_secret_settings,
     ):
-        """Read settings: env -> yaml -> default"""
+        """Read settings: env -> dotenv -> yaml -> default"""
         return (
             env_settings,
+            dotenv_settings,
             YamlConfigSettingsSource(settings_cls),
             init_settings,
         )

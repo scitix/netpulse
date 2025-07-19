@@ -1,0 +1,5 @@
+# SSH configuration - Enable ssh-rsa algorithm globally for legacy device compatibility
+Host *
+    PubkeyAcceptedKeyTypes +ssh-rsa
+    HostKeyAlgorithms +ssh-rsa
+    PubkeyAcceptedAlgorithms +ssh-rsa 

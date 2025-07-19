@@ -24,7 +24,7 @@ redis/tls
 redis/data
 
 k8s/
-docker/
+docker/*.dockerfile
 docker-compose*.yml
 
 *.md

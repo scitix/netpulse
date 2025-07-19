@@ -67,9 +67,9 @@ echo "  Redis Password: ${NETPULSE_REDIS__PASSWORD:0:10}..."
 echo "Stopping existing services..."
 docker compose down 2>/dev/null || true
 
-# Start services with explicit environment file
+# Start services
 echo "Starting services..."
-docker compose --env-file .env up -d
+docker compose up -d
 
 # Wait for services to be ready
 echo "Waiting for services to start..."
