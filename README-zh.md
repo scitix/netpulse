@@ -61,14 +61,14 @@ git clone https://github.com/netpulse/netpulse.git
 cd netpulse
 
 # 一键部署
-bash ./scripts/docker_deploy.sh
+bash ./scripts/docker_auto_deploy.sh
 ```
 
 ### 手动配置部署
 
 ```bash
 # 1. 生成环境配置
-bash ./scripts/check_env.sh generate
+bash ./scripts/setup_env.sh generate
 
 # 2. 配置必要的环境变量
 cat << EOF > .env

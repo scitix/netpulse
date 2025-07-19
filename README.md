@@ -61,14 +61,14 @@ git clone https://github.com/netpulse/netpulse.git
 cd netpulse
 
 # One-click deployment
-bash ./scripts/docker_deploy.sh
+bash ./scripts/docker_auto_deploy.sh
 ```
 
 ### Manual Configuration
 
 ```bash
 # 1. Generate environment configuration
-bash ./scripts/check_env.sh generate
+bash ./scripts/setup_env.sh generate
 
 # 2. Configure essential environment variables
 cat << EOF > .env

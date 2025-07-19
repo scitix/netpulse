@@ -45,7 +45,7 @@
 
 ```bash
 # 一键部署脚本
-bash ./scripts/docker_deploy.sh
+bash ./scripts/docker_auto_deploy.sh
 ```
 
 此脚本将自动完成：
@@ -85,7 +85,7 @@ API Key: np_1234567890abcdef...
 
 ```bash
 # 自动生成安全的环境变量
-bash ./scripts/check_env.sh generate
+bash ./scripts/setup_env.sh generate
 ```
 
 #### 步骤 2：审查和自定义（可选）
@@ -116,7 +116,8 @@ docker compose ps
 
 # 测试 API
 source .env
-curl -H "Authorization: Bearer $NETPULSE_SERVER__API_KEY" http://localhost:9000/health
+curl -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+     http://localhost:9000/health
 ```
 
 ---

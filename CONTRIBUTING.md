@@ -15,7 +15,7 @@ cd netpulse
 
 ```bash
 # Generate environment variables
-bash ./scripts/check_env.sh generate
+bash ./scripts/setup_env.sh generate
 
 # Start development services
 docker compose up -d

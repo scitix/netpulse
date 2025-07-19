@@ -245,7 +245,7 @@ if __name__ == "__main__":
 ### 环境变量检查
 ```bash
 #!/bin/bash
-# check_env.sh
+# setup_env.sh
 
 echo "检查环境变量配置..."
 

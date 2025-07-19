@@ -40,10 +40,10 @@ ls -la
 
 ```bash
 # Run environment check script
-bash ./scripts/check_env.sh
+bash ./scripts/setup_env.sh
 
 # Generate environment configuration file
-bash ./scripts/check_env.sh generate
+bash ./scripts/setup_env.sh generate
 ```
 
 This will create a `.env` file containing all necessary configuration parameters.

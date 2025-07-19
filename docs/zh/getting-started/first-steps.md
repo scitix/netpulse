@@ -21,15 +21,18 @@
 
 ## API 认证
 
-NetPulse 使用 Bearer Token 认证方式：
+NetPulse 使用 API Key 认证方式。所有端点都需要认证：
 
 ```bash
-# API 密钥格式
-Authorization: Bearer YOUR_API_KEY
+# API密钥格式（Header方式）
+X-API-KEY: YOUR_API_KEY
 
-# 示例
-curl -H "Authorization: Bearer sk-1234567890abcdef" \
+# 使用Header的示例
+curl -H "X-API-KEY: your_api_key_here" \
      http://localhost:9000/health
+
+# 使用查询参数的替代方式
+curl "http://localhost:9000/health?X-API-KEY=your_api_key_here"
 ```
 
 ## 基础API调用
@@ -39,7 +42,7 @@ curl -H "Authorization: Bearer sk-1234567890abcdef" \
 首先测试API服务是否正常运行：
 
 ```bash
-curl -H "Authorization: Bearer YOUR_API_KEY" \
+curl -H "X-API-KEY: YOUR_API_KEY" \
      http://localhost:9000/health
 ```
 
@@ -58,7 +61,7 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \
 查看API版本和功能信息：
 
 ```bash
-curl -H "Authorization: Bearer YOUR_API_KEY" \
+curl -H "X-API-KEY: YOUR_API_KEY" \
      http://localhost:9000/
 ```
 

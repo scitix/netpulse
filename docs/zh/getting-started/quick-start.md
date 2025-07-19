@@ -42,10 +42,10 @@ ls -la
 
 ```bash
 # 运行环境检查脚本
-bash ./scripts/check_env.sh
+bash ./scripts/setup_env.sh
 
 # 生成环境配置文件
-bash ./scripts/check_env.sh generate
+bash ./scripts/setup_env.sh generate
 ```
 
 这将创建 `.env` 文件，包含所有必要的配置参数。
