@@ -155,9 +155,8 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/netpulse
-    - icon: fontawesome/brands/docker
-      link: https://hub.docker.com/r/netpulse
+      link: https://github.com/scitix/netpulse
+
   analytics:
     provider: google
     property: !ENV GOOGLE_ANALYTICS_KEY

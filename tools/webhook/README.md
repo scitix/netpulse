@@ -19,7 +19,6 @@ This tool provides a lightweight HTTP server that can receive and display webhoo
 
 ### Prerequisites
 
-- Python 3.8+
 - FastAPI
 - Uvicorn
 
@@ -40,7 +39,7 @@ This tool provides a lightweight HTTP server that can receive and display webhoo
 ### Starting the Server
 
 ```bash
-python test_server.py
+python webhook_server.py
 ```
 
 The server will start on `http://localhost:8888`

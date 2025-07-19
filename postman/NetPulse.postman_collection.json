@@ -1,7 +1,7 @@
 {
 	"info": {
 		"_postman_id": "3aa8c7db-a603-4ef2-bb4d-4d52516bd63b",
-		"name": "NetPulse API Collection",
+		"name": "NetPulse API Collection -v 0.1",
 		"description": "NetPulse 网络设备管理 API",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "15361380",
