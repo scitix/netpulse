@@ -116,17 +116,17 @@ check_certificates() {
 }
 
 main() {
-    echo "🔍 NetPulse Environment Check"
-    echo "============================="
+    echo "NetPulse Environment Check"
+    echo "========================="
     
     case "${1:-check}" in
         "check")
             if check_env_file && check_env_variables && check_certificates; then
-                print_success "✅ Environment check passed!"
+                print_success "Environment check passed!"
                 print_status "You can now run: docker compose up -d"
                 return 0
             else
-                print_error "❌ Environment check failed!"
+                print_error "Environment check failed!"
                 print_status "Please fix the issues above before continuing"
                 return 1
             fi
@@ -134,7 +134,7 @@ main() {
         "generate")
             generate_secure_values
             check_certificates
-            print_success "✅ Environment setup complete!"
+            print_success "Environment setup complete!"
             print_status "You can now run: docker compose up -d"
             ;;
         *)

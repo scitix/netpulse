@@ -12,7 +12,7 @@ metadata:
 # Secrets (passwords, API keys) are NOT included here
 data:
   NETPULSE_LOG__LEVEL: "INFO"
-  NETPULSE_WORKER__PINNED_PER_NODE: "64" # Max number of connected devices per pod
+  NETPULSE_WORKER__PINNED_PER_NODE: "128" # Max number of connected devices per pod
   NETPULSE_REDIS__HOST: "redis-nodes-0.redis-nodes" # See 00-redis.yaml for details
   NETPULSE_REDIS__PORT: "6379"
   NETPULSE_REDIS__TLS__ENABLED: "false"

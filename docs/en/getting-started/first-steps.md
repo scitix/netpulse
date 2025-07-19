@@ -21,15 +21,18 @@ Before starting, please ensure:
 
 ## API Authentication
 
-NetPulse uses Bearer Token authentication:
+NetPulse uses API Key authentication. All endpoints require authentication:
 
 ```bash
-# API key format
-Authorization: Bearer YOUR_API_KEY
+# API key format (Header)
+X-API-KEY: YOUR_API_KEY
 
-# Example
-curl -H "Authorization: Bearer sk-1234567890abcdef" \
+# Example using header
+curl -H "X-API-KEY: your_api_key_here" \
      http://localhost:9000/health
+
+# Alternative using query parameter
+curl "http://localhost:9000/health?X-API-KEY=your_api_key_here"
 ```
 
 ## Basic API Calls
@@ -39,7 +42,7 @@ curl -H "Authorization: Bearer sk-1234567890abcdef" \
 First, test if the API service is running normally:
 
 ```bash
-curl -H "Authorization: Bearer YOUR_API_KEY" \
+curl -H "X-API-KEY: YOUR_API_KEY" \
      http://localhost:9000/health
 ```
 
@@ -58,7 +61,7 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \
 View API version and feature information:
 
 ```bash
-curl -H "Authorization: Bearer YOUR_API_KEY" \
+curl -H "X-API-KEY: YOUR_API_KEY" \
      http://localhost:9000/
 ```
 

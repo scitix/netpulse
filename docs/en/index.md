@@ -20,13 +20,13 @@ Welcome to the NetPulse Documentation Center! NetPulse is a distributed RESTful 
 ```bash
 git clone <repository-url>
 cd netpulse
-bash ./scripts/docker_deploy.sh
+bash ./scripts/docker_auto_deploy.sh
 ```
 
 ### Manual Setup
 ```bash
 # Generate environment configuration
-bash ./scripts/check_env.sh generate
+bash ./scripts/setup_env.sh generate
 
 # Start services
 docker compose up -d

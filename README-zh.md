@@ -3,10 +3,11 @@
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](https://hub.docker.com)
 [![Python](https://img.shields.io/badge/Python-3.12+-green?logo=python)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+[![Documentation](https://img.shields.io/badge/Docs-ReadTheDocs-blue)](https://netpulse.readthedocs.io/)
 
 简体中文 | [English](README.md)
 
-NetPulse 是一个高性能的分布式网络设备管理 API 框架。它通过创新的长连接技术提供统一接口，并通过插件机制无缝集成 Netmiko、NAPALM 等主流开源工具和厂商 API，让网络设备管理变得简单、高效、可靠。
+NetPulse 是一个专为现代网络自动化设计的高性能分布式网络设备管理API框架。它通过长连接技术提供统一接口，并通过插件机制无缝集成Netmiko、NAPALM等主流开源工具和PyEAPI等厂商API，让网络设备管理变得简单、高效、可靠。
 
 ## 为什么选择 NetPulse？
 
@@ -44,13 +45,13 @@ NetPulse 提供了强大的插件系统，支持多种功能扩展：
 
 ## 快速开始
 
-NetPulse 提供了详细的文档，包括快速入门、架构说明、API参考和最佳实践等。完整文档即将发布到 readthedocs，目前您可以查看以下内容：
+NetPulse 提供了详细的文档，包括快速入门、架构说明、API参考和最佳实践等。访问我们的文档站点获取完整指南：
 
-* [快速入门](docs/zh/getting-started/quick-start.md) - 5分钟上手指南
-* [架构设计](docs/zh/architecture/overview.md) - 系统架构说明
-* [API 参考](docs/zh/guides/api/README.md) - 完整的 API 文档
-* [插件开发](docs/zh/development/README.md) - 插件开发指南
-* [部署指南](docs/zh/getting-started/deployment.md) - 详细的部署文档
+* [📖 快速入门](https://netpulse.readthedocs.io/zh/latest/getting-started/quick-start.html) - 5分钟快速上手
+* [🏗️ 架构设计](https://netpulse.readthedocs.io/zh/latest/architecture/overview.html) - 系统架构概览
+* [🔌 API 参考](https://netpulse.readthedocs.io/zh/latest/guides/api.html) - 完整的 RESTful API 文档
+* [⚙️ 插件开发](https://netpulse.readthedocs.io/zh/latest/development/index.html) - 构建自定义驱动和插件
+* [🚀 部署指南](https://netpulse.readthedocs.io/zh/latest/getting-started/deployment.html) - 生产环境部署说明
 
 ### Docker 一键部署
 
@@ -60,14 +61,14 @@ git clone https://github.com/netpulse/netpulse.git
 cd netpulse
 
 # 一键部署
-bash ./scripts/docker_deploy.sh
+bash ./scripts/docker_auto_deploy.sh
 ```
 
 ### 手动配置部署
 
 ```bash
 # 1. 生成环境配置
-bash ./scripts/check_env.sh generate
+bash ./scripts/setup_env.sh generate
 
 # 2. 配置必要的环境变量
 cat << EOF > .env
@@ -78,6 +79,29 @@ EOF
 
 # 3. 启动服务
 docker compose up -d
+
+### 快速API测试
+
+部署完成后，使用简单的健康检查测试API：
+
+```bash
+# 测试健康检查端点
+curl -H "X-API-KEY: your_secure_api_key" http://localhost:9000/health
+
+# 测试设备命令（请替换为您的设备详情）
+curl -X POST http://localhost:9000/device/execute \
+  -H "X-API-KEY: your_secure_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "driver": "netmiko",
+    "connection_args": {
+      "device_type": "cisco_ios",
+      "host": "192.168.1.1",
+      "username": "admin",
+      "password": "admin123"
+    },
+    "command": "show version"
+  }'
 ```
 
 ## 参与贡献
@@ -92,13 +116,19 @@ docker compose up -d
 
 详细信息请参考 [贡献指南](CONTRIBUTING.md)。
 
+## 社区与支持
+
+* 📚 **[文档](https://netpulse.readthedocs.io/)** - 完整指南和API参考
+* 🐛 **[问题反馈](https://github.com/scitix/netpulse/issues)** - 报告bug和请求功能
+
+https://github.com/scitix/netpulse
 ## 开源协议
 
 本项目采用 MIT 协议 - 详见 [LICENSE](LICENSE) 文件。
 
 ## 作者
 
-* **Locus Li** – 项目负责人
+* **Locus Li** – 项目发起人 & 维护者
 * **Yongkun Li** – 首席开发者
 
 查看 [AUTHORS.md](AUTHORS.md) 了解所有贡献者信息。

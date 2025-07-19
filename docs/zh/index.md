@@ -20,13 +20,13 @@
 ```bash
 git clone <repository-url>
 cd netpulse
-bash ./scripts/docker_deploy.sh
+bash ./scripts/docker_auto_deploy.sh
 ```
 
 ### 手动设置
 ```bash
 # 生成环境配置
-bash ./scripts/check_env.sh generate
+bash ./scripts/setup_env.sh generate
 
 # 启动服务
 docker compose up -d

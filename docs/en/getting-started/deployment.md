@@ -45,7 +45,7 @@ The fastest way with minimal user interaction.
 
 ```bash
 # One-click deployment script
-bash ./scripts/docker_deploy.sh
+bash ./scripts/docker_auto_deploy.sh
 ```
 
 This script will automatically complete:
@@ -85,7 +85,7 @@ More control while automating tedious parts.
 
 ```bash
 # Automatically generate secure environment variables
-bash ./scripts/check_env.sh generate
+bash ./scripts/setup_env.sh generate
 ```
 
 #### Step 2: Review and Customize (Optional)
@@ -225,7 +225,7 @@ docker compose exec redis redis-cli --tls \
   -p 6379 -a "$NETPULSE_REDIS__PASSWORD" ping
 
 # Test API health endpoint
-curl -H "Authorization: Bearer $NETPULSE_SERVER__API_KEY" \
+curl -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
      http://localhost:9000/health
 
 # Expected response: {"code": 0, "message": "success", "data": "ok"}
@@ -390,7 +390,7 @@ Deploying Nginx Ingress can achieve load balancing and HTTPS access.
    
    Make sure you have created the `.env` file:
    ```bash
-   bash ./scripts/check_env.sh generate
+   bash ./scripts/setup_env.sh generate
    ```
 
 2. **Redis connection failed**
@@ -412,7 +412,7 @@ Deploying Nginx Ingress can achieve load balancing and HTTPS access.
 ### Getting Help
 
 - Check logs: `docker compose logs -f`
-- Verify environment: `bash ./scripts/check_env.sh check`
+- Verify environment: `bash ./scripts/setup_env.sh check`
 - Review [Configuration Guide](../guides/configuration.md)
 
 ---
