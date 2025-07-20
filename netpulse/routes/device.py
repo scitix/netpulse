@@ -27,12 +27,12 @@ def execute_device_operation(req: DeviceRequest):
         pull_req = req.to_pulling_request()
         pull_req.connection_args.enforced_field_check()
         job = g_mgr.pull_from_device(pull_req)
-        return SubmitJobResponse(code=0, message="success", data=job)
+        return SubmitJobResponse(code=200, message="success", data=job)
     else:
         push_req = req.to_pushing_request()
         push_req.connection_args.enforced_field_check()
         job = g_mgr.push_to_device(push_req)
-        return SubmitJobResponse(code=0, message="success", data=job)
+        return SubmitJobResponse(code=200, message="success", data=job)
 
 
 @router.post("/bulk", response_model=BatchSubmitJobResponse, status_code=201)
@@ -58,12 +58,12 @@ def bulk_device_operation(req: BatchDeviceRequest):
 
         result = g_mgr.pull_from_batch_devices(expanded)
         if result is None:
-            return BatchSubmitJobResponse(code=0, message="success", data=None)
+            return BatchSubmitJobResponse(code=200, message="success", data=None)
         data = BatchSubmitJobResponse.BatchSubmitJobData(
             succeeded=result[0],
             failed=result[1],
         )
-        return BatchSubmitJobResponse(code=0, message="success", data=data)
+        return BatchSubmitJobResponse(code=200, message="success", data=data)
     else:
         batch_push_req = req.to_batch_pushing_request()
         base_req = PushingRequest.model_validate(batch_push_req.model_dump(exclude={"devices"}))
@@ -85,12 +85,12 @@ def bulk_device_operation(req: BatchDeviceRequest):
 
         result = g_mgr.push_to_batch_devices(expanded)
         if result is None:
-            return BatchSubmitJobResponse(code=0, message="success", data=None)
+            return BatchSubmitJobResponse(code=200, message="success", data=None)
         data = BatchSubmitJobResponse.BatchSubmitJobData(
             succeeded=result[0],
             failed=result[1],
         )
-        return BatchSubmitJobResponse(code=0, message="success", data=data)
+        return BatchSubmitJobResponse(code=200, message="success", data=data)
 
 
 @router.post("/test-connection", response_model=ConnectionTestResponse, status_code=200)
@@ -110,7 +110,7 @@ def test_device_connection(req: ConnectionTestRequest):
     )
 
     return ConnectionTestResponse(
-        code=0,
+        code=200,
         message="Connection test completed" if success else "Connection test failed",
         data=data,
     )

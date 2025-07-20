@@ -31,7 +31,7 @@ def _serialize_datetime_with_tz(dt: Optional[datetime], _info=None) -> Optional[
 
 
 class BaseResponse(BaseModel):
-    code: int = 0
+    code: int = 200
     message: Optional[str] = None
     data: Optional[Any] = None
 

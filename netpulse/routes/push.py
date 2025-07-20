@@ -16,7 +16,7 @@ def push(req: PushingRequest):
     if req.driver is None:
         raise ValueError("driver is required for this request")
     resp = g_mgr.push_to_device(req)
-    return SubmitJobResponse(code=0, message="success", data=resp)
+    return SubmitJobResponse(code=200, message="success", data=resp)
 
 
 @router.post("/batch", response_model=BatchSubmitJobResponse, status_code=201)
@@ -44,10 +44,10 @@ def pull_in_batch(req: BatchPushingRequest):
 
     result = g_mgr.push_to_batch_devices(expanded)
     if result is None:
-        return BatchSubmitJobResponse(code=0, message="success", data=None)
+        return BatchSubmitJobResponse(code=200, message="success", data=None)
 
     data = BatchSubmitJobResponse.BatchSubmitJobData(
         succeeded=result[0],
         failed=result[1],
     )
-    return BatchSubmitJobResponse(code=0, message="success", data=data)
+    return BatchSubmitJobResponse(code=200, message="success", data=data)
