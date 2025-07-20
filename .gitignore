@@ -23,5 +23,6 @@ drafts/
 site/
 docs-local/
 tests/
+site*
 
 
