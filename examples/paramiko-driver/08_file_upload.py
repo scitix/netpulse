@@ -26,7 +26,7 @@ def main():
     print("文件上传示例")
     print("=" * 60)
 
-    # 创建测试文件（如果不存在）
+    # 创建测试文件(如果不存在)
     import os
 
     if not os.path.exists(LOCAL_FILE):
@@ -71,7 +71,7 @@ def main():
             print(f"✗ 任务提交失败: {result.get('message', 'Unknown error')}")
             return
 
-        print(f"任务已提交，Job ID: {job_id}")
+        print(f"任务已提交, Job ID: {job_id}")
 
         # 等待任务完成
         job_result = client.wait_for_job(job_id)
@@ -89,11 +89,11 @@ def main():
                         print("✓ 文件上传成功")
                         print(f"  传输字节数: {transfer_result.get('bytes_transferred', 0)}")
                     else:
-                        error_msg = value.get('error', 'Unknown error')
+                        error_msg = value.get("error", "Unknown error")
                         print(f"✗ 文件上传失败: {error_msg}")
-            
+
             if not found:
-                print("⚠ 未找到文件传输结果，可能文件传输未正确触发")
+                print("⚠ 未找到文件传输结果, 可能文件传输未正确触发")
                 print(f"返回数据: {result_data}")
 
     except Exception as e:
@@ -105,4 +105,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

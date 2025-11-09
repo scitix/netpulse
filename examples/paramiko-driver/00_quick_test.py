@@ -2,7 +2,7 @@
 """
 快速测试 - 连接测试
 
-最简单的示例：测试 SSH 连接是否正常
+最简单的示例: 测试 SSH 连接是否正常
 """
 
 from common import API_KEY, BASE_URL, TEST_HOST, TEST_PASSWORD, TEST_USERNAME, NetPulseClient

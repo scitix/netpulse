@@ -2,7 +2,7 @@
 """
 SSH代理连接示例
 
-演示如何通过代理服务器（跳板机）连接到目标服务器
+演示如何通过代理服务器(跳板机)连接到目标服务器
 """
 
 from common import (
@@ -28,7 +28,7 @@ def main():
 
     # 检查代理配置
     if not PROXY_HOST:
-        print("✗ 未配置代理服务器，请在 config.py 中设置 PROXY_HOST")
+        print("✗ 未配置代理服务器, 请在 config.py 中设置 PROXY_HOST")
         return
 
     # 创建客户端
@@ -65,7 +65,7 @@ def main():
             print(f"✗ 任务提交失败: {result.get('message', 'Unknown error')}")
             return
 
-        print(f"任务已提交，Job ID: {job_id}")
+        print(f"任务已提交, Job ID: {job_id}")
 
         # 等待任务完成
         job_result = client.wait_for_job(job_id)

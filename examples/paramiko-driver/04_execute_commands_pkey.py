@@ -2,7 +2,7 @@
 """
 命令执行示例 - 密钥内容认证
 
-演示如何使用密钥内容（PEM格式字符串）进行认证
+演示如何使用密钥内容(PEM格式字符串)进行认证
 """
 
 import os
@@ -52,7 +52,7 @@ def main():
     }
 
     print(f"执行命令到: {TEST_USERNAME}@{TEST_HOST}:{TEST_PORT}")
-    print(f"使用密钥内容认证（从文件: {KEY_FILE}）")
+    print(f"使用密钥内容认证(从文件: {KEY_FILE})")
 
     try:
         # 提交任务
@@ -63,7 +63,7 @@ def main():
             print(f"✗ 任务提交失败: {result.get('message', 'Unknown error')}")
             return
 
-        print(f"任务已提交，Job ID: {job_id}")
+        print(f"任务已提交, Job ID: {job_id}")
 
         # 等待任务完成
         job_result = client.wait_for_job(job_id)

@@ -19,7 +19,7 @@ from common import (
 def main():
     """主函数"""
     print("=" * 60)
-    print("测试场景 1: 连接测试（密码认证）")
+    print("测试场景 1: 连接测试(密码认证)")
     print("=" * 60)
 
     # 创建客户端
@@ -65,4 +65,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -555,9 +555,7 @@ if __name__ == "__main__":
         new_deque = deque(old_messages, maxlen=config.max_messages)
         globals()["webhook_messages"] = new_deque
 
-    if config.enable_cors and not any(
-        isinstance(m, CORSMiddleware) for m in app.user_middleware
-    ):
+    if config.enable_cors and not any(isinstance(m, CORSMiddleware) for m in app.user_middleware):
         app.add_middleware(
             CORSMiddleware,
             allow_origins=["*"],

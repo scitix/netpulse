@@ -61,7 +61,7 @@ def main():
             succeeded = batch_data.get("succeeded", [])
             failed = batch_data.get("failed", [])
 
-            print(f"\n批量执行完成")
+            print("\n批量执行完成")
             print(f"成功: {len(succeeded)} 台")
             print(f"失败: {len(failed)} 台")
 

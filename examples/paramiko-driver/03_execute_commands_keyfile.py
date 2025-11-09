@@ -52,7 +52,7 @@ def main():
             print(f"✗ 任务提交失败: {result.get('message', 'Unknown error')}")
             return
 
-        print(f"任务已提交，Job ID: {job_id}")
+        print(f"任务已提交, Job ID: {job_id}")
 
         # 等待任务完成
         job_result = client.wait_for_job(job_id)

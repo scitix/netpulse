@@ -36,7 +36,7 @@ def main():
             "port": TEST_PORT,
             "host_key_policy": "auto_add",
         },
-        "config": ["id", "whoami"],  # 示例命令（只读操作）
+        "config": ["id", "whoami"],  # 示例命令(只读操作)
         "driver_args": {
             "sudo": True,
             "sudo_password": SUDO_PASSWORD,
@@ -55,7 +55,7 @@ def main():
             print(f"✗ 任务提交失败: {result.get('message', 'Unknown error')}")
             return
 
-        print(f"任务已提交，Job ID: {job_id}")
+        print(f"任务已提交, Job ID: {job_id}")
 
         # 等待任务完成
         job_result = client.wait_for_job(job_id)

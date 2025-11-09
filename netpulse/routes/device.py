@@ -254,5 +254,3 @@ def _test_paramiko_connection(
 
     except Exception as e:
         return False, str(e), None
-
-

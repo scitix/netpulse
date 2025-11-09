@@ -77,7 +77,9 @@ class ParamikoDriver(BaseDriver):
         kwargs = {}
         if use_proxy:
             if self.conn_args.proxy_pkey:
-                kwargs["pkey"] = self._load_pkey(self.conn_args.proxy_pkey, self.conn_args.proxy_passphrase)
+                kwargs["pkey"] = self._load_pkey(
+                    self.conn_args.proxy_pkey, self.conn_args.proxy_passphrase
+                )
                 kwargs["username"] = self.conn_args.proxy_username or self.conn_args.username
             elif self.conn_args.proxy_key_filename:
                 kwargs["key_filename"] = self.conn_args.proxy_key_filename
@@ -255,9 +257,11 @@ class ParamikoDriver(BaseDriver):
             else:
                 raise ValueError(f"Unsupported operation: {file_transfer_op.operation}")
 
+            bytes_transferred = result.get("bytes_transferred", 0)
+            total_bytes = result.get("total_bytes", 0)
             return {
                 f"file_transfer_{file_transfer_op.operation}": {
-                    "output": f"File transfer completed: {result.get('bytes_transferred', 0)}/{result.get('total_bytes', 0)} bytes",
+                    "output": f"File transfer completed: {bytes_transferred}/{total_bytes} bytes",
                     "error": "",
                     "exit_status": 0 if result.get("success") else 1,
                     "transfer_result": result,
@@ -291,9 +295,8 @@ class ParamikoDriver(BaseDriver):
                     if self.args.timeout:
                         exec_kwargs["timeout"] = self.args.timeout
                     if isinstance(self.args, ParamikoSendConfigArgs):
-                        exec_kwargs["get_pty"] = (
-                            self.args.get_pty
-                            or (self.args.sudo and self.args.sudo_password is not None)
+                        exec_kwargs["get_pty"] = self.args.get_pty or (
+                            self.args.sudo and self.args.sudo_password is not None
                         )
                     else:
                         exec_kwargs["get_pty"] = False
@@ -397,7 +400,7 @@ class ParamikoDriver(BaseDriver):
                             "total_bytes": total_bytes,
                             "resumed": resume and remote_size > 0,
                         }
-                    except Exception as e:
+                    except Exception:
                         remote_file.close()
                         raise
             finally:
@@ -462,7 +465,7 @@ class ParamikoDriver(BaseDriver):
                             "total_bytes": total_bytes,
                             "resumed": resume and local_size > 0,
                         }
-                    except Exception as e:
+                    except Exception:
                         remote_file.close()
                         raise
             finally:
@@ -473,4 +476,3 @@ class ParamikoDriver(BaseDriver):
 
 
 __all__ = ["ParamikoDriver"]
-

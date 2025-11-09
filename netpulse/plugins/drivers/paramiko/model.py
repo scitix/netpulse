@@ -17,9 +17,7 @@ class ParamikoConnectionArgs(DriverConnectionArgs):
     # Authentication (choose one)
     password: Optional[str] = Field(None, description="Password authentication")
     key_filename: Optional[str] = Field(None, description="Private key file path")
-    pkey: Optional[str] = Field(
-        None, description="Private key content (PEM format string)"
-    )
+    pkey: Optional[str] = Field(None, description="Private key content (PEM format string)")
     passphrase: Optional[str] = Field(
         None, description="Private key passphrase (if key is encrypted)"
     )
@@ -215,6 +213,3 @@ class ParamikoPushingRequest(PushingRequest):
             }
         }
     )
-
-
-
