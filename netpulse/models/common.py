@@ -12,6 +12,7 @@ class QueueStrategy(str, Enum):
 class DriverName(str, Enum):
     NAPALM = "napalm"
     NETMIKO = "netmiko"
+    PARAMIKO = "paramiko"
     PYEAPI = "pyeapi"
     # NCCLIENT = "ncclient"
     # PURESNMP = "puresnmp"

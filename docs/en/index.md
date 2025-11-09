@@ -63,7 +63,7 @@ Traditional client-side tools need to be installed on every machine, and each pr
 - **RESTful API** - Unified asynchronous API interface supporting multi-vendor network devices
 - **Persistent Connections** - Improved operation efficiency through SSH long connection technology
 - **Distributed Architecture** - Supports multi-node deployment and horizontal scaling
-- **Multi-Driver Support** - Multiple drivers including Netmiko, NAPALM, PyEAPI
+- **Multi-Driver Support** - Multiple drivers including Netmiko, NAPALM, PyEAPI, Paramiko
 - **Template Support** - Supports Jinja2, TextFSM, TTP template engines
 - **Batch Operations** - Supports large-scale device management and configuration
 
@@ -125,10 +125,10 @@ If you are using NetPulse for the first time, we recommend reading the documenta
 A: Device operations (`/device/execute`, `/device/bulk`) are asynchronous and require querying task status to get results. Only `/device/test-connection` is synchronous.
 
 **Q: How to choose the right driver?**  
-A: Use PyEAPI for Arista devices, NAPALM if you need configuration rollback, and Netmiko for other scenarios (recommended).
+A: Use Paramiko for Linux servers, PyEAPI for Arista devices, NAPALM if you need configuration rollback, and Netmiko for other scenarios (recommended).
 
 **Q: When to use FIFO queue, when to use Pinned queue?**  
-A: The system will automatically select based on the driver. Netmiko/NAPALM default to Pinned (connection reuse), PyEAPI defaults to FIFO. Usually no manual specification is needed.
+A: The system will automatically select based on the driver. Netmiko/NAPALM default to Pinned (connection reuse), PyEAPI/Paramiko default to FIFO. Usually no manual specification is needed.
 
 **Q: How to get command execution results?**  
 A: After submitting a task, you get a task ID, then query results through the `/job?id=xxx` interface.

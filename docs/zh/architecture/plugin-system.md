@@ -24,6 +24,7 @@ graph TB
     Driver --> Netmiko[Netmiko驱动]
     Driver --> NAPALM[NAPALM驱动]
     Driver --> PyEAPI[PyEAPI驱动]
+    Driver --> Paramiko[Paramiko驱动]
     Driver --> Custom[自定义驱动...]
     
     style Plugin fill:#E6F4EA,stroke:#4B8B3B,stroke-width:3px
@@ -81,7 +82,7 @@ graph TD
 | **名称属性** | `driver_name` |
 | **目录** | `netpulse/plugins/drivers/` |
 | **全局变量** | `drivers` |
-| **内置实现** | Netmiko、NAPALM、pyeAPI |
+| **内置实现** | Netmiko、NAPALM、PyEAPI、Paramiko |
 
 **核心方法**：
 - `connect()`：建立设备连接

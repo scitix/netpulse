@@ -31,4 +31,7 @@ docs-local/
 tests/
 site*
 
+# Paramiko driver examples config
+examples/paramiko-driver/common.py
+
 

@@ -1,6 +1,6 @@
 # Device Driver System
 
-NetPulse provides extensible driver support through its plugin system. Users can use the three built-in supported drivers, or develop custom drivers as needed.
+NetPulse provides extensible driver support through its plugin system. Users can use the four built-in supported drivers, or develop custom drivers as needed.
 
 ## Core Drivers
 
@@ -8,7 +8,8 @@ NetPulse provides extensible driver support through its plugin system. Users can
 |----------|---------------|-----------------------------|-------------------------------------------|-------------------|
 | Netmiko  | SSH/Telnet    | 30+ vendors                 | CLI command execution, **SSH keepalive** | netmiko~=4.5.0    |
 | NAPALM   | API/SSH       | Multi-vendor (Cisco/Juniper/Arista) | Configuration management, state collection | napalm~=5.0.0     |
-| pyeAPI   | HTTP/HTTPS    | Arista EOS only             | Native EOS API access, HTTP-based eAPI | pyeapi~=1.0.4     |
+| PyEAPI   | HTTP/HTTPS    | Arista EOS only             | Native EOS API access, HTTP-based eAPI | pyeapi~=1.0.4     |
+| Paramiko | SSH           | Linux servers               | Native SSH, file transfer, proxy connections, sudo | paramiko~=3.0.0  |
 
 ## Specify Device Driver
 
@@ -59,6 +60,12 @@ Netmiko driver is a mature and stable driver in NetPulse, supporting 30+ network
 When using [Pinned Worker](./architecture-overview.md) with Netmiko driver, the Worker will create a new SSH connection and periodically send keepalive commands and KeepAlive packets. This maintains connection activity at both TCP connection and application layer protocol levels, thereby avoiding delays caused by SSH connection disconnection and reconnection.
 
 Users can configure SSH keepalive time through the `keepalive` parameter. When SSH keepalive fails, Pinned Worker will automatically exit. When tasks are sent again, a new Pinned Worker will be created to connect to the device.
+
+## Paramiko
+
+Paramiko driver is used to manage Linux servers in NetPulse, implemented based on native SSH protocol. Paramiko driver supports command execution, file transfer, proxy connections, sudo, and other advanced features, suitable for system monitoring, configuration management, software deployment, and other scenarios.
+
+Paramiko driver defaults to FIFO queue strategy (short connection), suitable for long-running tasks and file transfer scenarios. Unlike Netmiko driver, Paramiko driver does not implement long connection reuse, and will disconnect after each task execution.
 
 ## Long Connection Technology
 

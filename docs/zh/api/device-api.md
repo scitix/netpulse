@@ -293,7 +293,7 @@ response = requests.post(
 }
 ```
 
-> **详细参数说明**：请参考各驱动文档（[Netmiko](../drivers/netmiko.md)、[NAPALM](../drivers/napalm.md)、[PyEAPI](../drivers/pyeapi.md)）
+> **详细参数说明**：请参考各驱动文档（[Netmiko](../drivers/netmiko.md)、[NAPALM](../drivers/napalm.md)、[PyEAPI](../drivers/pyeapi.md)、[Paramiko](../drivers/paramiko.md)）
 
 ### options
 
@@ -615,6 +615,36 @@ response = requests.post(
 }
 ```
 
+#### Paramiko (Linux服务器)
+
+**基础连接测试**:
+```json
+{
+  "driver": "paramiko",
+  "connection_args": {
+    "host": "192.168.1.100",
+    "username": "admin",
+    "password": "your_password",
+    "port": 22,
+    "timeout": 30.0
+  }
+}
+```
+
+**密钥认证示例**:
+```json
+{
+  "driver": "paramiko",
+  "connection_args": {
+    "host": "192.168.1.100",
+    "username": "admin",
+    "key_filename": "/path/to/private_key",
+    "passphrase": "your_key_passphrase",
+    "port": 22
+  }
+}
+```
+
 ### 连接参数说明
 
 **Netmiko 参数**：
@@ -689,7 +719,7 @@ response = requests.post(
 
 ### 快速提示
 
-- **驱动选择**: Netmiko（通用SSH）、NAPALM（跨厂商）、PyEAPI（Arista专用）
+- **驱动选择**: Netmiko（通用SSH）、NAPALM（跨厂商）、PyEAPI（Arista专用）、Paramiko（Linux服务器）
 - **队列策略**: 通常无需指定，系统会根据驱动自动选择
 - **错误处理**: 实现重试机制，记录详细错误信息
 - **任务跟踪**: 使用 `/job` 接口查询任务状态，或使用webhook回调

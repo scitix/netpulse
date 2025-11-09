@@ -335,6 +335,9 @@ class DeviceRequest(BaseModel):
             if self.driver == DriverName.NETMIKO:
                 # SSH/Telnet long connections benefit from pinned strategy
                 self.options["queue_strategy"] = "pinned"
+            elif self.driver == DriverName.PARAMIKO:
+                # Paramiko uses short connections, benefit from fifo strategy
+                self.options["queue_strategy"] = "fifo"
             else:
                 # HTTP/HTTPS stateless connections benefit from fifo strategy
                 self.options["queue_strategy"] = "fifo"
@@ -382,6 +385,16 @@ class DeviceRequest(BaseModel):
             from ..plugins.drivers.pyeapi.model import PyeapiArg
 
             return PyeapiArg
+        elif self.driver == DriverName.PARAMIKO:
+            from ..plugins.drivers.paramiko.model import (
+                ParamikoSendCommandArgs,
+                ParamikoSendConfigArgs,
+            )
+
+            if self.is_pull_operation():
+                return ParamikoSendCommandArgs
+            else:
+                return ParamikoSendConfigArgs
         else:
             raise ValueError(f"Unsupported driver: {self.driver}")
 
@@ -394,11 +407,17 @@ class DeviceRequest(BaseModel):
         if not self.is_pull_operation():
             raise ValueError("Cannot convert non-pull request to PullingRequest")
 
+        # Ensure driver_args is properly serialized for RQ
+        args = self.driver_args
+        if args is not None and hasattr(args, "model_dump"):
+            # Convert to dict to ensure proper serialization
+            args = args.model_dump(exclude_none=True)
+
         return PullingRequest(
             driver=self.driver,
             connection_args=self.connection_args,
             command=self.command,
-            args=self.driver_args,
+            args=args,
             queue_strategy=self.options.get("queue_strategy"),
             webhook=self.options.get("webhook"),
             parsing=self.options.get("parsing"),
@@ -530,6 +549,8 @@ class BatchDeviceRequest(BaseModel):
         if "queue_strategy" not in self.options:
             if self.driver == "netmiko":
                 self.options["queue_strategy"] = "pinned"
+            elif self.driver == "paramiko":
+                self.options["queue_strategy"] = "fifo"
             else:
                 self.options["queue_strategy"] = "fifo"
 
@@ -576,6 +597,16 @@ class BatchDeviceRequest(BaseModel):
             from ..plugins.drivers.pyeapi.model import PyeapiArg
 
             return PyeapiArg
+        elif self.driver == DriverName.PARAMIKO:
+            from ..plugins.drivers.paramiko.model import (
+                ParamikoSendCommandArgs,
+                ParamikoSendConfigArgs,
+            )
+
+            if self.is_pull_operation():
+                return ParamikoSendCommandArgs
+            else:
+                return ParamikoSendConfigArgs
         else:
             raise ValueError(f"Unsupported driver: {self.driver}")
 
