@@ -1,310 +1,222 @@
-# Error Codes Reference
+# Error Codes
 
-This document provides a comprehensive reference for all NetPulse error codes and their meanings.
+This document explains NetPulse API error response format and common error situations.
 
-## Error Code Format
+## Response Format
 
-NetPulse uses a structured error code format:
-```
-NP-[CATEGORY]-[CODE]
-```
+### Success Response
 
-- **NP**: NetPulse prefix
-- **CATEGORY**: Error category (2-3 letters)
-- **CODE**: Specific error code (3-4 digits)
-
-## Error Categories
-
-### Authentication Errors (AUTH)
-
-| Code | Description | Cause | Solution |
-|------|-------------|--------|----------|
-| NP-AUTH-001 | Invalid API key | API key is missing or incorrect | Verify API key in configuration |
-| NP-AUTH-002 | API key expired | API key has expired | Generate new API key |
-| NP-AUTH-003 | Insufficient permissions | User lacks required permissions | Check user permissions |
-| NP-AUTH-004 | Rate limit exceeded | Too many requests | Implement rate limiting |
-
-### Connection Errors (CONN)
-
-| Code | Description | Cause | Solution |
-|------|-------------|--------|----------|
-| NP-CONN-001 | Connection timeout | Device not responding | Check device connectivity |
-| NP-CONN-002 | Authentication failed | Invalid credentials | Verify device credentials |
-| NP-CONN-003 | Connection refused | Device refused connection | Check device SSH/Telnet settings |
-| NP-CONN-004 | Host unreachable | Network connectivity issue | Check network connectivity |
-| NP-CONN-005 | SSH key authentication failed | SSH key not accepted | Verify SSH key configuration |
-| NP-CONN-006 | Connection pool exhausted | Too many concurrent connections | Increase connection pool size |
-
-### Command Execution Errors (CMD)
-
-| Code | Description | Cause | Solution |
-|------|-------------|--------|----------|
-| NP-CMD-001 | Command timeout | Command execution timed out | Increase command timeout |
-| NP-CMD-002 | Command failed | Command returned error | Check command syntax |
-| NP-CMD-003 | Invalid command | Command not recognized | Verify command for device type |
-| NP-CMD-004 | Permission denied | Insufficient privileges | Check user permissions on device |
-| NP-CMD-005 | Command not supported | Command not supported by driver | Use alternative command |
-
-### Template Errors (TMPL)
-
-| Code | Description | Cause | Solution |
-|------|-------------|--------|----------|
-| NP-TMPL-001 | Template not found | Template file missing | Check template path |
-| NP-TMPL-002 | Template syntax error | Invalid template syntax | Fix template syntax |
-| NP-TMPL-003 | Template rendering failed | Error during rendering | Check template variables |
-| NP-TMPL-004 | Template variable missing | Required variable not provided | Provide missing variables |
-| NP-TMPL-005 | Template parsing failed | TextFSM/TTP parsing error | Check template format |
-
-### Job Errors (JOB)
-
-| Code | Description | Cause | Solution |
-|------|-------------|--------|----------|
-| NP-JOB-001 | Job not found | Job ID does not exist | Verify job ID |
-| NP-JOB-002 | Job already cancelled | Job was previously cancelled | Check job status |
-| NP-JOB-003 | Job execution failed | Job failed during execution | Check job logs |
-| NP-JOB-004 | Job timeout | Job exceeded timeout limit | Increase job timeout |
-| NP-JOB-005 | Job queue full | Job queue is at capacity | Wait or increase queue size |
-
-### Configuration Errors (CFG)
-
-| Code | Description | Cause | Solution |
-|------|-------------|--------|----------|
-| NP-CFG-001 | Configuration file not found | Config file missing | Create configuration file |
-| NP-CFG-002 | Invalid configuration | Configuration syntax error | Fix configuration syntax |
-| NP-CFG-003 | Missing required parameter | Required config parameter missing | Add missing parameter |
-| NP-CFG-004 | Invalid parameter value | Parameter value is invalid | Correct parameter value |
-| NP-CFG-005 | Configuration validation failed | Configuration failed validation | Check configuration format |
-
-### Driver Errors (DRV)
-
-| Code | Description | Cause | Solution |
-|------|-------------|--------|----------|
-| NP-DRV-001 | Driver not found | Device driver not available | Install or configure driver |
-| NP-DRV-002 | Driver initialization failed | Driver failed to initialize | Check driver configuration |
-| NP-DRV-003 | Driver not supported | Device type not supported | Use compatible driver |
-| NP-DRV-004 | Driver version mismatch | Driver version incompatible | Update driver version |
-| NP-DRV-005 | Driver dependency missing | Required dependency not installed | Install missing dependency |
-
-### System Errors (SYS)
-
-| Code | Description | Cause | Solution |
-|------|-------------|--------|----------|
-| NP-SYS-001 | Internal server error | Unexpected system error | Check system logs |
-| NP-SYS-002 | Database connection failed | Database not accessible | Check database connectivity |
-| NP-SYS-003 | Redis connection failed | Redis not accessible | Check Redis connectivity |
-| NP-SYS-004 | Memory allocation failed | Insufficient memory | Increase system memory |
-| NP-SYS-005 | File system error | File system operation failed | Check file system permissions |
-
-### Validation Errors (VAL)
-
-| Code | Description | Cause | Solution |
-|------|-------------|--------|----------|
-| NP-VAL-001 | Invalid request format | Request format is invalid | Check request format |
-| NP-VAL-002 | Missing required field | Required field not provided | Provide missing field |
-| NP-VAL-003 | Invalid field value | Field value is invalid | Correct field value |
-| NP-VAL-004 | Field value out of range | Value exceeds allowed range | Use valid range |
-| NP-VAL-005 | Invalid data type | Data type is incorrect | Use correct data type |
-
-## Error Response Format
-
-### Standard Error Response
 ```json
 {
-  "error": {
-    "code": "NP-CONN-001",
-    "message": "Connection timeout",
-    "details": "Device 192.168.1.1 did not respond within 30 seconds",
-    "timestamp": "2024-01-01T12:00:00Z",
-    "job_id": "job_123456",
-    "trace_id": "trace_789012"
+  "code": 200,
+  "message": "success",
+  "data": {
+    // Specific data
   }
 }
 ```
 
-### Batch Error Response
+### Error Response
+
+NetPulse uses unified error response format:
+
 ```json
 {
-  "errors": [
+  "code": -1,
+  "message": "Error description",
+  "data": "Error details or data"
+}
+```
+
+**Description**:
+- `code: 200` indicates request success
+- `code: -1` indicates request failure
+- `message` contains error description
+- `data` contains error details (may be string or object)
+
+## HTTP Status Codes
+
+NetPulse API uses standard HTTP status codes:
+
+| Status Code | Description | Common Scenarios |
+|-------------|-------------|------------------|
+| `200` | OK | Request successful |
+| `201` | Created | Task created successfully |
+| `400` | Bad Request | Request parameter error, validation failed |
+| `403` | Forbidden | API key invalid or missing |
+| `404` | Not Found | Resource not found (e.g., template engine not found) |
+| `500` | Internal Server Error | Server internal error |
+
+## Common Error Situations
+
+### 1. API Key Error
+
+**HTTP Status Code**: `403`
+
+**Response Example**:
+```json
+{
+  "code": -1,
+  "message": "Invalid or missing API key."
+}
+```
+
+**Solution**:
+- Check if request header contains `X-API-KEY`
+- Verify API key is correct
+- Confirm API key matches `server.api_key` in configuration file
+
+### 2. Request Parameter Validation Error
+
+**HTTP Status Code**: `400`
+
+**Response Example**:
+```json
+{
+  "code": -1,
+  "message": "Validation Error",
+  "data": [
     {
-      "device": "192.168.1.1",
-      "error": {
-        "code": "NP-CONN-001",
-        "message": "Connection timeout",
-        "details": "Device did not respond within 30 seconds"
-      }
-    },
-    {
-      "device": "192.168.1.2",
-      "error": {
-        "code": "NP-AUTH-002",
-        "message": "Authentication failed",
-        "details": "Invalid username or password"
-      }
+      "type": "missing",
+      "loc": ["body", "driver"],
+      "msg": "Field required",
+      "input": {}
     }
   ]
 }
 ```
 
-## Error Handling Best Practices
+**Solution**:
+- Check if request body contains all required fields
+- Verify field types and formats are correct
+- Refer to API documentation to confirm parameter requirements
 
-### Client-side Error Handling
-```python
-import requests
-from netpulse_sdk import NetPulseClient
+### 3. Value Error
 
-client = NetPulseClient(api_key="your-api-key")
+**HTTP Status Code**: `400`
 
-try:
-    result = client.execute_command("192.168.1.1", "show version")
-except NetPulseError as e:
-    if e.code == "NP-CONN-001":
-        print("Connection timeout - device may be unreachable")
-    elif e.code == "NP-AUTH-002":
-        print("Authentication failed - check credentials")
-    else:
-        print(f"Error: {e.message}")
-```
-
-### Retry Logic
-```python
-import time
-from netpulse_sdk import NetPulseClient, NetPulseError
-
-def execute_with_retry(client, device, command, max_retries=3):
-    for attempt in range(max_retries):
-        try:
-            return client.execute_command(device, command)
-        except NetPulseError as e:
-            if e.code in ["NP-CONN-001", "NP-CONN-004"]:
-                if attempt < max_retries - 1:
-                    time.sleep(2 ** attempt)  # Exponential backoff
-                    continue
-            raise e
-```
-
-### Error Logging
-```python
-import logging
-from netpulse_sdk import NetPulseError
-
-logger = logging.getLogger(__name__)
-
-try:
-    result = client.execute_command("192.168.1.1", "show version")
-except NetPulseError as e:
-    logger.error(
-        f"Command execution failed: {e.code} - {e.message}",
-        extra={
-            "error_code": e.code,
-            "device": "192.168.1.1",
-            "command": "show version",
-            "trace_id": e.trace_id
-        }
-    )
-```
-
-## Common Error Scenarios
-
-### Scenario 1: Device Connection Issues
-```python
-# Common connection errors and solutions
-error_solutions = {
-    "NP-CONN-001": "Check device connectivity and increase timeout",
-    "NP-CONN-002": "Verify device credentials",
-    "NP-CONN-003": "Check SSH/Telnet service on device",
-    "NP-CONN-004": "Verify network connectivity to device"
+**Response Example**:
+```json
+{
+  "code": -1,
+  "message": "Value Error",
+  "data": "Specific error information"
 }
 ```
 
-### Scenario 2: Authentication Problems
+**Common Causes**:
+- Driver name doesn't exist
+- Template engine or parser not found
+- Configuration parameter values are invalid
+
+### 4. Internal Server Error
+
+**HTTP Status Code**: `500`
+
+**Response Example**:
+```json
+{
+  "code": -1,
+  "message": "Internal Server Error",
+  "data": "Error stack information"
+}
+```
+
+**Solution**:
+- View server logs for detailed error information
+- Check system resources (memory, CPU, network)
+- Verify Redis connection is normal
+
+## Task Execution Errors
+
+When task execution fails, error information is included in task result:
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "id": "job_id",
+    "status": "failed",
+    "result": {
+      "type": 2,
+      "error": {
+        "type": "ConnectionError",
+        "message": "Connection timeout"
+      }
+    }
+  }
+}
+```
+
+**Error Types**:
+- `ConnectionError`: Device connection failed
+- `TimeoutError`: Operation timeout
+- `AuthenticationError`: Device authentication failed
+- Other Python exception types
+
+## Error Handling Examples
+
+### Python Example
+
 ```python
-# Authentication troubleshooting
-def handle_auth_error(error_code):
-    if error_code == "NP-AUTH-001":
-        return "Check API key configuration"
-    elif error_code == "NP-AUTH-002":
-        return "Generate new API key"
-    elif error_code == "NP-AUTH-003":
-        return "Contact administrator for permissions"
-    else:
-        return "Unknown authentication error"
+import requests
+
+def call_api(url, api_key, data=None):
+    headers = {"X-API-KEY": api_key}
+    
+    try:
+        if data:
+            response = requests.post(url, headers=headers, json=data)
+        else:
+            response = requests.get(url, headers=headers)
+        
+        result = response.json()
+        
+        # Check business error code
+        if result.get("code") == -1:
+            print(f"API Error: {result.get('message')}")
+            print(f"Error Details: {result.get('data')}")
+            return None
+        
+        return result.get("data")
+        
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 403:
+            print("API key error, please check configuration")
+        elif e.response.status_code == 400:
+            print("Request parameter error")
+        else:
+            print(f"HTTP Error: {e.response.status_code}")
+        return None
 ```
 
-### Scenario 3: Command Execution Failures
+### Check Job Status
+
 ```python
-# Command execution troubleshooting
-def handle_command_error(error_code, device_type):
-    if error_code == "NP-CMD-001":
-        return "Increase command timeout"
-    elif error_code == "NP-CMD-003":
-        return f"Check command syntax for {device_type}"
-    elif error_code == "NP-CMD-004":
-        return "Check user privileges on device"
-    else:
-        return "Unknown command error"
+def check_job_status(job_id, api_key):
+    url = f"http://localhost:9000/job?id={job_id}"
+    headers = {"X-API-KEY": api_key}
+    
+    response = requests.get(url, headers=headers)
+    result = response.json()
+    
+    if result.get("code") == 200:
+        job = result.get("data", [])[0]
+        
+        if job.get("status") == "failed":
+            error = job.get("result", {}).get("error", {})
+            print(f"Task Failed: {error.get('type')} - {error.get('message')}")
+            return False
+        
+        return True
+    
+    return False
 ```
 
-## Error Monitoring
+## Debugging Recommendations
 
-### Prometheus Metrics
-```python
-# Error rate metrics
-netpulse_errors_total = Counter(
-    'netpulse_errors_total',
-    'Total number of errors',
-    ['error_code', 'category']
-)
-
-# Error rate by device
-netpulse_device_errors_total = Counter(
-    'netpulse_device_errors_total',
-    'Total number of device errors',
-    ['device', 'error_code']
-)
-```
-
-### Alerting Rules
-```yaml
-# Prometheus alerting rules
-groups:
-  - name: netpulse_errors
-    rules:
-      - alert: HighErrorRate
-        expr: rate(netpulse_errors_total[5m]) > 0.1
-        for: 2m
-        labels:
-          severity: warning
-        annotations:
-          summary: "High error rate detected"
-          
-      - alert: ConnectionFailures
-        expr: rate(netpulse_errors_total{category="CONN"}[5m]) > 0.05
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: "High connection failure rate"
-```
-
-## Troubleshooting Guide
-
-### Step 1: Identify Error Category
-1. Check error code prefix
-2. Refer to category-specific documentation
-3. Review error message and details
-
-### Step 2: Check Common Causes
-1. Verify configuration
-2. Check network connectivity
-3. Validate credentials
-4. Review system resources
-
-### Step 3: Apply Solutions
-1. Follow error-specific solutions
-2. Implement retry logic if appropriate
-3. Monitor error patterns
-4. Contact support if needed
-
-For more information, see:
-- [Log Analysis](../troubleshooting/log-analysis.md)
-- [Performance Tuning](../advanced/performance-tuning.md) 
+1. **View Logs**: Use `docker compose logs` to view detailed error information
+2. **Verify Configuration**: Confirm configuration file and environment variable settings are correct
+3. **Test Connection**: Use `/device/test-connection` endpoint to test device connection
+4. **Check Network**: Confirm network connection and device reachability

@@ -1,203 +1,131 @@
-# Environment Variables Reference
+# Environment Variables
 
-This document details all available environment variables in the NetPulse system, including their purpose, format, default values, and examples.
+This document lists available environment variables in NetPulse system. All environment variables use `NETPULSE_` prefix and connect nested configuration items through double underscore `__`.
 
-## 📋 Overview of Environment Variables
+## Naming Rules
 
-### By Function
-- **Basic Configuration**: Basic system settings
-- **Database Configuration**: Database connection and pool settings
-- **Redis Configuration**: Redis cache and message queue settings
-- **API Service Configuration**: API service runtime parameters
-- **Worker Configuration**: Worker service runtime parameters
-- **Device Connection Configuration**: Network device connection parameters
-- **Security Configuration**: Security-related settings
-- **Logging Configuration**: Logging settings
-- **Template Configuration**: Template engine settings
-- **Webhook Configuration**: Webhook notification settings
+Environment variable format: `NETPULSE_<SECTION>__<KEY>`
 
-## 🌐 Basic Configuration
+For example:
+- `NETPULSE_SERVER__PORT` corresponds to `server.port` in configuration
+- `NETPULSE_REDIS__TLS__ENABLED` corresponds to `redis.tls.enabled` in configuration
 
-### API_KEY
-**Purpose**: API access key for API authentication
-**Type**: string
-**Default**: Auto-generated
-**Example**:
+## Server Configuration
+
+| Environment Variable | Description | Default Value |
+|---------------------|-------------|---------------|
+| `NETPULSE_SERVER__HOST` | API service listen address | `0.0.0.0` |
+| `NETPULSE_SERVER__PORT` | API service listen port | `9000` |
+| `NETPULSE_SERVER__API_KEY` | API access key (required) | - |
+| `NETPULSE_SERVER__API_KEY_NAME` | HTTP header name for API key | `X-API-KEY` |
+| `NETPULSE_SERVER__GUNICORN_WORKER` | Gunicorn worker count | Auto-calculated |
+
+## Redis Configuration
+
+| Environment Variable | Description | Default Value |
+|---------------------|-------------|---------------|
+| `NETPULSE_REDIS__HOST` | Redis server address | `localhost` |
+| `NETPULSE_REDIS__PORT` | Redis server port | `6379` |
+| `NETPULSE_REDIS__PASSWORD` | Redis authentication password | `null` |
+| `NETPULSE_REDIS__TIMEOUT` | Redis connection timeout (seconds) | `30` |
+| `NETPULSE_REDIS__KEEPALIVE` | Redis connection keepalive time (seconds) | `30` |
+
+### Redis TLS Configuration
+
+| Environment Variable | Description | Default Value |
+|---------------------|-------------|---------------|
+| `NETPULSE_REDIS__TLS__ENABLED` | Whether to enable TLS | `false` |
+| `NETPULSE_REDIS__TLS__CA` | CA certificate path | `null` |
+| `NETPULSE_REDIS__TLS__CERT` | Client certificate path | `null` |
+| `NETPULSE_REDIS__TLS__KEY` | Client private key path | `null` |
+
+### Redis Sentinel Configuration
+
+| Environment Variable | Description | Default Value |
+|---------------------|-------------|---------------|
+| `NETPULSE_REDIS__SENTINEL__ENABLED` | Whether to enable Sentinel | `false` |
+| `NETPULSE_REDIS__SENTINEL__HOST` | Sentinel server address | `redis-sentinel` |
+| `NETPULSE_REDIS__SENTINEL__PORT` | Sentinel server port | `26379` |
+| `NETPULSE_REDIS__SENTINEL__MASTER_NAME` | Master node name | `mymaster` |
+| `NETPULSE_REDIS__SENTINEL__PASSWORD` | Sentinel authentication password | `null` |
+
+### Redis Key Configuration
+
+| Environment Variable | Description | Default Value |
+|---------------------|-------------|---------------|
+| `NETPULSE_REDIS__KEY__HOST_TO_NODE_MAP` | Key for host to node mapping | `netpulse:host_to_node_map` |
+| `NETPULSE_REDIS__KEY__NODE_INFO_MAP` | Key for node information mapping | `netpulse:node_info_map` |
+
+## Worker Configuration
+
+| Environment Variable | Description | Default Value |
+|---------------------|-------------|---------------|
+| `NETPULSE_WORKER__SCHEDULER` | Task scheduling plugin | `least_load` |
+| `NETPULSE_WORKER__TTL` | Worker heartbeat timeout (seconds) | `300` |
+| `NETPULSE_WORKER__PINNED_PER_NODE` | Maximum number of Pinned Workers running on each Node | `32` |
+
+## Job Configuration
+
+| Environment Variable | Description | Default Value |
+|---------------------|-------------|---------------|
+| `NETPULSE_JOB__TTL` | Maximum survival time of task in queue (seconds) | `1800` |
+| `NETPULSE_JOB__TIMEOUT` | Task execution timeout (seconds) | `300` |
+| `NETPULSE_JOB__RESULT_TTL` | Task result retention time (seconds) | `300` |
+
+## Log Configuration
+
+| Environment Variable | Description | Default Value |
+|---------------------|-------------|---------------|
+| `NETPULSE_LOG__LEVEL` | Log level | `INFO` |
+| `NETPULSE_LOG__CONFIG` | Log configuration file path | `config/log-config.yaml` |
+
+## Plugin Configuration
+
+| Environment Variable | Description | Default Value |
+|---------------------|-------------|---------------|
+| `NETPULSE_PLUGIN__DRIVER` | Device driver plugin directory | `netpulse/plugins/drivers/` |
+| `NETPULSE_PLUGIN__WEBHOOK` | Webhook plugin directory | `netpulse/plugins/webhooks/` |
+| `NETPULSE_PLUGIN__TEMPLATE` | Template plugin directory | `netpulse/plugins/templates/` |
+| `NETPULSE_PLUGIN__SCHEDULER` | Scheduler plugin directory | `netpulse/plugins/schedulers/` |
+
+## Other Configuration
+
+| Environment Variable | Description | Default Value |
+|---------------------|-------------|---------------|
+| `NETPULSE_CONFIG_FILE` | Configuration file path | `config/config.yaml` |
+
+## Usage Examples
+
+### Development Environment
+
 ```bash
-export API_KEY="np_sk_1234567890abcdef"
+# .env file
+NETPULSE_SERVER__API_KEY=dev-api-key-123
+NETPULSE_REDIS__HOST=localhost
+NETPULSE_REDIS__PORT=6379
+NETPULSE_LOG__LEVEL=DEBUG
 ```
 
-### DEBUG
-**Purpose**: Debug mode switch
-**Type**: boolean
-**Default**: false
-**Example**:
+### Production Environment
+
 ```bash
-export DEBUG=true
+# .env file
+NETPULSE_SERVER__API_KEY=your-secure-api-key
+NETPULSE_REDIS__HOST=redis-cluster.example.com
+NETPULSE_REDIS__PORT=6379
+NETPULSE_REDIS__PASSWORD=your-secure-password
+NETPULSE_REDIS__TLS__ENABLED=true
+NETPULSE_REDIS__TLS__CA=/etc/redis/tls/ca.crt
+NETPULSE_REDIS__TLS__CERT=/etc/redis/tls/client.crt
+NETPULSE_REDIS__TLS__KEY=/etc/redis/tls/client.key
+NETPULSE_WORKER__PINNED_PER_NODE=64
+NETPULSE_LOG__LEVEL=INFO
 ```
 
-### LOG_LEVEL
-**Purpose**: Logging level
-**Type**: string
-**Default**: INFO
-**Options**: DEBUG, INFO, WARNING, ERROR, CRITICAL
-**Example**:
-```bash
-export LOG_LEVEL=DEBUG
-```
+## Configuration Priority
 
-### TZ
-**Purpose**: System timezone setting
-**Type**: string
-**Default**: Asia/Shanghai
-**Example**:
-```bash
-export TZ=Asia/Shanghai
-export TZ=UTC
-export TZ=America/New_York
-```
-
-## 🗄️ Database Configuration
-
-### DATABASE_URL
-**Purpose**: Database connection URL
-**Type**: string
-**Default**: sqlite:///netpulse.db
-**Format**: `driver://user:password@host:port/database`
-**Example**:
-```bash
-# SQLite
-export DATABASE_URL="sqlite:///netpulse.db"
-
-# PostgreSQL
-export DATABASE_URL="postgresql://user:password@localhost:5432/netpulse"
-
-# MySQL
-export DATABASE_URL="mysql://user:password@localhost:3306/netpulse"
-```
-
-### DB_POOL_SIZE
-**Purpose**: Database connection pool size
-**Type**: integer
-**Default**: 10
-**Example**:
-```bash
-export DB_POOL_SIZE=20
-```
-
-### DB_MAX_OVERFLOW
-**Purpose**: Database connection pool overflow size
-**Type**: integer
-**Default**: 20
-**Example**:
-```bash
-export DB_MAX_OVERFLOW=30
-```
-
-### DB_ECHO
-**Purpose**: Show SQL statements
-**Type**: boolean
-**Default**: false
-**Example**:
-```bash
-export DB_ECHO=true
-```
-
-## 🔴 Redis Configuration
-
-### REDIS_URL
-**Purpose**: Redis connection URL
-**Type**: string
-**Default**: redis://localhost:6379
-**Format**: `redis://[password@]host[:port][/db]`
-**Example**:
-```bash
-# Local Redis
-export REDIS_URL="redis://localhost:6379"
-
-# With password
-export REDIS_URL="redis://password@localhost:6379"
-
-# Specify database
-export REDIS_URL="redis://localhost:6379/1"
-
-# With password and database
-export REDIS_URL="redis://password@localhost:6379/1"
-```
-
-### REDIS_DB
-**Purpose**: Redis database number
-**Type**: integer
-**Default**: 0
-**Example**:
-```bash
-export REDIS_DB=1
-```
-
-### REDIS_PASSWORD
-**Purpose**: Redis password
-**Type**: string
-**Default**: null
-**Example**:
-```bash
-export REDIS_PASSWORD="your_redis_password"
-```
-
-### REDIS_POOL_SIZE
-**Purpose**: Redis connection pool size
-**Type**: integer
-**Default**: 10
-**Example**:
-```bash
-export REDIS_POOL_SIZE=20
-```
-
-## 🚀 API Service Configuration
-
-### API_HOST
-**Purpose**: API service listen address
-**Type**: string
-**Default**: 0.0.0.0
-**Example**:
-```bash
-export API_HOST="0.0.0.0"
-export API_HOST="127.0.0.1"
-```
-
-### API_PORT
-**Purpose**: API service listen port
-**Type**: integer
-**Default**: 9000
-**Example**:
-```bash
-export API_PORT=9000
-```
-
-### API_WORKERS
-**Purpose**: Number of API worker processes
-**Type**: integer
-**Default**: 4
-**Example**:
-```bash
-export API_WORKERS=8
-```
-
-### API_TIMEOUT
-**Purpose**: API request timeout (seconds)
-**Type**: integer
-**Default**: 30
-**Example**:
-```bash
-export API_TIMEOUT=60
-```
-
-### API_CORS_ORIGINS
-**Purpose**: Allowed CORS origins
-**Type**: string
-**Default**: *
-**Example**:
-```bash
-export API_CORS_ORIGINS="*"
-```
-
-// ... 其余内容请继续补全，如需全部内容请告知 ... 
+Configuration loading priority (from high to low):
+1. Environment variables
+2. `.env` file
+3. YAML configuration file
+4. Default values
