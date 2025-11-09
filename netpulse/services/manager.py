@@ -551,6 +551,7 @@ class Manager:
 
         return r
 
+
     def push_to_batch_devices(self, reqs: list[PushingRequest]):
         if not reqs or len(reqs) == 0:
             return None

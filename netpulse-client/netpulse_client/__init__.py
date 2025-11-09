@@ -23,6 +23,8 @@ NetPulse Client - 网络设备自动化客户端
 """
 
 # 核心客户端类
+from importlib import metadata
+
 from .async_client import AsyncJobHandle, AsyncNetPulseClient
 from .client import NetPulseClient
 
@@ -52,8 +54,6 @@ from .models import (
     create_batch_device_request,
     create_device_request,
 )
-
-from importlib import metadata
 
 try:
     __version__ = metadata.version("netpulse-client")

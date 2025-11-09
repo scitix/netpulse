@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "netpulse"
-version = "0.1.1"
+version = "0.2.0"
 description = "API Server for Network Devices"
 authors = [
     { name = "Yongkun Li", email = "44155313+Nativu5@users.noreply.github.com" },
@@ -42,7 +42,8 @@ dependencies = [
     # Drivers
     "napalm~=5.0.0",
     "ncclient~=0.6.15",
-    "netmiko~=4.5.0",
+    "netmiko~=4.6.0",
+    "paramiko~=4.0.0",
     "puresnmp~=2.0.1",
     "pyeapi~=1.0.4",
 

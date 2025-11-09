@@ -32,6 +32,8 @@ NetPulse 提供了强大的插件系统，支持多种功能扩展：
 * **设备驱动**: 
   - 支持 Netmiko (Cisco/Huawei/Juniper等)
   - 支持 NAPALM (配置管理/状态检查)
+  - 支持 PyEAPI (Arista EOS)
+  - 支持 Paramiko (Linux服务器)
   - 支持自定义协议扩展
 
 * **模板引擎**: 

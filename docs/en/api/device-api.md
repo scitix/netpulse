@@ -293,7 +293,7 @@ Driver-specific parameters, vary by driver type and operation type. **Most scena
 }
 ```
 
-> **Detailed Parameter Description**: Please refer to driver-specific documentation ([Netmiko](../drivers/netmiko.md), [NAPALM](../drivers/napalm.md), [PyEAPI](../drivers/pyeapi.md))
+> **Detailed Parameter Description**: Please refer to driver-specific documentation ([Netmiko](../drivers/netmiko.md), [NAPALM](../drivers/napalm.md), [PyEAPI](../drivers/pyeapi.md), [Paramiko](../drivers/paramiko.md))
 
 ### options
 
@@ -615,6 +615,36 @@ response = requests.post(
 }
 ```
 
+#### Paramiko (Linux Servers)
+
+**Basic Connection Test**:
+```json
+{
+  "driver": "paramiko",
+  "connection_args": {
+    "host": "192.168.1.100",
+    "username": "admin",
+    "password": "your_password",
+    "port": 22,
+    "timeout": 30.0
+  }
+}
+```
+
+**Key Authentication Example**:
+```json
+{
+  "driver": "paramiko",
+  "connection_args": {
+    "host": "192.168.1.100",
+    "username": "admin",
+    "key_filename": "/path/to/private_key",
+    "passphrase": "your_key_passphrase",
+    "port": 22
+  }
+}
+```
+
 ### Connection Parameter Description
 
 **Netmiko Parameters**:
@@ -689,7 +719,7 @@ response = requests.post(
 
 ### Quick Tips
 
-- **Driver Selection**: Netmiko (universal SSH), NAPALM (multi-vendor), PyEAPI (Arista-specific)
+- **Driver Selection**: Netmiko (universal SSH), NAPALM (multi-vendor), PyEAPI (Arista-specific), Paramiko (Linux servers)
 - **Queue Strategy**: Usually no need to specify, system will automatically select based on driver
 - **Error Handling**: Implement retry mechanism, record detailed error information
 - **Task Tracking**: Use `/job` interface to query task status, or use webhook callbacks

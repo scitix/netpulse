@@ -9,6 +9,7 @@ NetPulse 采用插件化的驱动架构，支持快速扩展新的设备驱动�
 | **Netmiko** | SSH/Telnet | **大多数场景（推荐）** | 支持设备类型较广泛，长连接复用可提升性能 |
 | **NAPALM** | SSH/HTTP/HTTPS | 需要配置合并/回滚 | 支持配置合并、替换、回滚 |
 | **PyEAPI** | HTTP/HTTPS | Arista EOS设备 | 原生API，性能较好，JSON结构化数据 |
+| **Paramiko** | SSH | Linux服务器 | 原生SSH，支持文件传输、代理连接、sudo等 |
 
 ## 驱动说明
 
@@ -66,10 +67,32 @@ NetPulse 基于插件化的驱动架构，可以快速扩展新的设备驱动�
 
 📖 [查看 PyEAPI 详细文档](./pyeapi.md)
 
+### Paramiko
+
+**管理Linux服务器时的推荐选择**。基于原生SSH协议，支持文件传输、代理连接、sudo等高级功能。
+
+- 支持设备：Linux服务器（Ubuntu、CentOS、Debian等）
+- 推荐队列策略：FIFO（短连接）
+- 适用场景：系统监控、配置管理、文件传输、批量服务器操作
+
+**关键参数**：
+- `connection_args.host`（必需）：服务器地址
+- `connection_args.username`（必需）：SSH用户名
+- `connection_args.password`：密码认证
+- `connection_args.key_filename`：私钥文件路径
+- `connection_args.pkey`：私钥内容（PEM格式字符串）
+- `connection_args.proxy_host`：SSH代理/跳板机地址
+- `driver_args.timeout`：命令执行超时时间
+- `driver_args.get_pty`：是否使用伪终端（PTY）
+- `driver_args.file_transfer`：文件传输操作（上传/下载）
+
+📖 [查看 Paramiko 详细文档](./paramiko.md)
+
 ## 选择建议
 
 | 场景 | 推荐驱动 |
 |------|---------|
+| Linux服务器 | **Paramiko（首选）** |
 | Arista设备 | **PyEAPI（首选）** |
 | Cisco/Juniper/其他SSH设备 | **Netmiko（推荐）** |
 | 需要配置合并/回滚 | NAPALM |
@@ -77,6 +100,7 @@ NetPulse 基于插件化的驱动架构，可以快速扩展新的设备驱动�
 ## 快速决策
 
 ```
+Linux服务器？ → Paramiko
 Arista设备？ → PyEAPI
 需要配置合并/回滚？ → NAPALM
 其他场景 → Netmiko（推荐）

@@ -83,6 +83,7 @@ Device Operation API provides device query, configuration, and connection testin
 - Netmiko (SSH) - Universal SSH connection
 - NAPALM (multi-vendor) - Standardized interface
 - PyEAPI (Arista-specific) - HTTP/HTTPS API
+- Paramiko (SSH) - Linux server management
 
 For detailed information, see: [Device Operation API](./device-api.md)
 
@@ -129,6 +130,11 @@ For detailed information, see: [Job Management API](./job-api.md)
 - **Connection Method**: HTTP/HTTPS API
 - **Features**: Native API support, excellent performance
 
+### Paramiko (Linux Servers)
+- **Device Types**: Linux servers (Ubuntu, CentOS, Debian, etc.)
+- **Connection Method**: SSH
+- **Features**: Native SSH, supports file transfer, proxy connections, sudo, etc.
+
 ## Queue Strategies
 
 NetPulse supports two queue strategies, and the system will automatically select the appropriate strategy based on driver type:
@@ -140,12 +146,12 @@ NetPulse supports two queue strategies, and the system will automatically select
 - **Use Cases**: Frequent operations on the same device, need to maintain connection state
 
 ### FIFO Queue (fifo)
-- **Applicable Drivers**: PyEAPI (HTTP/HTTPS stateless connections)
+- **Applicable Drivers**: PyEAPI (HTTP/HTTPS stateless connections), Paramiko (Linux servers)
 - **Features**: First-in-first-out, new connection each time
 - **Advantages**: Simple and efficient, suitable for stateless operations
-- **Use Cases**: HTTP API calls, no need to maintain connection state
+- **Use Cases**: HTTP API calls, long-running tasks, no need to maintain connection state
 
-> **Tip**: If `queue_strategy` is not specified, the system will automatically select based on driver type (Netmiko/NAPALM → `pinned`, PyEAPI → `fifo`)
+> **Tip**: If `queue_strategy` is not specified, the system will automatically select based on driver type (Netmiko/NAPALM → `pinned`, PyEAPI/Paramiko → `fifo`)
 
 ## Core Parameters Quick Reference
 

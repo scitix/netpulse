@@ -21,7 +21,7 @@ Client → API Request → Controller → Task Queue → Worker → Network Devi
       Driver Selection  Task Dispatch  Queue Strategy  Connection Reuse
 ```
 
-- **Driver**: How to connect to devices (Netmiko/NAPALM/PyEAPI)
+- **Driver**: How to connect to devices (Netmiko/NAPALM/PyEAPI/Paramiko)
 - **Queue**: How to schedule tasks (FIFO/Pinned)
 - **Job**: Asynchronous execution, need to query results
 

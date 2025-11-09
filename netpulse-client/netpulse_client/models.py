@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class DriverName(str, Enum):
     NETMIKO = "netmiko"
     NAPALM = "napalm"
+    PARAMIKO = "paramiko"
     PYEAPI = "pyeapi"
 
 
@@ -300,6 +301,8 @@ def create_device_request(
             conn_args = NapalmConnectionArgs(**connection_args)
         elif driver_name == DriverName.PYEAPI:
             conn_args = PyeapiConnectionArg(**connection_args)
+        elif driver_name == DriverName.PARAMIKO:
+            conn_args = ConnectionArgs(**connection_args)
         else:
             conn_args = ConnectionArgs(**connection_args)
     except ValueError:

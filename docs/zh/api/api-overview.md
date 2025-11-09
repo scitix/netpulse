@@ -8,7 +8,7 @@ NetPulse 提供统一的API接口来管理各种网络设备。本文档介绍Ne
 
 ### API 端点
 - **基础URL**: `http://localhost:9000`
-- **API版本**: v0.1
+- **API版本**: v0.2
 - **认证方式**: API Key (X-API-KEY Header)
 
 ### 认证
@@ -83,6 +83,7 @@ NetPulse 提供以下API端点，所有端点都需要API Key认证。
 - Netmiko (SSH) - 通用SSH连接
 - NAPALM (跨厂商) - 标准化接口
 - PyEAPI (Arista专用) - HTTP/HTTPS API
+- Paramiko (SSH) - Linux服务器管理
 
 详细说明请参考：[设备操作 API](./device-api.md)
 
@@ -129,6 +130,11 @@ NetPulse 提供以下API端点，所有端点都需要API Key认证。
 - **连接方式**: HTTP/HTTPS API
 - **特点**: 原生API支持，性能优异
 
+### Paramiko (Linux服务器)
+- **设备类型**: Linux服务器（Ubuntu、CentOS、Debian等）
+- **连接方式**: SSH
+- **特点**: 原生SSH，支持文件传输、代理连接、sudo等
+
 ## 队列策略
 
 NetPulse 支持两种队列策略，系统会根据驱动类型自动选择合适的策略：
@@ -140,12 +146,12 @@ NetPulse 支持两种队列策略，系统会根据驱动类型自动选择合�
 - **使用场景**：频繁操作同一设备，需要保持连接状态
 
 ### FIFO队列 (fifo)
-- **适用驱动**：PyEAPI（HTTP/HTTPS无状态连接）
+- **适用驱动**：PyEAPI（HTTP/HTTPS无状态连接）、Paramiko（Linux服务器）
 - **特点**：先进先出，每次新建连接
 - **优势**：简单高效，适合无状态操作
-- **使用场景**：HTTP API调用，无需保持连接状态
+- **使用场景**：HTTP API调用、长时间运行任务，无需保持连接状态
 
-> **提示**：如果不指定 `queue_strategy`，系统会根据驱动类型自动选择（Netmiko/NAPALM → `pinned`，PyEAPI → `fifo`）
+> **提示**：如果不指定 `queue_strategy`，系统会根据驱动类型自动选择（Netmiko/NAPALM → `pinned`，PyEAPI/Paramiko → `fifo`）
 
 ## 核心参数快速参考
 

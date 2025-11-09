@@ -599,6 +599,62 @@
 						"description": "PyEAPI Arista设备连接测试 - HTTP/HTTPS API"
 					},
 					"response": []
+				},
+				{
+					"name": "Paramiko连接测试 - 密码认证",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22,\n    \"timeout\": 30.0,\n    \"host_key_policy\": \"auto_add\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/device/test-connection",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"test-connection"
+							]
+						},
+						"description": "Paramiko Linux服务器连接测试 - 密码认证"
+					},
+					"response": []
+				},
+				{
+					"name": "Paramiko连接测试 - 密钥认证",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"key_filename\": \"/path/to/private_key\",\n    \"passphrase\": \"{{key_passphrase}}\",\n    \"port\": 22,\n    \"timeout\": 30.0\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/device/test-connection",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"test-connection"
+							]
+						},
+						"description": "Paramiko Linux服务器连接测试 - 密钥文件认证"
+					},
+					"response": []
 				}
 			],
 			"description": "各种驱动的设备连接测试功能"
@@ -1516,6 +1572,344 @@
 			"description": "PyEAPI驱动的Arista专用操作"
 		},
 		{
+			"name": "Paramiko Driver - Linux Server",
+			"item": [
+				{
+					"name": "Paramiko查询操作",
+					"item": [
+						{
+							"name": "基础查询 - 单命令",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22,\n    \"timeout\": 30.0\n  },\n  \"command\": \"uname -a\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/execute",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"execute"
+									]
+								},
+								"description": "Paramiko基础单命令查询 - 系统信息"
+							},
+							"response": []
+						},
+						{
+							"name": "多命令查询 - 系统信息",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22\n  },\n  \"command\": [\n    \"uname -a\",\n    \"df -h\",\n    \"free -m\",\n    \"uptime\",\n    \"whoami\"\n  ],\n  \"driver_args\": {\n    \"timeout\": 30.0\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/execute",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"execute"
+									]
+								},
+								"description": "Paramiko多命令查询 - 系统信息采集"
+							},
+							"response": []
+						},
+						{
+							"name": "查询 - 密钥认证",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"key_filename\": \"/path/to/private_key\",\n    \"passphrase\": \"{{key_passphrase}}\",\n    \"port\": 22\n  },\n  \"command\": \"df -h\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/execute",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"execute"
+									]
+								},
+								"description": "Paramiko查询 - 使用密钥文件认证"
+							},
+							"response": []
+						},
+						{
+							"name": "查询 - 网络诊断",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [\n    \"ip addr show\",\n    \"ip route show\",\n    \"ss -tuln\",\n    \"netstat -rn\"\n  ],\n  \"driver_args\": {\n    \"timeout\": 60.0\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/execute",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"execute"
+									]
+								},
+								"description": "Paramiko网络诊断 - 网络配置和连接状态"
+							},
+							"response": []
+						}
+					],
+					"description": "Paramiko驱动的查询操作示例"
+				},
+				{
+					"name": "Paramiko配置操作",
+					"item": [
+						{
+							"name": "基础配置 - 单命令",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"config\": \"echo 'Hello World' > /tmp/test.txt\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/execute",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"execute"
+									]
+								},
+								"description": "Paramiko基础配置 - 单命令执行"
+							},
+							"response": []
+						},
+						{
+							"name": "配置操作 - 使用sudo",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"config\": [\n    \"echo 'server.example.com' > /etc/hostname\",\n    \"systemctl restart hostname\"\n  ],\n  \"driver_args\": {\n    \"sudo\": true,\n    \"sudo_password\": \"{{sudo_password}}\",\n    \"timeout\": 60.0\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/execute",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"execute"
+									]
+								},
+								"description": "Paramiko配置操作 - 使用sudo权限执行"
+							},
+							"response": []
+						},
+						{
+							"name": "配置操作 - 多行配置",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"key_filename\": \"/path/to/private_key\"\n  },\n  \"config\": [\n    \"cat > /tmp/config.sh << 'EOF'\",\n    \"#!/bin/bash\",\n    \"echo 'Configuration script'\",\n    \"EOF\",\n    \"chmod +x /tmp/config.sh\"\n  ],\n  \"driver_args\": {\n    \"timeout\": 30.0,\n    \"get_pty\": true\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/execute",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"execute"
+									]
+								},
+								"description": "Paramiko多行配置 - 创建脚本文件"
+							},
+							"response": []
+						}
+					],
+					"description": "Paramiko驱动的配置操作示例"
+				},
+				{
+					"name": "Paramiko文件传输",
+					"item": [
+						{
+							"name": "文件上传",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22\n  },\n  \"command\": [\"__FILE_TRANSFER__\"],\n  \"driver_args\": {\n    \"file_transfer\": {\n      \"operation\": \"upload\",\n      \"local_path\": \"/local/file.txt\",\n      \"remote_path\": \"/remote/file.txt\",\n      \"resume\": false,\n      \"chunk_size\": 32768\n    }\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/execute",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"execute"
+									]
+								},
+								"description": "Paramiko文件上传 - SFTP上传文件到远程服务器"
+							},
+							"response": []
+						},
+						{
+							"name": "文件下载",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22\n  },\n  \"command\": [\"__FILE_TRANSFER__\"],\n  \"driver_args\": {\n    \"file_transfer\": {\n      \"operation\": \"download\",\n      \"local_path\": \"/local/file.txt\",\n      \"remote_path\": \"/remote/file.txt\",\n      \"resume\": true,\n      \"chunk_size\": 32768\n    }\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/execute",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"execute"
+									]
+								},
+								"description": "Paramiko文件下载 - SFTP从远程服务器下载文件（支持断点续传）"
+							},
+							"response": []
+						}
+					],
+					"description": "Paramiko驱动的文件传输操作"
+				},
+				{
+					"name": "Paramiko SSH代理连接",
+					"item": [
+						{
+							"name": "通过代理连接 - 密码认证",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"proxy_host\": \"{{proxy_host}}\",\n    \"proxy_username\": \"{{proxy_username}}\",\n    \"proxy_password\": \"{{proxy_password}}\",\n    \"proxy_port\": 22\n  },\n  \"command\": \"uname -a\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/execute",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"execute"
+									]
+								},
+								"description": "Paramiko SSH代理连接 - 通过跳板机连接（密码认证）"
+							},
+							"response": []
+						},
+						{
+							"name": "通过代理连接 - 密钥认证",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"key_filename\": \"/path/to/key\",\n    \"proxy_host\": \"{{proxy_host}}\",\n    \"proxy_username\": \"{{proxy_username}}\",\n    \"proxy_key_filename\": \"/path/to/proxy_key\"\n  },\n  \"command\": \"df -h\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/execute",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"execute"
+									]
+								},
+								"description": "Paramiko SSH代理连接 - 通过跳板机连接（密钥认证）"
+							},
+							"response": []
+						}
+					],
+					"description": "Paramiko驱动的SSH代理/跳板机连接示例"
+				}
+			],
+			"description": "Paramiko驱动的Linux服务器管理操作"
+		},
+		{
 			"name": "Batch Operations",
 			"item": [
 				{
@@ -2309,6 +2703,26 @@
 			"key": "api_token",
 			"value": "your-api-token-here",
 			"type": "string"
+		},
+		{
+			"key": "key_passphrase",
+			"value": "your_key_passphrase"
+		},
+		{
+			"key": "sudo_password",
+			"value": "your_sudo_password"
+		},
+		{
+			"key": "proxy_host",
+			"value": "192.168.1.100"
+		},
+		{
+			"key": "proxy_username",
+			"value": "admin"
+		},
+		{
+			"key": "proxy_password",
+			"value": "your_proxy_password"
 		}
 	]
 }

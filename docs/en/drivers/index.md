@@ -9,6 +9,7 @@ NetPulse adopts a plugin-based driver architecture, supporting rapid extension o
 | **Netmiko** | SSH/Telnet | **Most scenarios (recommended)** | Supports a wide range of device types, long connection reuse improves performance |
 | **NAPALM** | SSH/HTTP/HTTPS | Need configuration merge/rollback | Supports configuration merge, replace, rollback |
 | **PyEAPI** | HTTP/HTTPS | Arista EOS devices | Native API, excellent performance, JSON structured data |
+| **Paramiko** | SSH | Linux servers | Native SSH, supports file transfer, proxy connections, sudo, etc. |
 
 ## Driver Description
 
@@ -66,10 +67,32 @@ NetPulse is based on a plugin-based driver architecture that can quickly extend 
 
 📖 [View PyEAPI Detailed Documentation](./pyeapi.md)
 
+### Paramiko
+
+**Recommended choice when managing Linux servers**. Based on native SSH protocol, supports file transfer, proxy connections, sudo, and other advanced features.
+
+- Supported Devices: Linux servers (Ubuntu, CentOS, Debian, etc.)
+- Recommended Queue Strategy: FIFO (short connection)
+- Use Cases: System monitoring, configuration management, file transfer, batch server operations
+
+**Key Parameters**:
+- `connection_args.host` (required)`: Server address
+- `connection_args.username` (required)`: SSH username
+- `connection_args.password`: Password authentication
+- `connection_args.key_filename`: Private key file path
+- `connection_args.pkey`: Private key content (PEM format string)
+- `connection_args.proxy_host`: SSH proxy/jump host address
+- `driver_args.timeout`: Command execution timeout
+- `driver_args.get_pty`: Whether to use pseudo-terminal (PTY)
+- `driver_args.file_transfer`: File transfer operation (upload/download)
+
+📖 [View Paramiko Detailed Documentation](./paramiko.md)
+
 ## Selection Recommendations
 
 | Scenario | Recommended Driver |
 |----------|-------------------|
+| Linux servers | **Paramiko (preferred)** |
 | Arista devices | **PyEAPI (preferred)** |
 | Cisco/Juniper/Other SSH devices | **Netmiko (recommended)** |
 | Need configuration merge/rollback | NAPALM |
@@ -77,6 +100,7 @@ NetPulse is based on a plugin-based driver architecture that can quickly extend 
 ## Quick Decision
 
 ```
+Linux server? → Paramiko
 Arista device? → PyEAPI
 Need configuration merge/rollback? → NAPALM
 Other scenarios → Netmiko (recommended)

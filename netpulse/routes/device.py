@@ -126,6 +126,8 @@ def _test_connection(
             return _test_napalm_connection(connection_args)
         elif driver == "pyeapi":
             return _test_pyeapi_connection(connection_args)
+        elif driver == "paramiko":
+            return _test_paramiko_connection(connection_args)
         else:
             return False, f"Unsupported driver: {driver}", None
 
@@ -211,3 +213,46 @@ def _test_pyeapi_connection(
 
     except Exception as e:
         return False, str(e), None
+
+
+def _test_paramiko_connection(
+    connection_args: DriverConnectionArgs,
+) -> Tuple[bool, Optional[str], Optional[dict]]:
+    try:
+        from ..plugins.drivers.paramiko import ParamikoDriver
+        from ..plugins.drivers.paramiko.model import (
+            ParamikoConnectionArgs,
+            ParamikoSendCommandArgs,
+        )
+
+        # Convert to ParamikoConnectionArgs
+        if not isinstance(connection_args, ParamikoConnectionArgs):
+            paramiko_args = ParamikoConnectionArgs.model_validate(
+                connection_args.model_dump(exclude_none=True)
+            )
+        else:
+            paramiko_args = connection_args
+
+        # Use driver for connection test
+        driver = ParamikoDriver(
+            args=ParamikoSendCommandArgs(),
+            conn_args=paramiko_args,
+        )
+
+        session = driver.connect()
+        stdin, stdout, stderr = session.exec_command("uname -a", timeout=5)
+        output = stdout.read().decode("utf-8", errors="replace")
+
+        device_info = {
+            "host": paramiko_args.host,
+            "system_info": output.strip(),
+            "connection_type": "paramiko",
+        }
+
+        driver.disconnect(session)
+        return True, None, device_info
+
+    except Exception as e:
+        return False, str(e), None
+
+

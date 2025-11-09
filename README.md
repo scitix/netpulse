@@ -32,6 +32,8 @@ NetPulse offers a powerful plugin system supporting various functional extension
 * **Device Drivers**: 
   - Netmiko support (Cisco/Huawei/Juniper etc.)
   - NAPALM support (Configuration management/State verification)
+  - PyEAPI support (Arista EOS)
+  - Paramiko support (Linux servers)
   - Custom protocol extension support
 
 * **Template Engine**: 

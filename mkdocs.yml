@@ -79,6 +79,7 @@ plugins:
             Netmiko Driver: Netmiko驱动
             NAPALM Driver: NAPALM驱动
             PyEAPI Driver: PyEAPI驱动
+            Paramiko Driver: Paramiko驱动
             Technical Architecture: 技术架构
             Architecture Overview: 架构概览
             Plugin System: 插件系统
@@ -149,6 +150,7 @@ nav:
       - Netmiko Driver: en/drivers/netmiko.md
       - NAPALM Driver: en/drivers/napalm.md
       - PyEAPI Driver: en/drivers/pyeapi.md
+      - Paramiko Driver: en/drivers/paramiko.md
   - Technical Architecture:
       - Architecture Overview: en/architecture/architecture-overview.md
       - Plugin System: en/architecture/plugin-system.md

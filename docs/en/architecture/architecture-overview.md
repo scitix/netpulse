@@ -289,7 +289,7 @@ NetPulse improves system performance, availability, and scalability through the 
 **Design Philosophy**: Extend functionality through plugin mechanism, drivers are one type of plugin.
 
 **Supported Extensions**:
-- **Device Drivers**: Can add new device drivers (currently supports Netmiko, NAPALM, pyeAPI, etc.)
+- **Device Drivers**: Can add new device drivers (currently supports Netmiko, NAPALM, PyEAPI, Paramiko, etc.)
 - **Template Engines**: Can add new template formats (currently supports Jinja2, TextFSM, TTP, etc.)
 - **Scheduling Algorithms**: Can add new scheduling strategies (currently supports greedy, minimum load, etc.)
 - **Notification Mechanisms**: Can add new Webhook implementations
