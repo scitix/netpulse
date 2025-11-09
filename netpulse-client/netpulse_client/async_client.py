@@ -185,8 +185,8 @@ class AsyncNetPulseClient:
 
         Args:
             device: 目标设备
-            command: 要执行的命令 (Pull操作) 
-            config: 要推送的配置 (Push操作) 
+            command: 要执行的命令 (Pull操作)
+            config: 要推送的配置 (Push操作)
             parse_with: 解析器类型
             save: 是否保存配置
             dry_run: 是否为干运行模式
@@ -229,9 +229,15 @@ class AsyncNetPulseClient:
         }
 
         if parse_with:
+            cmd_or_cfg = command or config
+            template_name = (
+                cmd_or_cfg.replace(" ", "_")
+                if isinstance(cmd_or_cfg, str)
+                else cmd_or_cfg[0].replace(" ", "_")
+            )
             options["parsing"] = {
                 "name": parse_with,
-                "template": f"file:///templates/{(command or config).replace(' ', '_') if isinstance((command or config), str) else (command or config)[0].replace(' ', '_')}.{parse_with}",
+                "template": f"file:///templates/{template_name}.{parse_with}",
             }
 
         # 创建请求
@@ -317,8 +323,8 @@ class AsyncNetPulseClient:
 
         Args:
             devices: 设备列表
-            command: 要执行的命令 (Pull操作) 
-            config: 要推送的配置 (Push操作) 
+            command: 要执行的命令 (Pull操作)
+            config: 要推送的配置 (Push操作)
             parse_with: 解析器类型
             save: 是否保存配置
             dry_run: 是否为干运行模式
@@ -373,9 +379,15 @@ class AsyncNetPulseClient:
         }
 
         if parse_with:
+            cmd_or_cfg = command or config
+            template_name = (
+                cmd_or_cfg.replace(" ", "_")
+                if isinstance(cmd_or_cfg, str)
+                else cmd_or_cfg[0].replace(" ", "_")
+            )
             options["parsing"] = {
                 "name": parse_with,
-                "template": f"file:///templates/{(command or config).replace(' ', '_') if isinstance((command or config), str) else (command or config)[0].replace(' ', '_')}.{parse_with}",
+                "template": f"file:///templates/{template_name}.{parse_with}",
             }
 
         # 创建请求
@@ -722,14 +734,16 @@ class AsyncNetPulseClient:
         """
         异步激进递进式重试等待任务结果
 
-        轮询策略: 
+        轮询策略:
         - 初始延迟: 0.4秒
-        - 递增步长序列: 0.1s -> 0.2s -> 0.3s -> 0.5s -> 1.5s -> 2.5s -> 4.0s -> 6.0s -> 9.0s -> 13.5s -> 20.0s -> 30.0s
-        - 轮询间隔: 0.4s -> 0.5s -> 0.7s -> 1.0s -> 1.5s -> 3.0s -> 5.5s -> 9.5s -> 15.5s -> 24.5s -> 37.5s -> 57.5s
+        - 递增步长序列: 0.1s -> 0.2s -> 0.3s -> 0.5s -> 1.5s -> 2.5s -> 4.0s
+          -> 6.0s -> 9.0s -> 13.5s -> 20.0s -> 30.0s
+        - 轮询间隔: 0.4s -> 0.5s -> 0.7s -> 1.0s -> 1.5s -> 3.0s -> 5.5s
+          -> 9.5s -> 15.5s -> 24.5s -> 37.5s -> 57.5s
         - 最大间隔: 30秒
         - 最大总时长: 120秒
 
-        示例轮询序列: 
+        示例轮询序列:
         第1次: 0.4s (初始)
         第2次: 0.5s (0.4s + 0.1s)
         第3次: 0.7s (0.5s + 0.2s)
@@ -766,16 +780,19 @@ class AsyncNetPulseClient:
 
                     if status in ["finished", "failed"]:
                         logger.info(
-                            f"任务 {job_id} 完成, 总耗时: {total_elapsed:.2f}秒, 轮询次数: {attempt}"
+                            f"任务 {job_id} 完成, 总耗时: {total_elapsed:.2f}秒, "
+                            f"轮询次数: {attempt}"
                         )
                         return result
                     elif status == "queued":
                         logger.info(
-                            f"任务 {job_id} 排队中... (第{attempt}次轮询, 已耗时{total_elapsed:.2f}秒)"
+                            f"任务 {job_id} 排队中... "
+                            f"(第{attempt}次轮询, 已耗时{total_elapsed:.2f}秒)"
                         )
                     elif status == "started":
                         logger.info(
-                            f"任务 {job_id} 执行中... (第{attempt}次轮询, 已耗时{total_elapsed:.2f}秒)"
+                            f"任务 {job_id} 执行中... "
+                            f"(第{attempt}次轮询, 已耗时{total_elapsed:.2f}秒)"
                         )
 
                 # 激进递进式延迟
@@ -796,7 +813,8 @@ class AsyncNetPulseClient:
                 # 记录轮询信息
                 if attempt % 3 == 0:  # 每3次轮询记录一次详细信息
                     logger.info(
-                        f"任务 {job_id} 轮询中... 第{attempt}次, 当前延迟: {delay:.2f}s, 总耗时: {total_elapsed:.2f}s"
+                        f"任务 {job_id} 轮询中... 第{attempt}次, "
+                        f"当前延迟: {delay:.2f}s, 总耗时: {total_elapsed:.2f}s"
                     )
 
             except Exception as e:

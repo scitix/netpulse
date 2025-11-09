@@ -862,7 +862,7 @@ def main():
         signal.signal(signal.SIGINT, lambda sig, frame: sys.exit(0))
         _ = CliApp.run(RootSettings)
     except Exception as e:
-        print(f"Uncatched exception: {e}")
+        logging.error(f"Uncaught exception: {e}", exc_info=True)
         sys.exit(1)
 
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "netpulse-client"
-version = "0.1.0"
+version = "0.1.1"
 description = "Professional Python SDK for NetPulse network automation platform"
 authors = [
     { name = "NetPulse Team", email = "team@netpulse.dev" },
@@ -106,6 +106,8 @@ strict_equality = true
 [tool.ruff]
 line-length = 100
 target-version = "py38"
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "RUF", "I"]
 
 [tool.pytest.ini_options]
