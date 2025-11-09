@@ -3,6 +3,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis-nodes
+  namespace: netpulse
   labels: {app: redis}
 spec:
   clusterIP: None # Headless Service
@@ -17,6 +18,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: redis-nodes
+  namespace: netpulse
 spec:
   serviceName: redis-nodes
   replicas: 3 # redis-0 is initial master
@@ -89,6 +91,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis-sentinel
+  namespace: netpulse
   labels: {app: redis-sentinel}
 spec:
   ports:
@@ -101,6 +104,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: redis-sentinel
+  namespace: netpulse
 spec:
   serviceName: redis-sentinel
   replicas: 3
@@ -173,6 +177,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: pdb-redis
+  namespace: netpulse
 spec:
   minAvailable: 2
   selector:
@@ -183,6 +188,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: pdb-redis-sentinel
+  namespace: netpulse
 spec:
   minAvailable: 2
   selector:
