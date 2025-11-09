@@ -9,56 +9,126 @@ This tool provides a lightweight HTTP server that can receive and display webhoo
 ## Features
 
 - **Webhook Reception**: Receives POST requests at `/webhook` endpoint
-- **Message Storage**: Stores received webhook messages in memory
+- **Message Storage**: Stores received webhook messages in memory with size limits
 - **Detailed Logging**: Provides comprehensive logging of webhook requests
 - **Status Monitoring**: Offers endpoints to check server status and view messages
 - **Error Parsing**: Intelligently parses and displays NetPulse error messages
 - **JSON Formatting**: Pretty-prints JSON responses for better readability
+- **Message Filtering**: Filter messages by job ID, time range, and success status
+- **Pagination**: Support for paginated message retrieval
+- **Statistics**: Track success/failure rates and message counts
+- **Export**: Export messages in JSON or CSV format
+- **Auto Cleanup**: Automatic cleanup of old messages based on retention policy
+- **CORS Support**: Configurable CORS for frontend access
+- **Health Check**: Standard health check endpoint for monitoring
 
 ## Installation
 
 ### Prerequisites
 
-- FastAPI
-- Uvicorn
+- Python 3.12+
+- NetPulse project dependencies
 
 ### Setup
 
-1. Navigate to the webhook test server directory:
-   ```bash
-   cd tools/webhook
-   ```
+Dependencies are already defined in the `api` group of `[project.optional-dependencies]` in `pyproject.toml`.
 
-2. Install dependencies:
-   ```bash
-   pip install fastapi uvicorn
-   ```
+**Method 1: If virtual environment has pip (Recommended)**
+
+```bash
+# Activate virtual environment
+source .venv/bin/activate
+
+# Install API dependencies (including FastAPI and Uvicorn)
+pip install -e ".[api]"
+```
+
+**Method 2: If virtual environment doesn't have pip (using system pip)**
+
+Use system pip to install directly to the virtual environment, referencing versions defined in `pyproject.toml`:
+
+```bash
+# From project root directory, install dependencies needed for webhook server
+python3 -m pip install --target .venv/lib/python3.12/site-packages \
+    "fastapi~=0.115.12" \
+    "uvicorn~=0.34.0"
+```
+
+> **Note**: Version numbers come from the `api` group in `[project.optional-dependencies]` of `pyproject.toml`. If you need to install all API dependencies (including gunicorn, uvloop, etc.), check the file for the complete list.
 
 ## Usage
 
 ### Starting the Server
 
+From the project root directory:
+
 ```bash
+python tools/webhook/webhook_server.py
+```
+
+Or from the webhook directory:
+
+```bash
+cd tools/webhook
 python webhook_server.py
 ```
 
-The server will start on `http://localhost:8888`
+The server will start on `http://localhost:8888` by default.
+
+#### Command Line Arguments
+
+You can specify IP address and port using command line arguments:
+
+```bash
+# Specify host and port
+python tools/webhook/webhook_server.py --host 127.0.0.1 --port 9999
+
+# Specify only port
+python tools/webhook/webhook_server.py --port 9999
+
+# Specify only host
+python tools/webhook/webhook_server.py --host 192.168.1.100
+
+# Other options
+python tools/webhook/webhook_server.py --host 0.0.0.0 --port 8888 --max-messages 20000 --retention-hours 48 --no-cors
+```
+
+Available command line arguments:
+- `--host`: Server host address (default: 0.0.0.0)
+- `--port`: Server port (default: 8888)
+- `--max-messages`: Maximum messages to store (default: 10000)
+- `--retention-hours`: Message retention time in hours (default: 24)
+- `--no-cors`: Disable CORS (default: enabled)
+
+#### Environment Variables
+
+You can also configure the server using environment variables (with `WEBHOOK_` prefix):
+- `WEBHOOK_SERVER_PORT`: Server port (default: 8888)
+- `WEBHOOK_SERVER_HOST`: Server host (default: 0.0.0.0)
+- `WEBHOOK_MAX_MESSAGES`: Maximum messages to store (default: 10000)
+- `WEBHOOK_RETENTION_HOURS`: Message retention time in hours (default: 24)
+- `WEBHOOK_ENABLE_CORS`: Enable CORS (default: true)
+
+> **Note**: Command line arguments take precedence over environment variables.
 
 ### Available Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/` | GET | Server information and available endpoints |
+| `/health` | GET | Health check endpoint |
 | `/webhook` | POST | Receive webhook messages from NetPulse |
 | `/webhook/status` | GET | Check server status and message count |
-| `/webhook/messages` | GET | View all received webhook messages |
+| `/webhook/messages` | GET | View messages with filtering & pagination |
+| `/webhook/stats` | GET | Get detailed statistics |
+| `/webhook/export` | GET | Export messages (JSON/CSV format) |
 | `/webhook/clear` | DELETE | Clear all stored messages |
 
 ### Testing with NetPulse
 
 1. Start the webhook test server:
    ```bash
-   python test_server.py
+   python tools/webhook/webhook_server.py
    ```
 
 2. Configure NetPulse to send webhooks to:
@@ -142,7 +212,57 @@ The server handles various error scenarios:
 
 - **Invalid JSON**: Returns 400 Bad Request
 - **Parsing Errors**: Logs raw data for debugging
-- **Memory Management**: Automatically manages message storage
+- **Memory Management**: Automatically manages message storage with size limits
+- **Auto Cleanup**: Periodically removes messages older than retention period
+
+## Advanced Usage
+
+### Filtering Messages
+
+You can filter messages using query parameters:
+
+```bash
+# Filter by job ID
+GET /webhook/messages?job_id=abc123
+
+# Filter by success status
+GET /webhook/messages?is_success=true
+
+# Filter by time range
+GET /webhook/messages?start_time=2024-01-01T00:00:00&end_time=2024-01-02T00:00:00
+
+# Combine filters with pagination
+GET /webhook/messages?is_success=false&limit=50&offset=0
+```
+
+### Exporting Messages
+
+Export messages in different formats:
+
+```bash
+# Export as JSON
+GET /webhook/export?format=json
+
+# Export as CSV
+GET /webhook/export?format=csv
+
+# Export with filters
+GET /webhook/export?format=csv&is_success=true&start_time=2024-01-01T00:00:00
+```
+
+### Viewing Statistics
+
+Get detailed statistics about received webhooks:
+
+```bash
+GET /webhook/stats
+```
+
+Returns information about:
+- Total messages received
+- Success/failure counts
+- Success rate
+- Messages in memory vs total
 
 ## Development
 
