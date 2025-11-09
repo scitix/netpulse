@@ -28,7 +28,7 @@ def render_template(req: TemplateRenderRequest, name: Optional[str] = None):
         raise HTTPException(status_code=404, detail=f"Renderer {req.name} not found")
 
     data = robj.render(req.context)
-    return BaseResponse(code=0, message="success", data=data)
+    return BaseResponse(code=200, message="success", data=data)
 
 
 # Parse
@@ -47,4 +47,4 @@ def parse_template(req: TemplateParseRequest, name: Optional[str] = None):
         raise HTTPException(status_code=404, detail=f"Parser {req.name} not found")
 
     data = pobj.parse(req.context)
-    return BaseResponse(code=0, message="success", data=data)
+    return BaseResponse(code=200, message="success", data=data)

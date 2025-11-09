@@ -25,7 +25,7 @@ def get_jobs(
 ):
     if id:
         resp = g_mgr.get_job_list_by_ids([id])
-        return GetJobResponse(code=0, message="success", data=resp)
+        return GetJobResponse(code=200, message="success", data=resp)
 
     q_name = None
     if host:
@@ -36,7 +36,7 @@ def get_jobs(
         q_name = queue
 
     resp = g_mgr.get_job_list(q_name=q_name, status=status)
-    return GetJobResponse(code=0, message="success", data=resp)
+    return GetJobResponse(code=200, message="success", data=resp)
 
 
 @router.delete("/job", response_model=DeleteJobResponse)
@@ -53,7 +53,7 @@ def delete_jobs(
     """
     if id:
         resp = g_mgr.cancel_job(id=id)
-        return DeleteJobResponse(code=0, message="success", data=resp)
+        return DeleteJobResponse(code=200, message="success", data=resp)
 
     q_name = None
     if host:
@@ -62,7 +62,7 @@ def delete_jobs(
         q_name = queue
 
     resp = g_mgr.cancel_job(q_name=q_name)
-    return DeleteJobResponse(code=0, message="success", data=resp)
+    return DeleteJobResponse(code=200, message="success", data=resp)
 
 
 # Get all running workers
@@ -81,7 +81,7 @@ def get_workers(
         q_name = queue
 
     resp = g_mgr.get_worker_list(q_name=q_name)
-    return GetWorkerResponse(code=0, message="success", data=resp)
+    return GetWorkerResponse(code=200, message="success", data=resp)
 
 
 @router.delete("/worker", response_model=DeleteWorkerResponse)
@@ -102,9 +102,9 @@ def delete_workers(
         q_name = None
 
     killed = g_mgr.kill_worker(q_name=q_name, name=name)
-    return DeleteWorkerResponse(code=0, message="success", data=killed)
+    return DeleteWorkerResponse(code=200, message="success", data=killed)
 
 
 @router.get("/health", response_model=BaseResponse)
 def health_check():
-    return BaseResponse(code=0, message="success", data="ok")
+    return BaseResponse(code=200, message="success", data="ok")

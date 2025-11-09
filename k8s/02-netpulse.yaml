@@ -5,6 +5,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: netpulse-config
+  namespace: netpulse
   labels:
     app: netpulse
     component: shared
@@ -26,6 +27,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: netpulse-controller
+  namespace: netpulse
 spec:
   replicas: 3
   selector:
@@ -42,6 +44,13 @@ spec:
       - name: controller
         image: localhost/netpulse-controller:latest
         imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+          limits:
+            memory: "8Gi"
+            cpu: "8000m"
         envFrom:
         - configMapRef:
             name: netpulse-config
@@ -69,8 +78,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: netpulse-node-worker
+  namespace: netpulse
 spec:
-  replicas: 3
+  replicas: 6
   selector:
     matchLabels:
       app: netpulse
@@ -85,6 +95,13 @@ spec:
       - name: node-worker
         image: localhost/netpulse-node-worker:latest
         imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "4000m"
         envFrom:
         - configMapRef:
             name: netpulse-config
@@ -110,8 +127,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: netpulse-fifo-worker
+  namespace: netpulse
 spec:
-  replicas: 3
+  replicas: 6
   selector:
     matchLabels:
       app: netpulse
@@ -126,6 +144,13 @@ spec:
       - name: fifo-worker
         image: localhost/netpulse-fifo-worker:latest
         imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "4000m"
         envFrom:
         - configMapRef:
             name: netpulse-config
@@ -151,6 +176,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: netpulse
+  namespace: netpulse
 spec:
   selector:
     app: netpulse

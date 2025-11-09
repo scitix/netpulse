@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="1050" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .title { font-family: Arial, sans-serif; font-size: 20px; font-weight: bold; fill: #2c3e50; }
+      .subtitle { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; fill: #34495e; }
+      .text { font-family: Arial, sans-serif; font-size: 14px; fill: #2c3e50; }
+      .small-text { font-family: Arial, sans-serif; font-size: 12px; fill: #7f8c8d; }
+      .client { fill: #3498db; stroke: #2980b9; stroke-width: 2; }
+      .api { fill: #2ecc71; stroke: #27ae60; stroke-width: 2; }
+      .queue { fill: #e67e22; stroke: #d35400; stroke-width: 2; }
+      .worker { fill: #9b59b6; stroke: #8e44ad; stroke-width: 2; }
+      .device { fill: #3498db; stroke: #2980b9; stroke-width: 2; }
+      .arrow { stroke: #95a5a6; stroke-width: 2; marker-end: url(#arrowhead); }
+      .arrow-bold { stroke: #3498db; stroke-width: 2.5; marker-end: url(#arrowhead-bold); }
+      .flow-text { font-family: Arial, sans-serif; font-size: 12px; fill: #2c3e50; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8" fill="#95a5a6"/>
+    </marker>
+    <marker id="arrowhead-bold" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto">
+      <path d="M0,0 L12,4.5 L0,9" fill="#3498db"/>
+    </marker>
+  </defs>
+  
+  <!-- 整体向右偏移50px，所有x坐标+50 -->
+  
+  <!-- 标题 -->
+  <text x="600" y="50" text-anchor="middle" class="title">NetPulse 核心工作流程</text>
+  
+  <!-- 客户端层 -->
+  <rect x="100" y="80" width="1000" height="100" rx="10" fill="#f8f9fa" stroke="#bdc3c7" stroke-width="2"/>
+  <text x="600" y="105" text-anchor="middle" class="subtitle">客户端层</text>
+  
+  <!-- 客户端组件 -->
+  <rect x="170" y="120" width="120" height="40" rx="5" class="client"/>
+  <text x="230" y="145" text-anchor="middle" class="text" fill="white">API客户端</text>
+  
+  <rect x="340" y="120" width="120" height="40" rx="5" class="client"/>
+  <text x="400" y="145" text-anchor="middle" class="text" fill="white">CLI工具</text>
+  
+  <rect x="510" y="120" width="120" height="40" rx="5" class="client"/>
+  <text x="570" y="145" text-anchor="middle" class="text" fill="white">Web界面</text>
+  
+  <rect x="680" y="120" width="120" height="40" rx="5" class="client"/>
+  <text x="740" y="145" text-anchor="middle" class="text" fill="white">MCP接入</text>
+  
+  <rect x="850" y="120" width="120" height="40" rx="5" class="client"/>
+  <text x="910" y="145" text-anchor="middle" class="text" fill="white">监控系统</text>
+  
+  <!-- API层 -->
+  <rect x="100" y="220" width="1000" height="100" rx="10" fill="#f8f9fa" stroke="#bdc3c7" stroke-width="2"/>
+  <text x="600" y="245" text-anchor="middle" class="subtitle">API层 (Controller)</text>
+  
+  <rect x="120" y="260" width="120" height="40" rx="5" class="api"/>
+  <text x="180" y="285" text-anchor="middle" class="text" fill="white">设备操作</text>
+  
+  <rect x="260" y="260" width="120" height="40" rx="5" class="api"/>
+  <text x="320" y="285" text-anchor="middle" class="text" fill="white">批量操作</text>
+  
+  <rect x="400" y="260" width="120" height="40" rx="5" class="api"/>
+  <text x="460" y="285" text-anchor="middle" class="text" fill="white">模板渲染</text>
+  
+  <rect x="540" y="260" width="120" height="40" rx="5" class="api"/>
+  <text x="600" y="285" text-anchor="middle" class="text" fill="white">任务管理</text>
+  
+  <rect x="680" y="260" width="120" height="40" rx="5" class="api"/>
+  <text x="740" y="285" text-anchor="middle" class="text" fill="white">Worker管理</text>
+  
+  <rect x="820" y="260" width="120" height="40" rx="5" class="api"/>
+  <text x="880" y="285" text-anchor="middle" class="text" fill="white">健康检查</text>
+  
+  <rect x="960" y="260" width="120" height="40" rx="5" class="api"/>
+  <text x="1020" y="285" text-anchor="middle" class="text" fill="white">连接测试</text>
+  
+  <!-- 队列层 -->
+  <rect x="100" y="360" width="1000" height="100" rx="10" fill="#f8f9fa" stroke="#bdc3c7" stroke-width="2"/>
+  <text x="600" y="385" text-anchor="middle" class="subtitle">任务队列 (Redis)</text>
+  
+  <rect x="170" y="400" width="200" height="40" rx="5" class="queue"/>
+  <text x="270" y="425" text-anchor="middle" class="text" fill="white">FIFO任务队列</text>
+  
+  <rect x="420" y="400" width="200" height="40" rx="5" class="queue"/>
+  <text x="520" y="425" text-anchor="middle" class="text" fill="white">Pinned任务队列</text>
+  
+  <rect x="670" y="400" width="200" height="40" rx="5" class="queue"/>
+  <text x="770" y="425" text-anchor="middle" class="text" fill="white">任务状态存储</text>
+  
+  <rect x="920" y="400" width="160" height="40" rx="5" class="queue"/>
+  <text x="1000" y="425" text-anchor="middle" class="text" fill="white">连接状态存储</text>
+  
+  <!-- Worker层 -->
+  <rect x="100" y="500" width="1000" height="140" rx="10" fill="#f8f9fa" stroke="#bdc3c7" stroke-width="2"/>
+  <text x="600" y="525" text-anchor="middle" class="subtitle">Worker层</text>
+  
+  <!-- FIFO Worker -->
+  <rect x="120" y="550" width="300" height="70" rx="8" class="worker"/>
+  <text x="270" y="575" text-anchor="middle" class="text" fill="white">FIFO Worker</text>
+  <text x="270" y="595" text-anchor="middle" class="small-text" fill="white">并发处理查询任务</text>
+  <text x="270" y="610" text-anchor="middle" class="small-text" fill="white">无设备绑定关系</text>
+  
+  <!-- Node Worker -->
+  <rect x="460" y="550" width="300" height="70" rx="8" class="worker"/>
+  <text x="610" y="575" text-anchor="middle" class="text" fill="white">Node Worker</text>
+  <text x="610" y="595" text-anchor="middle" class="small-text" fill="white">管理Pinned Worker</text>
+  <text x="610" y="610" text-anchor="middle" class="small-text" fill="white">节点状态监控</text>
+  
+  <!-- Pinned Worker -->
+  <rect x="800" y="550" width="280" height="70" rx="8" class="worker"/>
+  <text x="940" y="575" text-anchor="middle" class="text" fill="white">Pinned Worker</text>
+  <text x="940" y="595" text-anchor="middle" class="small-text" fill="white">一对一设备绑定</text>
+  <text x="940" y="610" text-anchor="middle" class="small-text" fill="white">SSH长连接保活</text>
+  
+  <!-- 设备层 -->
+  <rect x="100" y="680" width="1000" height="100" rx="10" fill="#f8f9fa" stroke="#bdc3c7" stroke-width="2"/>
+  <text x="600" y="705" text-anchor="middle" class="subtitle">网络设备层</text>
+  
+  <!-- 设备布局 -->
+  <rect x="120" y="725" width="120" height="40" rx="5" class="device"/>
+  <text x="180" y="750" text-anchor="middle" class="text" fill="white">Cisco</text>
+  
+  <rect x="260" y="725" width="120" height="40" rx="5" class="device"/>
+  <text x="320" y="750" text-anchor="middle" class="text" fill="white">华为</text>
+  
+  <rect x="400" y="725" width="120" height="40" rx="5" class="device"/>
+  <text x="460" y="750" text-anchor="middle" class="text" fill="white">H3C</text>
+  
+  <rect x="540" y="725" width="120" height="40" rx="5" class="device"/>
+  <text x="600" y="750" text-anchor="middle" class="text" fill="white">Juniper</text>
+  
+  <rect x="680" y="725" width="120" height="40" rx="5" class="device"/>
+  <text x="740" y="750" text-anchor="middle" class="text" fill="white">Arista</text>
+  
+  <rect x="820" y="725" width="120" height="40" rx="5" class="device"/>
+  <text x="880" y="750" text-anchor="middle" class="text" fill="white">云网络设备</text>
+  
+  <rect x="960" y="725" width="120" height="40" rx="5" class="device"/>
+  <text x="1020" y="750" text-anchor="middle" class="text" fill="white">虚拟设备</text>
+  
+  <!-- 主要流程箭头 -->
+  <line x1="600" y1="180" x2="600" y2="220" class="arrow-bold"/>
+  <text x="620" y="205" class="flow-text">请求</text>
+  
+  <line x1="600" y1="320" x2="600" y2="360" class="arrow-bold"/>
+  <text x="620" y="345" class="flow-text">任务</text>
+  
+  <line x1="600" y1="460" x2="600" y2="500" class="arrow-bold"/>
+  <text x="620" y="485" class="flow-text">执行</text>
+  
+  <line x1="600" y1="640" x2="600" y2="680" class="arrow-bold"/>
+  <text x="620" y="665" class="flow-text">操作</text>
+  
+  <!-- 流程说明 -->
+  <rect x="100" y="820" width="1000" height="200" rx="10" fill="#f8f9fa" stroke="#bdc3c7" stroke-width="2"/>
+  <text x="600" y="845" text-anchor="middle" class="subtitle">工作流程说明</text>
+  
+  <!-- 流程1-3 第一行 -->
+  <text x="180" y="880" class="text">1️⃣ 请求接收</text>
+  <text x="180" y="900" class="small-text">• 客户端通过RESTful API发送请求</text>
+  <text x="180" y="920" class="small-text">• API层验证请求格式和权限</text>
+  <text x="180" y="940" class="small-text">• 根据操作类型选择任务队列</text>
+  
+  <text x="450" y="880" class="text">2️⃣ 任务调度</text>
+  <text x="450" y="900" class="small-text">• 智能调度器分析任务类型</text>
+  <text x="450" y="920" class="small-text">• 查询任务分配给FIFO Worker</text>
+  <text x="450" y="940" class="small-text">• 配置任务分配给Pinned Worker</text>
+  
+  <text x="720" y="880" class="text">3️⃣ 任务执行</text>
+  <text x="720" y="900" class="small-text">• Worker建立或复用设备连接</text>
+  <text x="720" y="920" class="small-text">• 执行命令并收集结果</text>
+  <text x="720" y="940" class="small-text">• 更新任务状态和结果</text>
+  
+  <!-- 流程4-6 第二行 -->
+  <text x="180" y="970" class="text">4️⃣ 结果返回</text>
+  <text x="180" y="990" class="small-text">• 结果存储到Redis队列</text>
+  <text x="180" y="1010" class="small-text">• API层返回结果给客户端</text>
+  
+  <text x="450" y="970" class="text">5️⃣ 连接管理</text>
+  <text x="450" y="990" class="small-text">• Pinned Worker维持SSH长连接</text>
+  <text x="450" y="1010" class="small-text">• 定期保活确保连接稳定</text>
+  
+  <text x="720" y="970" class="text">6️⃣ 扩展性保障</text>
+  <text x="720" y="990" class="small-text">• 支持水平扩展Worker节点</text>
+  <text x="720" y="1010" class="small-text">• 多厂商设备统一管理</text>
+</svg> 

@@ -23,6 +23,15 @@ theme:
     - content.code.annotate
     - navigation.footer
     - navigation.tracking
+    - navigation.indexes
+    - navigation.prune
+  
+  # 目录配置 - 限制只显示一级和二级标题
+  toc:
+    depth: 2
+  
+  # 自定义样式
+  custom_dir: docs/overrides
   palette:
     - media: "(prefers-color-scheme)"
       scheme: default
@@ -38,15 +47,13 @@ theme:
       toggle:
         icon: material/brightness-7
         name: 切换主题
-  logo: assets/images/logo.png
+  logo: assets/images/logo.svg
   favicon: assets/images/favicon.ico
 
 # 插件配置
 plugins:
   - search
   - i18n:
-      default_language: en
-      default_language_only: true
       docs_structure: folder
       languages:
         - locale: zh
@@ -56,36 +63,37 @@ plugins:
           nav_translations:
             Home: 首页
             Getting Started: 快速开始
-            Quick Start: 快速入门
-            First Steps: 第一个API调用
+            Quick Start: 快速开始
+            Basic Concepts: 基础概念
             Deployment Guide: 部署指南
-            User Guides: 使用指南
+            Postman Guide: Postman 使用
             API Reference: API参考
-            CLI Tools: CLI工具
-            SDK Guide: SDK指南
-            Postman Collection: Postman集合
-            Configuration: 配置管理
-            Advanced Features: 高级功能
-            Batch Operations: 批量操作
-            Template System: 模板系统
-            Webhook Configuration: Webhook配置
-            Performance Tuning: 性能调优
-            Architecture: 系统架构
+            API Overview: API概览
+            Device Operation API: 设备操作API
+            Template Operation API: 模板操作API
+            Job Management API: 任务管理API
+            API Examples: API示例
+            API Best Practices: API最佳实践
+            Driver Usage: 驱动使用
+            Driver Selection: 驱动选择
+            Netmiko Driver: Netmiko驱动
+            NAPALM Driver: NAPALM驱动
+            PyEAPI Driver: PyEAPI驱动
+            Technical Architecture: 技术架构
             Architecture Overview: 架构概览
-            Architecture Design: 架构设计
-            Long Connection Technology: 长连接技术
-            Task Schedulers: 任务调度器
-            Driver System: 驱动系统
-            Webhook System: Webhook系统
             Plugin System: 插件系统
-            Reference: 参考文档
+            Driver System: 设备驱动系统
+            Template System: 模板系统
+            Scheduler System: 任务调度器
+            Webhook System: Webhook系统
+            Reference Manual: 参考手册
+            Configuration Guide: 配置指南
             Environment Variables: 环境变量
             Error Codes: 错误代码
-            Best Practices: 最佳实践
-            Troubleshooting: 故障排除
-            Log Analysis: 日志分析
-            Development: 开发指南
-            Development Guide: 开发文档
+            Performance Tuning: 性能调优
+            Glossary: 术语表
+            Troubleshooting: 故障排查
+            Development Guide: 开发指南
         - locale: en
           name: English
           default: true
@@ -105,7 +113,6 @@ markdown_extensions:
   - attr_list
   - admonition
   - pymdownx.details
-  - pymdownx.superfences
   - pymdownx.emoji
   - pymdownx.tabbed
   - pymdownx.tasklist
@@ -113,54 +120,68 @@ markdown_extensions:
   - pymdownx.smartsymbols
   - pymdownx.arithmatex:
       generic: true
+  
+  # 目录扩展 - 限制只显示一级和二级标题
+  - toc:
+      permalink: true
+      title: 目录
+      baselevel: 1
+      toc_depth: 2
 
-# 导航配置
+# 导航配置 - 基于默认语言（英文）文档结构
+# i18n 插件会自动为其他语言生成对应的导航
 nav:
-  - Home: index.md
+  - Home: en/index.md
   - Getting Started:
-      - Quick Start: getting-started/quick-start.md
-      - First Steps: getting-started/first-steps.md
-      - Deployment Guide: getting-started/deployment.md
-  - User Guides:
-      - API Reference: guides/api.md
-      - CLI Tools: guides/cli.md
-      - SDK Guide: guides/sdk-guide.md
-      - Postman Collection: guides/postman-collection.md
-      - Configuration: guides/configuration.md
-  - Advanced Features:
-      - Batch Operations: advanced/batch-operations.md
-      - Template System: advanced/templates.md
-      - Webhook Configuration: advanced/webhooks.md
-      - Performance Tuning: advanced/performance-tuning.md
-  - Architecture:
-      - Architecture Overview: architecture/overview.md
-      - Architecture Design: architecture/architecture.md
-      - Long Connection Technology: architecture/long-connection.md
-      - Task Schedulers: architecture/schedulers.md
-      - Driver System: architecture/drivers.md
-      - Template System: architecture/templates.md
-      - Webhook System: architecture/webhooks.md
-      - Plugin System: architecture/plugins.md
-  - Reference:
-      - Configuration: reference/configuration.md
-      - Environment Variables: reference/environment-variables.md
-      - Error Codes: reference/error-codes.md
-      - Best Practices: reference/best-practices.md
-  - Troubleshooting:
-      - Log Analysis: troubleshooting/log-analysis.md
-  - Development:
-      - Development Guide: development/index.md
+      - Quick Start: en/getting-started/quick-start.md
+      - Basic Concepts: en/getting-started/basic-concepts.md
+      - Deployment Guide: en/getting-started/deployment-guide.md
+      - Postman Guide: en/getting-started/postman-guide.md
+  - API Reference:
+      - API Overview: en/api/api-overview.md
+      - Device Operation API: en/api/device-api.md
+      - Template Operation API: en/api/template-api.md
+      - Job Management API: en/api/job-api.md
+      - API Examples: en/api/api-examples.md
+      - API Best Practices: en/api/api-best-practices.md
+  - Driver Usage:
+      - Driver Selection: en/drivers/index.md
+      - Netmiko Driver: en/drivers/netmiko.md
+      - NAPALM Driver: en/drivers/napalm.md
+      - PyEAPI Driver: en/drivers/pyeapi.md
+  - Technical Architecture:
+      - Architecture Overview: en/architecture/architecture-overview.md
+      - Plugin System: en/architecture/plugin-system.md
+      - Driver System: en/architecture/driver-system.md
+      - Template System: en/architecture/template-system.md
+      - Scheduler System: en/architecture/scheduler-system.md
+      - Webhook System: en/architecture/webhook-system.md
+  - Reference Manual:
+      - Configuration Guide: en/reference/configuration-guide.md
+      - Environment Variables: en/reference/environment-variables.md
+      - Error Codes: en/reference/error-codes.md
+      - Performance Tuning: en/reference/performance-tuning.md
+      - Glossary: en/reference/glossary.md
+      - Troubleshooting: en/reference/troubleshooting.md
+      - Development Guide: en/reference/development-guide.md
 
 # 额外配置
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/netpulse
-    - icon: fontawesome/brands/docker
-      link: https://hub.docker.com/r/netpulse
+      link: https://github.com/scitix/netpulse
+
   analytics:
     provider: google
     property: !ENV GOOGLE_ANALYTICS_KEY
+  
+  alternate:
+    - name: 中文
+      link: /zh/
+      lang: zh
+    - name: English
+      link: /
+      lang: en
 
 # 版权信息
-copyright: Copyright &copy; 2025 NetPulse Team 
+copyright: Copyright &copy; 2025 NetPulse Team

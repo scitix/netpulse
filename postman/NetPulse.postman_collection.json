@@ -1,15 +1,14 @@
 {
 	"info": {
-		"_postman_id": "3aa8c7db-a603-4ef2-bb4d-4d52516bd63b",
-		"name": "NetPulse API Collection",
+		"_postman_id": "d1f438db-a94c-400d-9709-dea8a05935cd",
+		"name": "NetPulse API Collection -v 0.2",
 		"description": "NetPulse 网络设备管理 API",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "15361380",
-		"_collection_link": "https://naivfun.postman.co/workspace/3a1a7d62-3432-4e76-805a-2d9e450075ee/collection/15361380-3aa8c7db-a603-4ef2-bb4d-4d52516bd63b?action=share&source=collection_link&creator=15361380"
+		"_exporter_id": "7085138"
 	},
 	"item": [
 		{
-			"name": "System Health - 健康管理",
+			"name": "System Health",
 			"item": [
 				{
 					"name": "Health Check",
@@ -33,282 +32,270 @@
 			"description": "系统健康状态检查"
 		},
 		{
-			"name": "Job Management - 任务管理",
+			"name": "Job Management",
 			"item": [
 				{
-					"name": "任务查询",
-					"item": [
+					"name": "获取所有任务",
+					"event": [
 						{
-							"name": "获取所有任务",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"type": "text/javascript",
-										"exec": [
-											"if (pm.response.json().data && pm.response.json().data.length > 0) {",
-											"    pm.collectionVariables.set('job_id', pm.response.json().data[0].id);",
-											"    console.log('任务ID已设置: ' + pm.collectionVariables.get('job_id'));",
-											"}"
-										]
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/job",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"job"
-									]
-								},
-								"description": "获取系统中的所有任务"
-							},
-							"response": []
-						},
-						{
-							"name": "按ID查询任务",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/job?id={{job_id}}",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"job"
-									],
-									"query": [
-										{
-											"key": "id",
-											"value": "{{job_id}}",
-											"description": "要查询的任务ID"
-										}
-									]
-								},
-								"description": "通过ID查询特定任务的详细信息"
-							},
-							"response": []
-						},
-						{
-							"name": "按状态查询 - 排队中",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/job?status=queued",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"job"
-									],
-									"query": [
-										{
-											"key": "status",
-											"value": "queued",
-											"description": "排队中的任务"
-										}
-									]
-								},
-								"description": "查询所有排队等待执行的任务"
-							},
-							"response": []
-						},
-						{
-							"name": "按状态查询 - 执行中",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/job?status=started",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"job"
-									],
-									"query": [
-										{
-											"key": "status",
-											"value": "started",
-											"description": "正在执行的任务"
-										}
-									]
-								},
-								"description": "查询所有正在执行的任务"
-							},
-							"response": []
-						},
-						{
-							"name": "按状态查询 - 已完成",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/job?status=finished",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"job"
-									],
-									"query": [
-										{
-											"key": "status",
-											"value": "finished",
-											"description": "已完成的任务"
-										}
-									]
-								},
-								"description": "查询所有已完成的任务"
-							},
-							"response": []
-						},
-						{
-							"name": "按状态查询 - 失败",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/job?status=failed",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"job"
-									],
-									"query": [
-										{
-											"key": "status",
-											"value": "failed",
-											"description": "执行失败的任务"
-										}
-									]
-								},
-								"description": "查询所有执行失败的任务"
-							},
-							"response": []
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.json().data && pm.response.json().data.length > 0) {",
+									"    pm.collectionVariables.set('job_id', pm.response.json().data[0].id);",
+									"    console.log('任务ID已设置: ' + pm.collectionVariables.get('job_id'));",
+									"}"
+								]
+							}
 						}
 					],
-					"description": "各种任务查询方式"
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/job",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"job"
+							]
+						},
+						"description": "获取系统中的所有任务"
+					},
+					"response": []
 				},
 				{
-					"name": "任务取消",
-					"item": [
-						{
-							"name": "取消任务 - 按ID",
-							"request": {
-								"method": "DELETE",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/job?id={{job_id}}",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"job"
-									],
-									"query": [
-										{
-											"key": "id",
-											"value": "{{job_id}}",
-											"description": "要取消的任务ID"
-										}
-									]
-								},
-								"description": "取消特定任务（仅限排队中的任务）"
-							},
-							"response": []
+					"name": "按状态查询 - 排队中",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/job?status=queued",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"job"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "queued",
+									"description": "排队中的任务"
+								}
+							]
 						},
-						{
-							"name": "取消任务 - 按FIFO队列",
-							"request": {
-								"method": "DELETE",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/job?queue=FifoQ",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"job"
-									],
-									"query": [
-										{
-											"key": "queue",
-											"value": "FifoQ",
-											"description": "队列名称"
-										}
-									]
-								},
-								"description": "取消特定队列中的所有排队任务"
-							},
-							"response": []
+						"description": "查询所有排队等待执行的任务"
+					},
+					"response": []
+				},
+				{
+					"name": "按ID查询任务",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/job?id={{job_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"job"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "{{job_id}}",
+									"description": "要查询的任务ID"
+								}
+							]
 						},
-						{
-							"name": "取消任务 - 按pinned队列",
-							"request": {
-								"method": "DELETE",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/job?queue=pinned-{{device_host}}",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"job"
-									],
-									"query": [
-										{
-											"key": "queue",
-											"value": "pinned-{{device_host}}",
-											"description": "设备绑定队列"
-										}
-									]
-								},
-								"description": "取消特定设备队列中的所有排队任务"
-							},
-							"response": []
+						"description": "通过ID查询特定任务的详细信息"
+					},
+					"response": []
+				},
+				{
+					"name": "按状态查询 - 执行中",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/job?status=started",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"job"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "started",
+									"description": "正在执行的任务"
+								}
+							]
 						},
-						{
-							"name": "取消任务 - 按主机",
-							"request": {
-								"method": "DELETE",
-								"header": [],
-								"url": {
-									"raw": "{{base_url}}/job?host={{device_host}}",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"job"
-									],
-									"query": [
-										{
-											"key": "host",
-											"value": "{{device_host}}",
-											"description": "设备主机地址"
-										}
-									]
-								},
-								"description": "取消绑定到特定主机的所有排队任务"
-							},
-							"response": []
-						}
-					],
-					"description": "各种任务取消方式（仅限排队中的任务）"
+						"description": "查询所有正在执行的任务"
+					},
+					"response": []
+				},
+				{
+					"name": "按状态查询 - 失败",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/job?status=failed",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"job"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "failed",
+									"description": "执行失败的任务"
+								}
+							]
+						},
+						"description": "查询所有执行失败的任务"
+					},
+					"response": []
+				},
+				{
+					"name": "取消任务 - 按ID",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/job?id={{job_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"job"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "{{job_id}}",
+									"description": "要取消的任务ID"
+								}
+							]
+						},
+						"description": "取消特定任务（仅限排队中的任务）"
+					},
+					"response": []
+				},
+				{
+					"name": "取消任务 - 按FIFO队列",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/job?queue=FifoQ",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"job"
+							],
+							"query": [
+								{
+									"key": "queue",
+									"value": "FifoQ",
+									"description": "队列名称"
+								}
+							]
+						},
+						"description": "取消特定队列中的所有排队任务"
+					},
+					"response": []
+				},
+				{
+					"name": "取消任务 - 按pinned队列",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/job?queue=pinned-{{device_host}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"job"
+							],
+							"query": [
+								{
+									"key": "queue",
+									"value": "pinned-{{device_host}}",
+									"description": "设备绑定队列"
+								}
+							]
+						},
+						"description": "取消特定设备队列中的所有排队任务"
+					},
+					"response": []
+				},
+				{
+					"name": "取消任务 - 按主机",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/job?host={{device_host}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"job"
+							],
+							"query": [
+								{
+									"key": "host",
+									"value": "{{device_host}}",
+									"description": "设备主机地址"
+								}
+							]
+						},
+						"description": "取消绑定到特定主机的所有排队任务"
+					},
+					"response": []
+				},
+				{
+					"name": "按状态查询 - 已完成",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/job?status=finished",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"job"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "finished",
+									"description": "已完成的任务"
+								}
+							]
+						},
+						"description": "查询所有已完成的任务"
+					},
+					"response": []
 				}
 			],
 			"description": "任务管理和监控功能 - 包含所有查询和取消方式"
 		},
 		{
-			"name": "Worker Management - 工作进程管理",
+			"name": "Worker Management",
 			"item": [
 				{
 					"name": "获取所有工作进程",
@@ -471,7 +458,7 @@
 			"description": "工作进程管理和监控功能 - 包含所有查询和终止方式"
 		},
 		{
-			"name": "Device Connection Testing - 设备连接测试",
+			"name": "Device Connection Testing",
 			"item": [
 				{
 					"name": "Netmiko连接测试 - 基础",
@@ -617,7 +604,7 @@
 			"description": "各种驱动的设备连接测试功能"
 		},
 		{
-			"name": "Netmiko Driver - 查询操作",
+			"name": "Netmiko Driver - Query",
 			"item": [
 				{
 					"name": "单命令查询",
@@ -634,7 +621,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show version\"\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"display version\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/execute",
@@ -802,7 +789,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show running\",\n  \"driver_args\": {\n    \"read_timeout\": 45,\n    \"strip_prompt\": true,\n    \"normalize\": true\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300,\n    \"webhook\": {\n      \"name\": \"basic\",\n      \"url\": \"http://192.168.1.1:8888/webhook\", //根据实际情况修改\n      \"method\": \"POST\",\n      \"headers\": {\n        \"Authorization\": \"Bearer{{api_token}}\", // 根据实际情况看是否有认证\n        \"Content-Type\": \"application/json\"\n      },\n      \"timeout\": 30\n    }\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"display version\",\n  \"driver_args\": {\n    \"read_timeout\": 45,\n    \"strip_prompt\": true,\n    \"normalize\": true\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300,\n    \"webhook\": {\n      \"name\": \"basic\",\n      \"url\": \"http://127.0.0.1:8888/webhook\", //根据实际情况修改\n      \"method\": \"POST\",\n      \"headers\": {\n        \"Content-Type\": \"application/json\"\n      },\n      \"timeout\": 30\n    }\n  }\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/execute",
@@ -943,7 +930,7 @@
 			"description": "Netmiko驱动的各种查询操作示例"
 		},
 		{
-			"name": "Netmiko Driver - 配置操作",
+			"name": "Netmiko Driver - Configuration",
 			"item": [
 				{
 					"name": "单配置推送",
@@ -1157,7 +1144,7 @@
 			"description": "Netmiko驱动的各种配置操作示例"
 		},
 		{
-			"name": "NAPALM Driver - 跨厂商操作",
+			"name": "NAPALM Driver",
 			"item": [
 				{
 					"name": "NAPALM查询操作",
@@ -1343,7 +1330,7 @@
 			"description": "NAPALM驱动的跨厂商标准化操作"
 		},
 		{
-			"name": "PyEAPI Driver - Arista专用操作",
+			"name": "PyEAPI Driver - Arista",
 			"item": [
 				{
 					"name": "PyEAPI查询操作",
@@ -1529,7 +1516,7 @@
 			"description": "PyEAPI驱动的Arista专用操作"
 		},
 		{
-			"name": "Batch Operations - 批量设备操作",
+			"name": "Batch Operations",
 			"item": [
 				{
 					"name": "同厂商批量操作",
@@ -1925,7 +1912,7 @@
 			"description": "传统Push API - 用于向后兼容"
 		},
 		{
-			"name": "Template Operations -模版管理",
+			"name": "Template Operations",
 			"item": [
 				{
 					"name": "模板渲染 (Rendering)",
@@ -2146,7 +2133,7 @@
 			"description": "模板渲染和解析功能 - 支持所有模板引擎"
 		},
 		{
-			"name": "Advanced Scenarios - 高级应用场景",
+			"name": "Advanced Scenarios - Advanced",
 			"item": [
 				{
 					"name": "网络审计场景 - 设备清单",
@@ -2216,7 +2203,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 90\n  },\n  \"devices\": [\n    {\"host\": \"{{device_host}}\", \"site\": \"HQ\"},\n    {\"host\": \"{{device_host_2}}\", \"site\": \"Branch1\"},\n    {\"host\": \"{{device_host_3}}\", \"site\": \"Branch2\"}\n  ],\n  \"config\": {\n    \"site\": \"{{ site }}\",\n    \"ntp_servers\": [\"8.8.8.8\", \"8.8.4.4\"],\n    \"logging_server\": \"192.168.1.100\",\n    \"snmp_community\": \"company_ro\",\n    \"domain_name\": \"company.com\"\n  },\n  \"rendering\": {\n    \"name\": \"jinja2\",\n    \"template\": \"!\\n! 标准化配置 - {{ site }}站点\\n!\\nip domain-name {{ domain_name }}\\n{% for server in ntp_servers %}\\nntp server {{ server }}\\n{% endfor %}\\nlogging host {{ logging_server }}\\nsnmp-server community {{ snmp_community }} RO\\nsnmp-server location {{ site }}\\nsnmp-server contact netadmin@{{ domain_name }}\\nbanner motd ^\\n警告: 仅授权用户可访问此设备\\n所有活动均被监控和记录\\n^\\n!\"\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600\n  }\n}"
+							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 90\n  },\n  \"devices\": [\n    {\"host\": \"{{device_host}}\", \"site\": \"HQ\"},\n    {\"host\": \"{{device_host_2}}\", \"site\": \"Branch1\"},\n    {\"host\": \"{{device_host_3}}\", \"site\": \"Branch2\"}\n  ],\n  \"config\": {\n    \"site\": \"{{ site }}\",\n    \"ntp_servers\": [\"8.8.8.8\", \"8.8.4.4\"],\n    \"logging_server\": \"192.168.1.100\",\n    \"snmp_community\": \"company_ro\",\n    \"domain_name\": \"company.com\"\n  },\n  \"options\": {\n    \"rendering\": {\n      \"name\": \"jinja2\",\n      \"template\": \"!\\n! 标准化配置 - {{ site }}站点\\n!\\nip domain-name {{ domain_name }}\\n{% for server in ntp_servers %}\\nntp server {{ server }}\\n{% endfor %}\\nlogging host {{ logging_server }}\\nsnmp-server community {{ snmp_community }} RO\\nsnmp-server location {{ site }}\\nsnmp-server contact netadmin@{{ domain_name }}\\nbanner motd ^\\n警告: 仅授权用户可访问此设备\\n所有活动均被监控和记录\\n^\\n!\"\n    },\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600\n  }\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/device/bulk",

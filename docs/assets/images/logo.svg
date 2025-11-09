@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="70" viewBox="0 0 240 70">
+  <!-- Background with rounded corners - 使用和表头一致的颜色 -->
+  <rect width="240" height="70" fill="#2196F3" rx="10"/>
+  
+  <!-- NetPulse Text - Larger and bolder -->
+  <text x="120" y="42" 
+        font-family="'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif" 
+        font-size="38" 
+        font-weight="700" 
+        fill="white" 
+        text-anchor="middle" 
+        dominant-baseline="middle"
+        letter-spacing="1">
+    NetPulse
+  </text>
+</svg>

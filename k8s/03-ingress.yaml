@@ -3,14 +3,13 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: netpulse-ingress
-  namespace: default
+  namespace: netpulse
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   ingressClassName: nginx
   rules:
-  - host: netpulse.local
-    http:
+  - http:
       paths:
       - path: /
         pathType: Prefix

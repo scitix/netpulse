@@ -1,137 +1,120 @@
-# Quick Start
+# NetPulse Quick Start
 
-This guide will help you get started with NetPulse in 5 minutes and experience its powerful network device management capabilities.
+!!! info "NetPulse Architecture Overview"
+    NetPulse is a server-based network automation controller. Unlike standalone tools like Netmiko, it needs to be deployed on a server to provide RESTful API services, supporting multi-user concurrent access and distributed task processing.
 
-## Learning Objectives
+This guide will help you quickly experience the basic features of NetPulse without needing to understand technical details in depth.
 
-Through this guide, you will learn:
-- Deploy NetPulse services
-- Configure network device connections
-- Execute your first API call
-- View device status information
+## Quick Experience Goals
 
-## Prerequisites
+Through this guide you will: start the NetPulse service, execute your first API call, connect and operate network devices, understand batch operation features
 
-### System Requirements
-- **Operating System**: Linux (Ubuntu 22.04+ recommended)
-- **Docker**: Version 20.10+
-- **Docker Compose**: Version 2.0+
-- **CPU**: At least 8 cores
-- **Memory**: At least 16GB
 
-**When the number of device connections increases or concurrent tasks are executed, it is recommended to increase system resources to ensure stability.**
+## One-Click Startup
 
-### Network Devices
-- Network devices supporting SSH (routers, switches, etc.)
-- Device IP address and login credentials
+!!! tip "System Requirements"
+    - Docker 20.10+ and Docker Compose 2.0+
+    - At least 2GB available memory
+    - Port 9000 is not occupied
 
-## Step 1: Get the Code
-
+### 1. Get Code
 ```bash
-# Clone the project repository
-git clone https://github.com/netpulse/netpulse.git
+git clone https://github.com/scitix/netpulse.git
 cd netpulse
-
-# Check project structure
-ls -la
 ```
 
-## Step 2: Environment Configuration
+### 2. One-Click Deployment
+
+!!! tip "Recommended Method"
+    This is the simplest and fastest deployment method, suitable for development, testing, and production environments.
+    
+    **Prerequisites:** Ensure your machine has Docker installed. The required images will be automatically downloaded on first deployment, please keep your network connection active.
 
 ```bash
-# Run environment check script
-bash ./scripts/setup_env.sh
-
-# Generate environment configuration file
-bash ./scripts/setup_env.sh generate
+bash ./scripts/docker_auto_deploy.sh
 ```
 
-This will create a `.env` file containing all necessary configuration parameters.
+**Expected Output:**
+```bash
+Redis TLS certificates generated in redis/tls.
+Note: The permissions of the private key are set to 644 to allow the Docker container to read the key. Please evaluate the security implications of this setting in your environment.
+Clearing system environment variables...
+Loading environment variables from .env file...
+Verifying environment variables...
+Environment variables loaded correctly:
+  API Key: np_90fbd8685671a2c0b...
+  Redis Password: ElkycJeV0d...
+Stopping existing services...
+Starting services...
+[+] Running 6/6
+ ✔ Network netpulse-network          Created                                                                                                                                                                                             0.0s
+ ✔ Container netpulse-redis-1        Healthy                                                                                                                                                                                             5.7s
+ ✔ Container netpulse-fifo-worker-1  Started                                                                                                                                                                                             5.9s
+ ✔ Container netpulse-controller-1   Started                                                                                                                                                                                             5.9s
+ ✔ Container netpulse-node-worker-2  Started                                                                                                                                                                                             6.1s
+ ✔ Container netpulse-node-worker-1  Started                                                                                                                                                                                             5.8s
+Waiting for services to start...
+Verifying environment variables in container...
+Environment variables are correctly set in container
+Verifying deployment...
+Services are running!
 
-## Step 3: Start Services
+Deployment successful!
+====================
+API Endpoint: http://localhost:9000
+API Key: np_90fbd8685671a2c0b34aa107...
+
+Test your deployment:
+curl -H "X-API-KEY: np_90fbd8685671a2c0b34aa107..." http://localhost:9000/health
+
+View logs: docker compose logs -f
+Stop services: docker compose down
+```
+**Important:** Please record your API Key (e.g., `np_90fbd8685671a2c0b34aa107...`), as all subsequent API calls will require this key. To view the complete key, you can find it in the `.env` file in the project root directory.
+
+### 3. Verify Service
+
+!!! success "Deployment Successful"
+    If you see the above output, the service has been successfully started!
 
 ```bash
-# Start all services using Docker Compose
-docker compose up -d
-
 # Check service status
 docker compose ps
 
-# View logs
-docker compose logs -f
+# Test API connection
+curl -H "X-API-KEY: np_90fbd8685671a2c0b34aa107..." http://localhost:9000/health
+
+# If you see the following message, the service deployment is successful
+{"code":200,"message":"success","data":"ok"}
 ```
 
-After services start, you will see the following containers:
-- `netpulse-controller`: API controller (port 9000)
-- `netpulse-node-worker`: Node worker processes (2 instances)
-- `netpulse-fifo-worker`: FIFO worker process
-- `netpulse-redis`: Redis cache
+## First API Call
 
-## Step 4: Get API Key
+### API Authentication
+
+NetPulse uses Header authentication. All API requests need to carry the API Key in the Header:
 
 ```bash
-# View generated API key
-cat .env | grep NETPULSE_SERVER__API_KEY
-
-# Or get from logs
-docker compose logs controller | grep "API Key"
-```
-
-## Step 5: Test API Connection
-
-```bash
-# Test health check endpoint
-curl -H "Authorization: Bearer YOUR_API_KEY" \
+# Method 1: Use API Key directly (obtained from .env file or deployment output)
+curl -H "X-API-KEY: np_90fbd8685671a2c0b34aa107..." \
      http://localhost:9000/health
 
-# Expected response
-{
-  "code": 0,
-  "message": "success",
-  "data": "ok"
-}
+# Method 2: Use environment variable (recommended)
+source .env
+curl -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+     http://localhost:9000/health
 ```
 
-## Step 6: Test Device Connection
+### Test Device Connection
 
-### Prepare Device Information
-```json
-{
-  "driver": "netmiko",
-  "connection_args": {
-    "host": "192.168.1.1",
-    "username": "admin",
-    "password": "your_password",
-    "device_type": "cisco_ios",
-    "port": 22
-  }
-}
-```
+!!! note "Device Connection Test"
+    Before connecting to a real device, please ensure the device is network-reachable and the account credentials are correct.
+    
+    **Note:** Please replace the IP address, username, and password in the example with your actual device information.
 
-### Test Connection
 ```bash
 curl -X POST \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "driver": "netmiko",
-    "connection_args": {
-      "host": "192.168.1.1",
-      "username": "admin", 
-      "password": "your_password",
-      "device_type": "cisco_ios",
-      "port": 22
-    }
-  }' \
-  http://localhost:9000/device/test-connection
-```
-
-## Step 7: Execute First Command
-
-```bash
-# Get device information
-curl -X POST \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "driver": "netmiko",
@@ -139,47 +122,283 @@ curl -X POST \
       "host": "192.168.1.1",
       "username": "admin",
       "password": "your_password",
+      "device_type": "cisco_ios"
+    }
+  }' \
+  http://localhost:9000/device/test-connection
+```
+
+**Connection Parameter Description:**
+
+| Parameter | Type | Required | Description |
+|:----------|:-----|:--------:|:------------|
+| `host` | string | ✅ | Device IP address |
+| `username` | string | ✅ | SSH username |
+| `password` | string | ✅ | SSH password |
+| `device_type` | string | ✅ | Device type (e.g., cisco_ios, hp_comware, juniper_junos, etc.) |
+
+**Expected Response:**
+```json
+{
+  "code": 200,
+  "message": "Connection test completed",
+  "data": {
+    "success": true,
+    "connection_time": 2.64,
+    "error_message": null,
+    "device_info": {
+      "prompt": "Router#",
       "device_type": "cisco_ios",
-      "port": 22
+      "host": "192.168.1.1"
+    },
+    "timestamp": "2025-09-21T02:23:13.469090+08:00"
+  }
+}
+```
+
+### Execute Network Command
+
+!!! info "Command Execution"
+    Supports standard commands for all network devices, such as `show version` (Cisco), `display version` (H3C/Huawei), etc. Command syntax may differ between vendors.
+    
+    **Note:** This example uses a Cisco IOS device. For other vendor devices, please refer to the corresponding device type and command syntax.
+
+```bash
+# Execute command
+response=$(curl -s -X POST \
+  -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "driver": "netmiko",
+    "connection_args": {
+      "host": "192.168.1.1",
+      "username": "admin",
+      "password": "your_password",
+      "device_type": "cisco_ios"
     },
     "command": "show version"
+  }' \
+  http://localhost:9000/device/execute)
+
+# View response
+echo "$response" | jq '.'
+```
+
+**Expected Response (immediate return):**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "id": "job_12345",
+    "status": "queued",
+    "queue": "pinned_192.168.1.1",
+    "created_at": "2025-09-21T02:25:13.469090+08:00"
+  }
+}
+```
+
+!!! warning "Important: Device Operations are Asynchronous"
+    All device operations (`/device/execute`, `/device/bulk`) are asynchronous:
+    1. API immediately returns task ID and status (usually `queued`)
+    2. Need to query execution results through `/job?id=xxx` interface
+    3. Only `/device/test-connection` is synchronous and returns results immediately
+    
+    **Query Task Results:**
+    ```bash
+    # Extract task ID
+    task_id=$(echo "$response" | jq -r '.data.id')
+    
+    # Wait a few seconds then query task results
+    sleep 3
+    curl -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+         http://localhost:9000/job?id=$task_id | jq '.'
+    ```
+    
+    **Response Example After Task Completion:**
+    ```json
+    {
+      "code": 200,
+      "message": "success",
+      "data": [{
+        "id": "job_12345",
+        "status": "finished",
+        "result": {
+          "type": "success",
+          "retval": {
+            "show version": "Cisco IOS Software, Version 15.2..."
+          }
+        },
+        "duration": 1.45
+      }]
+    }
+    ```
+
+### Configuration Push
+
+In addition to executing query commands, NetPulse also supports configuration push functionality:
+
+```bash
+curl -X POST \
+  -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "driver": "netmiko",
+    "connection_args": {
+      "host": "192.168.1.1",
+      "username": "admin",
+      "password": "your_password",
+      "device_type": "cisco_ios"
+    },
+    "config": [
+      "interface GigabitEthernet0/1",
+      "description Management Interface",
+      "ip address 192.168.1.1 255.255.255.0",
+      "no shutdown"
+    ]
   }' \
   http://localhost:9000/device/execute
 ```
 
-## Congratulations!
+## Batch Operation Experience
 
-You have successfully completed the NetPulse quick start! Now you can:
+### Batch Device Configuration
 
-- ✅ Deploy and run NetPulse services
-- ✅ Connect to network devices
-- ✅ Execute network commands
-- ✅ Get device information
+!!! warning "Batch Operation Notes"
+    Before batch operations, please ensure all devices are network-reachable. It is recommended to test on a small number of devices first.
+
+```bash
+curl -X POST \
+  -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "driver": "netmiko",
+    "connection_args": {
+      "device_type": "cisco_ios",
+      "username": "admin",
+      "password": "your_password"
+    },
+    "devices": [
+      {
+        "host": "192.168.1.1",
+        "device_type": "cisco_ios",
+        "username": "admin",
+        "password": "password1"
+      },
+      {
+        "host": "192.168.1.2",
+        "device_type": "cisco_ios",
+        "username": "admin",
+        "password": "password2"
+      }
+    ],
+    "command": "show ip interface brief"
+  }' \
+  http://localhost:9000/device/bulk
+```
+
+**Expected Response (immediate return):**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "succeeded": [
+      {
+        "id": "job_abc123",
+        "status": "queued",
+        "queue": "pinned_192.168.1.1"
+      },
+      {
+        "id": "job_def456",
+        "status": "queued",
+        "queue": "pinned_192.168.1.2"
+      }
+    ],
+    "failed": []
+  }
+}
+```
+
+!!! note "Batch Operation Description"
+    Batch operations return a task list, with each device corresponding to one task. You need to query the execution results for each device through the task ID.
+
+## Task Management
+
+NetPulse supports asynchronous task processing. You can query execution status and results through task IDs.
+
+### Query Task Status
+
+```bash
+# Query all tasks
+curl -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+     http://localhost:9000/job
+
+# Query by status (finished, running, failed, etc.)
+curl -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+     http://localhost:9000/job?status=finished
+
+# Query specific task
+curl -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+     http://localhost:9000/job?id=your_job_id
+```
+
+### Cancel Task
+
+```bash
+# Cancel specific task
+curl -X DELETE \
+  -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+  http://localhost:9000/job?id=your_job_id
+```
+
+## Best Practices
+
+### Error Handling
+
+In actual use, it is recommended to check API response status and handle errors:
+
+```bash
+# Execute command and check response
+response=$(curl -s -X POST \
+  -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "driver": "netmiko",
+    "connection_args": {
+      "host": "192.168.1.1",
+      "username": "admin",
+      "password": "your_password",
+      "device_type": "cisco_ios"
+    },
+    "command": "show version"
+  }' \
+  http://localhost:9000/device/execute)
+
+# Parse response
+if echo "$response" | jq -e '.code == 200' > /dev/null; then
+    echo "Command executed successfully"
+    echo "$response" | jq -r '.data.output'
+else
+    echo "Command execution failed"
+    echo "$response" | jq -r '.message'
+fi
+```
 
 ## Next Steps
 
-### Deep Learning
-- **[First API Call](first-steps.md)** - More API usage examples
-- **[API Reference](../guides/api.md)** - Complete API documentation
+### Further Learning
+- [Basic Concepts](basic-concepts.md) - Understand system architecture and core concepts
+- [Deployment Guide](deployment-guide.md) - Learn production environment deployment
+- [Postman Guide](postman-guide.md) - Use Postman to quickly experience APIs
+- [API Overview](../api/api-overview.md) - Deep dive into all API interfaces
 
-### Advanced Features
-- **[Batch Operations](../advanced/batch-operations.md)** - Manage multiple devices
-- **[Template System](../advanced/templates.md)** - Use templates to simplify operations
-- **[Long Connection Technology](../architecture/long-connection.md)** - Understand core technology
-- **[Performance Tuning](../advanced/performance-tuning.md)** - Optimize system performance
+## Encountering Issues?
 
-## Having Issues?
-
-If you encounter any problems, please refer to:
-- **[Log Analysis](../troubleshooting/log-analysis.md)** - Log interpretation and problem diagnosis
-- **[GitHub Issues](https://github.com/netpulse/issues)** - Submit issue feedback
+!!! failure "Common Issues"
+    - **Service startup failed** → See [Deployment Guide](deployment-guide.md)
+    - **API call error** → Check if API Key is correct, see [API Overview](../api/api-overview.md)
+    - **Device connection issues** → Confirm device is network-reachable, check if username and password are correct
+    - **Task execution failed** → Use task management API to query detailed error information
 
 ---
-
-<div align="center">
-
-**Ready to start your network automation journey?**
-
-[First API Call →](first-steps.md)
-
-</div> 

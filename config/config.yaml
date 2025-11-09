@@ -18,7 +18,7 @@ worker:
 redis:
   host: redis
   port: 6379
-  password: p@$Sw0rd!
+  password: ${NETPULSE_REDIS__PASSWORD}
   timeout: 30
   keepalive: 30
   tls:
@@ -31,7 +31,7 @@ redis:
     host: redis-sentinel
     port: 26379
     master_name: mymaster
-    password: p@$Sw0rd!
+    password: ${NETPULSE_REDIS__SENTINEL__PASSWORD}
   key:
     host_to_node_map: netpulse:host_to_node_map
     node_info_map: netpulse:node_info_map

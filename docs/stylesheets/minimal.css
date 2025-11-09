@@ -1,0 +1,47 @@
+/* 极简标题样式 */
+
+/* 二级标题 - 极简版本 */
+.md-content h2 {
+  position: relative;
+  padding: 12px 0 6px 0;
+  margin: 24px 0 12px 0;
+  color: var(--md-primary-fg-color);
+  font-weight: 600;
+  font-size: 1.5em;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* 三级标题 - 极简版本 */
+.md-content h3 {
+  position: relative;
+  padding: 8px 0 4px 0;
+  margin: 16px 0 8px 0;
+  color: var(--md-primary-fg-color);
+  font-weight: 500;
+  font-size: 1.2em;
+}
+
+/* 四级标题 - 极简版本 */
+.md-content h4 {
+  position: relative;
+  padding: 6px 0 3px 0;
+  margin: 12px 0 6px 0;
+  color: var(--md-primary-fg-color);
+  font-weight: 500;
+  font-size: 1.1em;
+}
+
+/* 深色主题适配 */
+[data-md-color-scheme="slate"] .md-content h2 {
+  border-bottom-color: #444;
+}
+
+/* 移除所有装饰元素 */
+.md-content h2::before,
+.md-content h2::after,
+.md-content h3::before,
+.md-content h3::after,
+.md-content h4::before,
+.md-content h4::after {
+  display: none;
+} 

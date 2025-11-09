@@ -101,6 +101,36 @@ After setup, the commit message template will be automatically loaded when runni
 
 Please use GitHub Issues to report bugs or request features.
 
+## Version Management
+
+NetPulse uses a **Single Source of Truth** approach for version management:
+
+### How It Works
+
+- **Version Definition**: Version numbers are defined in `pyproject.toml` (and `netpulse-client/pyproject.toml` for the client SDK)
+- **Automatic Reading**: Code automatically reads version from installed package metadata using `importlib.metadata`
+- **Development Fallback**: If package is not installed (development mode), a fallback version is used
+
+### Updating Version Numbers
+
+**For Production Releases** (package installed):
+1. Update `version = "x.y.z"` in `pyproject.toml`
+2. Update `version = "x.y.z"` in `netpulse-client/pyproject.toml` (if needed)
+3. Reinstall the package: `pip install -e .`
+4. Code will automatically use the new version
+
+**For Development Consistency** (optional but recommended):
+- Also update the fallback version in `netpulse/__init__.py` and `netpulse-client/netpulse_client/__init__.py` to match
+
+### Version Files
+
+- `pyproject.toml` - Main project version (primary source)
+- `netpulse-client/pyproject.toml` - Client SDK version (primary source)
+- `netpulse/__init__.py` - Auto-reads from package metadata (fallback for dev mode)
+- `netpulse-client/netpulse_client/__init__.py` - Auto-reads from package metadata (fallback for dev mode)
+
+**Note**: In most cases, you only need to update `pyproject.toml` files. The code will automatically use the correct version after package installation.
+
 ## Questions?
 
 Feel free to open a discussion or contact the maintainers.

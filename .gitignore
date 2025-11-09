@@ -13,9 +13,15 @@ __pycache__/
 *.egg-info/
 *.egg
 *.whl
+prd/
+
 
 redis/tls
 redis/data
+
+# Kubernetes deployment files
+k8s/00-secrets-deploy.yaml
+k8s/02-netpulse-deploy.yaml
 
 *.pid
 *.lock
@@ -23,5 +29,6 @@ drafts/
 site/
 docs-local/
 tests/
+site*
 
 
