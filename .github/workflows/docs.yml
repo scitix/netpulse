@@ -48,3 +48,18 @@ jobs:
           path: site/
           retention-days: 7
 
+      - name: Trigger Read the Docs build
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        env:
+          RTD_API_TOKEN: ${{ secrets.RTD_API_TOKEN }}
+        run: |
+          if [ -n "$RTD_API_TOKEN" ]; then
+            curl -X POST "https://readthedocs.org/api/v3/projects/netpulse/versions/latest/builds/" \
+              -H "Authorization: token $RTD_API_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d '{"version": "latest"}'
+            echo "Read the Docs build triggered"
+          else
+            echo "RTD_API_TOKEN not set, skipping Read the Docs build trigger"
+          fi
+
