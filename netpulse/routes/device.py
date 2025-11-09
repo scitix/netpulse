@@ -240,7 +240,7 @@ def _test_paramiko_connection(
         )
 
         session = driver.connect()
-        stdin, stdout, stderr = session.exec_command("uname -a", timeout=5)
+        _stdin, stdout, _stderr = session.exec_command("uname -a", timeout=5)
         output = stdout.read().decode("utf-8", errors="replace")
 
         device_info = {

@@ -216,7 +216,7 @@ class ParamikoDriver(BaseDriver):
                     if self.args.bufsize != -1:
                         exec_kwargs["bufsize"] = self.args.bufsize
 
-                stdin, stdout, stderr = session.exec_command(cmd, **exec_kwargs)
+                _stdin, stdout, stderr = session.exec_command(cmd, **exec_kwargs)
                 output = stdout.read().decode("utf-8", errors="replace")
                 error = stderr.read().decode("utf-8", errors="replace")
                 exit_status = stdout.channel.recv_exit_status()
