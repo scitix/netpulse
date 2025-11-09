@@ -11,7 +11,7 @@ NetPulse 是一个专为现代网络自动化设计的高性能分布式网络�
 
 ## 为什么选择 NetPulse？
 
-![NetPulse 项目价值](docs/zh/assets/images/architecture/project-value-proposition.svg)
+![NetPulse 项目价值](docs/assets/images/architecture/project-value-proposition.svg)
 
 ## 系统特性
 
@@ -23,7 +23,7 @@ NetPulse 是一个专为现代网络自动化设计的高性能分布式网络�
 
 ### 技术架构
 
-![NetPulse 系统架构](docs/zh/assets/images/architecture/workflow-overview111.svg)
+![NetPulse 系统架构](docs/zh/assets/images/architecture/workflow-overview.svg)
 
 ### 插件系统
 
@@ -57,7 +57,7 @@ NetPulse 提供了详细的文档，包括快速入门、架构说明、API参�
 
 ```bash
 # 克隆项目
-git clone https://github.com/netpulse/netpulse.git
+git clone https://github.com/scitix/netpulse.git
 cd netpulse
 
 # 一键部署
@@ -121,7 +121,6 @@ curl -X POST http://localhost:9000/device/execute \
 * 📚 **[文档](https://netpulse.readthedocs.io/)** - 完整指南和API参考
 * 🐛 **[问题反馈](https://github.com/scitix/netpulse/issues)** - 报告bug和请求功能
 
-https://github.com/scitix/netpulse
 ## 开源协议
 
 本项目采用 MIT 协议 - 详见 [LICENSE](LICENSE) 文件。

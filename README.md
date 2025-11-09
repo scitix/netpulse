@@ -11,7 +11,7 @@ NetPulse is a high-performance distributed network device management API framewo
 
 ## Why NetPulse?
 
-![NetPulse Value Proposition](docs/en/assets/images/architecture/project-value-proposition-en.svg)
+![NetPulse Value Proposition](docs/assets/images/architecture/project-value-proposition-en.svg)
 
 ## System Features
 
@@ -57,7 +57,7 @@ NetPulse provides comprehensive documentation including quick start guides, arch
 
 ```bash
 # Clone the repository
-git clone https://github.com/netpulse/netpulse.git
+git clone https://github.com/scitix/netpulse.git
 cd netpulse
 
 # One-click deployment
