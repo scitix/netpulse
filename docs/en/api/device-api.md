@@ -90,7 +90,7 @@ curl -X POST "http://localhost:9000/device/bulk" \
 
 ### POST /device/test-connection
 
-Test device connection status, used to verify device connection and authentication availability. Supports different driver types such as Netmiko, NAPALM, and PyEAPI.
+Test device connection status, used to verify device connection and authentication availability. Supports different driver types such as Netmiko, NAPALM, PyEAPI, and Paramiko.
 
 **Request Example**:
 
