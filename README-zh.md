@@ -50,10 +50,10 @@ NetPulse 提供了强大的插件系统，支持多种功能扩展：
 NetPulse 提供了详细的文档，包括快速入门、架构说明、API参考和最佳实践等。访问我们的文档站点获取完整指南：
 
 * [📖 快速入门](https://netpulse.readthedocs.io/zh/latest/getting-started/quick-start.html) - 5分钟快速上手
-* [🏗️ 架构设计](https://netpulse.readthedocs.io/zh/latest/architecture/overview.html) - 系统架构概览
-* [🔌 API 参考](https://netpulse.readthedocs.io/zh/latest/guides/api.html) - 完整的 RESTful API 文档
-* [⚙️ 插件开发](https://netpulse.readthedocs.io/zh/latest/development/index.html) - 构建自定义驱动和插件
-* [🚀 部署指南](https://netpulse.readthedocs.io/zh/latest/getting-started/deployment.html) - 生产环境部署说明
+* [🏗️ 架构设计](https://netpulse.readthedocs.io/zh/latest/architecture/architecture-overview.html) - 系统架构概览
+* [🔌 API 参考](https://netpulse.readthedocs.io/zh/latest/api/api-overview.html) - 完整的 RESTful API 文档
+* [⚙️ 插件开发](https://netpulse.readthedocs.io/zh/latest/reference/development-guide.html) - 构建自定义驱动和插件
+* [🚀 部署指南](https://netpulse.readthedocs.io/zh/latest/getting-started/deployment-guide.html) - 生产环境部署说明
 
 ### Docker 一键部署
 

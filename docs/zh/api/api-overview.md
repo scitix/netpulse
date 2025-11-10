@@ -116,12 +116,12 @@ NetPulse 提供以下API端点，所有端点都需要API Key认证。
 ## 支持的驱动类型
 
 ### Netmiko (SSH)
-- **设备类型**: cisco_ios, cisco_nxos, juniper_junos, arista_eos, huawei, hp_comware
+- **设备类型**: cisco_ios, cisco_nxos, juniper_junos, arista_eos, huawei, hp_comware 等。完整支持的设备类型列表请查看 [Netmiko 平台支持文档](https://github.com/ktbyers/netmiko/blob/develop/PLATFORMS.md)
 - **连接方式**: SSH
-- **特点**: 通用性强，支持大多数网络设备
+- **特点**: 通用性强，支持大多数主流网络设备
 
 ### NAPALM (跨厂商)
-- **设备类型**: ios, iosxr, junos, eos, nxos
+- **设备类型**: ios, iosxr, junos, eos, nxos 等
 - **连接方式**: SSH/API
 - **特点**: 标准化接口，跨厂商兼容
 
@@ -133,7 +133,7 @@ NetPulse 提供以下API端点，所有端点都需要API Key认证。
 ### Paramiko (Linux服务器)
 - **设备类型**: Linux服务器（Ubuntu、CentOS、Debian等）
 - **连接方式**: SSH
-- **特点**: 原生SSH，支持文件传输、代理连接、sudo等
+- **特点**: 原生SSH，支持文件传输、代理连接、sudo等，可以用于端侧相关的自动化
 
 ## 队列策略
 

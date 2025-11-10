@@ -83,7 +83,8 @@ plugins:
             Technical Architecture: 技术架构
             Architecture Overview: 架构概览
             Plugin System: 插件系统
-            Driver System: 设备驱动系统
+            Driver System: 驱动系统
+            Long Connection Technology: 长连接技术
             Template System: 模板系统
             Scheduler System: 任务调度器
             Webhook System: Webhook系统
@@ -155,6 +156,7 @@ nav:
       - Architecture Overview: en/architecture/architecture-overview.md
       - Plugin System: en/architecture/plugin-system.md
       - Driver System: en/architecture/driver-system.md
+      - Long Connection Technology: en/architecture/long-connection.md
       - Template System: en/architecture/template-system.md
       - Scheduler System: en/architecture/scheduler-system.md
       - Webhook System: en/architecture/webhook-system.md

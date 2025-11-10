@@ -90,7 +90,7 @@ curl -X POST "http://localhost:9000/device/bulk" \
 
 ### POST /device/test-connection
 
-测试设备连接状态，用于验证设备连接和认证的可用性。支持Netmiko、NAPALM和PyEAPI等不同驱动类型。
+测试设备连接状态，用于验证设备连接和认证的可用性。支持Netmiko、NAPALM、PyEAPI和Paramiko等不同驱动类型。
 
 **请求示例**:
 

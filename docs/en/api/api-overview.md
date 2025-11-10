@@ -116,9 +116,9 @@ For detailed information, see: [Job Management API](./job-api.md)
 ## Supported Driver Types
 
 ### Netmiko (SSH)
-- **Device Types**: cisco_ios, cisco_nxos, juniper_junos, arista_eos, huawei, hp_comware
+- **Device Types**: cisco_ios, cisco_nxos, juniper_junos, arista_eos, huawei, hp_comware, and more. See the [Netmiko Platform Support](https://github.com/ktbyers/netmiko/blob/develop/PLATFORMS.md) for the complete list of supported device types
 - **Connection Method**: SSH
-- **Features**: Strong universality, supports most network devices
+- **Features**: Strong universality, supports most mainstream network devices
 
 ### NAPALM (Multi-vendor)
 - **Device Types**: ios, iosxr, junos, eos, nxos

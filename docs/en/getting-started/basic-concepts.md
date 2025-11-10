@@ -8,7 +8,7 @@ NetPulse is a distributed RESTful API controller designed for network device man
     - **Distributed Architecture**: Supports Docker and Kubernetes multi-node deployment, supports horizontal scaling
     - **Connection Reuse**: Reduces connection establishment overhead through persistent connections
     - **Asynchronous Processing**: Asynchronous processing mechanism based on task queues
-    - **Multi-Driver Support**: Supports multiple network device drivers (Netmiko, NAPALM, PyEAPI, etc.)
+    - **Multi-Driver Support**: Supports multiple network device drivers (Netmiko, NAPALM, PyEAPI, Paramiko, etc.)
     - **Basic Monitoring**: Provides task status query and Worker status monitoring
 
 ## Core Concepts Overview
@@ -38,6 +38,7 @@ NetPulse supports multiple network device drivers, each targeting different devi
 | **Netmiko** | SSH | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | General device management |
 | **NAPALM** | SSH/API | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | Multi-vendor standardization |
 | **PyEAPI** | HTTP/HTTPS | ⭐⭐⭐⭐⭐ | ⭐⭐ | Arista-specific |
+| **Paramiko** | SSH | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | Linux server management |
 
 #### Netmiko Driver
 
@@ -81,27 +82,47 @@ NetPulse supports multiple network device drivers, each targeting different devi
 | **Advantages** | Good performance for Arista devices, supports batch operations |
 | **Disadvantages** | Only supports Arista devices |
 
+#### Paramiko Driver
+
+!!! info "For Linux server management"
+    Paramiko is a driver for managing Linux servers, implemented based on native SSH protocol.
+
+| Feature | Description |
+|---------|-------------|
+| **Purpose** | Linux server management (Ubuntu, CentOS, Debian, etc.) |
+| **Device Types** | Linux servers |
+| **Characteristics** | Supports command execution, file transfer, proxy connections, sudo, and other advanced features |
+| **Use Cases** | System monitoring, configuration management, software deployment, file transfer |
+| **Advantages** | Rich features, supports file transfer and sudo operations |
+| **Disadvantages** | Only supports Linux servers, does not support network devices |
+
 ### 2. Queue Strategies (Queue Strategies)
 
 NetPulse provides two queue strategies to optimize task execution. Choosing the right queue strategy can improve system performance and stability in specific scenarios.
 
 #### Queue Strategy Comparison
 
-| Strategy | Performance | Connection Reuse | Use Cases | Recommendation |
-|----------|-------------|------------------|-----------|-----------------|
-| **FIFO** | ⭐⭐⭐ | ❌ | Stateless general tasks | ⭐⭐⭐ |
-| **Pinned** | ⭐⭐⭐⭐⭐ | ✅ | SSH operations | ⭐⭐⭐⭐⭐ |
+| Strategy | Performance | Connection Reuse | Use Cases | Driver Recommendation |
+|----------|-------------|------------------|-----------|----------------------|
+| **FIFO** | ⭐⭐⭐ | ❌ | Stateless general tasks, long-running tasks, file transfer | **NAPALM** (recommended), **PyEAPI** (default + recommended), **Paramiko** (default + recommended) |
+| **Pinned** | ⭐⭐⭐⭐⭐ | ✅ | SSH operations, frequent operations on same device | **Netmiko** (default + recommended), NAPALM (default, but FIFO recommended) |
+
+!!! tip "Driver and Queue Strategy Selection"
+    - **Netmiko**: Default and recommended to use **Pinned**, improves performance through connection reuse
+    - **NAPALM**: Default uses Pinned, but **FIFO** is recommended (more suitable for configuration management scenarios)
+    - **PyEAPI**: Default and recommended to use **FIFO** (HTTP/HTTPS stateless connection)
+    - **Paramiko**: Default and recommended to use **FIFO** (suitable for Linux server management and file transfer)
 
 #### FIFO Queue (fifo)
 
-!!! note "Default strategy for PyEAPI driver"
-    FIFO queue is the default strategy for PyEAPI driver, suitable for HTTP/HTTPS stateless connections.
+!!! note "Default strategy for PyEAPI and Paramiko drivers"
+    FIFO queue is the default strategy for PyEAPI and Paramiko drivers, suitable for HTTP/HTTPS stateless connections and Linux server management.
 
 - **Characteristics**: First-In-First-Out, creates new connection each time
-- **Advantages**: Simple and efficient, suitable for stateless operations
-- **Use Cases**: HTTP/HTTPS API calls (e.g., PyEAPI), no need to maintain connection state
+- **Advantages**: Simple and efficient, suitable for stateless operations and long-running tasks
+- **Use Cases**: HTTP/HTTPS API calls (e.g., PyEAPI), Linux server management (e.g., Paramiko), file transfer
 - **Configuration**: `"queue_strategy": "fifo"`
-- **Performance**: Suitable for stateless operations, relatively large connection overhead
+- **Performance**: Suitable for stateless operations and long-running tasks, relatively large connection overhead
 
 #### Device-Bound Queue (pinned)
 

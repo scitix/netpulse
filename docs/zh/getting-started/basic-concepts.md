@@ -8,7 +8,7 @@ NetPulse 是一个专为网络设备管理设计的分布式RESTful API控制器
     - **分布式架构**: 支持Docker和Kubernetes多节点部署，支持横向扩展
     - **连接复用**: 通过持久化连接减少连接建立开销
     - **异步处理**: 基于任务队列的异步处理机制
-    - **多驱动支持**: 支持多种网络设备驱动（Netmiko、NAPALM、PyEAPI等）
+    - **多驱动支持**: 支持多种网络设备驱动（Netmiko、NAPALM、PyEAPI、Paramiko等）
     - **基础监控**: 提供任务状态查询和Worker状态监控
 
 ## 核心概念速览
@@ -21,7 +21,7 @@ NetPulse 是一个专为网络设备管理设计的分布式RESTful API控制器
       驱动选择    任务分发     队列策略   连接复用
 ```
 
-- **驱动（Driver）**：如何连接设备（Netmiko/NAPALM/PyEAPI）
+- **驱动（Driver）**：如何连接设备（Netmiko/NAPALM/PyEAPI/Paramiko）
 - **队列（Queue）**：如何调度任务（FIFO/Pinned）
 - **任务（Job）**：异步执行，需要查询结果
 
@@ -38,6 +38,7 @@ NetPulse 支持多种网络设备驱动，每种驱动针对不同的设备类�
 | **Netmiko** | SSH | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 通用设备管理 |
 | **NAPALM** | SSH/API | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | 多厂商标准化 |
 | **PyEAPI** | HTTP/HTTPS | ⭐⭐⭐⭐⭐ | ⭐⭐ | Arista专用 |
+| **Paramiko** | SSH | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | Linux服务器管理 |
 
 #### Netmiko 驱动
 
@@ -81,27 +82,47 @@ NetPulse 支持多种网络设备驱动，每种驱动针对不同的设备类�
 | **优势** | Arista设备性能较好，支持批量操作 |
 | **劣势** | 仅支持 Arista 设备 |
 
+#### Paramiko 驱动
+
+!!! info "用于 Linux 服务器管理"
+    Paramiko 是用于管理 Linux 服务器的驱动，基于原生 SSH 协议实现。
+
+| 特性 | 说明 |
+|------|------|
+| **用途** | Linux服务器管理（Ubuntu、CentOS、Debian等） |
+| **设备类型** | Linux服务器 |
+| **特点** | 支持命令执行、文件传输、代理连接、sudo等高级功能 |
+| **适用场景** | 系统监控、配置管理、软件部署、文件传输 |
+| **优势** | 功能丰富，支持文件传输和sudo操作 |
+| **劣势** | 仅支持Linux服务器，不支持网络设备 |
+
 ### 2. 队列策略 (Queue Strategies)
 
 NetPulse 提供两种队列策略来优化任务执行。选择合适的队列策略可以在特定场景下提升系统性能和稳定性。
 
 #### 队列策略对比
 
-| 策略 | 性能 | 连接复用 | 适用场景 | 推荐指数 |
+| 策略 | 性能 | 连接复用 | 适用场景 | 驱动推荐 |
 |------|------|----------|----------|----------|
-| **FIFO** | ⭐⭐⭐ | ❌ | 无状态的一般任务 | ⭐⭐⭐ |
-| **Pinned** | ⭐⭐⭐⭐⭐ | ✅ | SSH操作 | ⭐⭐⭐⭐⭐ |
+| **FIFO** | ⭐⭐⭐ | ❌ | 无状态的一般任务、长时间运行任务、文件传输 | **NAPALM**（推荐）、**PyEAPI**（默认+推荐）、**Paramiko**（默认+推荐） |
+| **Pinned** | ⭐⭐⭐⭐⭐ | ✅ | SSH操作、频繁操作同一设备 | **Netmiko**（默认+推荐）、NAPALM（默认，但推荐FIFO） |
+
+!!! tip "驱动与队列策略选择"
+    - **Netmiko**：默认和推荐使用 **Pinned**，通过连接复用提升性能
+    - **NAPALM**：默认使用 Pinned，但推荐使用 **FIFO**（更适合配置管理场景）
+    - **PyEAPI**：默认和推荐使用 **FIFO**（HTTP/HTTPS无状态连接）
+    - **Paramiko**：默认和推荐使用 **FIFO**（适合Linux服务器管理和文件传输）
 
 #### FIFO 队列 (fifo)
 
-!!! note "PyEAPI驱动的默认策略"
-    FIFO 队列是 PyEAPI 驱动的默认策略，适合HTTP/HTTPS无状态连接。
+!!! note "PyEAPI和Paramiko驱动的默认策略"
+    FIFO 队列是 PyEAPI 和 Paramiko 驱动的默认策略，适合HTTP/HTTPS无状态连接和Linux服务器管理。
 
 - **特点**: 先进先出，每次新建连接
-- **优势**: 简单高效，适合无状态操作
-- **适用场景**: HTTP/HTTPS API调用（如PyEAPI），无需保持连接状态
+- **优势**: 简单高效，适合无状态操作和长时间运行任务
+- **适用场景**: HTTP/HTTPS API调用（如PyEAPI）、Linux服务器管理（如Paramiko）、文件传输
 - **配置**: `"queue_strategy": "fifo"`
-- **性能**: 适合无状态操作，连接开销相对较大
+- **性能**: 适合无状态操作和长时间任务，连接开销相对较大
 
 #### 设备绑定队列 (pinned)
 
