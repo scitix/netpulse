@@ -50,10 +50,10 @@ NetPulse offers a powerful plugin system supporting various functional extension
 NetPulse provides comprehensive documentation including quick start guides, architecture explanations, API references, and best practices. Visit our documentation site for complete guides:
 
 * [📖 Quick Start](https://netpulse.readthedocs.io/en/latest/getting-started/quick-start.html) - Get started in 5 minutes
-* [🏗️ Architecture](https://netpulse.readthedocs.io/en/latest/architecture/overview.html) - System architecture overview
-* [🔌 API Reference](https://netpulse.readthedocs.io/en/latest/guides/api.html) - Complete RESTful API documentation
-* [⚙️ Plugin Development](https://netpulse.readthedocs.io/en/latest/development/index.html) - Build custom drivers and plugins
-* [🚀 Deployment Guide](https://netpulse.readthedocs.io/en/latest/getting-started/deployment.html) - Production deployment instructions
+* [🏗️ Architecture](https://netpulse.readthedocs.io/en/latest/architecture/architecture-overview.html) - System architecture overview
+* [🔌 API Reference](https://netpulse.readthedocs.io/en/latest/api/api-overview.html) - Complete RESTful API documentation
+* [⚙️ Plugin Development](https://netpulse.readthedocs.io/en/latest/reference/development-guide.html) - Build custom drivers and plugins
+* [🚀 Deployment Guide](https://netpulse.readthedocs.io/en/latest/getting-started/deployment-guide.html) - Production deployment instructions
 
 ### Docker Quick Deploy
 
