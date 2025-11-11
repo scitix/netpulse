@@ -9,6 +9,15 @@ This guide will help you quickly experience the basic features of NetPulse witho
 
 Through this guide you will: start the NetPulse service, execute your first API call, connect and operate network devices, understand batch operation features
 
+## Deployment Environment Preparation
+
+!!! info "Server Deployment Description"
+    NetPulse is a program that needs to be deployed on a server. You need to prepare a server to run the NetPulse service. This server needs to be able to connect to the network devices you want to manage.
+    
+    **Server Requirements:**
+    - The server needs to be able to access target network devices over the network (SSH/HTTP/HTTPS)
+    - It is recommended to use a dedicated server or virtual machine to ensure network connectivity and security
+    - Software and hardware requirements are as follows (using Docker deployment)
 
 ## One-Click Startup
 
