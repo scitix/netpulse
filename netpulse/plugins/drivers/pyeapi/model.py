@@ -3,7 +3,7 @@ from typing import Optional
 from pydantic import ConfigDict, Field
 
 from ....models import DriverArgs, DriverConnectionArgs
-from ....models.request import PullingRequest, PushingRequest
+from ....models.request import ExecutionRequest, PullingRequest, PushingRequest
 
 
 class PyeapiConnectionArg(DriverConnectionArgs):
@@ -72,6 +72,30 @@ class PyeapiPushingRequest(PushingRequest):
                 },
                 "config": "hostname test-device",
                 "save": True,
+            }
+        }
+    )
+
+
+class PyeapiExecutionRequest(ExecutionRequest):
+    connection_args: PyeapiConnectionArg
+    driver_args: Optional[PyeapiArg] = None
+    enable_mode: bool = Field(True, description="Enter privileged mode for execution")
+    save: bool = Field(False, description="Save configuration after execution")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "driver": "pyeapi",
+                "queue_strategy": "fifo",
+                "connection_args": {
+                    "host": "172.17.0.1",
+                    "username": "admin",
+                    "password": "admin",
+                    "transport": "https",
+                },
+                "config": "hostname test-device",
+                "save": False,
             }
         }
     )

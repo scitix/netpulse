@@ -136,7 +136,7 @@ class WorkerInResponse(BaseModel):
         return _serialize_datetime_with_tz(dt, _info)
 
     @classmethod
-    def from_worker(cls, worker: "rq.Worker") -> "WorkerInResponse":
+    def from_worker(cls, worker: "rq.worker.BaseWorker") -> "WorkerInResponse":
         return cls(
             name=worker.name,
             status=worker.get_state(),

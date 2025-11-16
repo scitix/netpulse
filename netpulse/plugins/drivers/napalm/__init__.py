@@ -1,5 +1,6 @@
 import logging
 from inspect import signature
+from typing import Optional
 
 from napalm.base import NetworkDriver, get_network_driver
 
@@ -7,6 +8,7 @@ from .. import BaseDriver
 from .model import (
     DriverConnectionArgs,
     NapalmConnectionArgs,
+    NapalmExecutionRequest,
     NapalmPullingArgs,
     NapalmPullingRequest,
     NapalmPushingArgs,
@@ -53,6 +55,17 @@ class NapalmDriver(BaseDriver):
         return cls(conn_args=req.connection_args, args=req.args, dry_run=req.dry_run)
 
     @classmethod
+    def from_execution_request(cls, req: NapalmExecutionRequest) -> "NapalmDriver":
+        """
+        Create driver instance from an execution request.
+        """
+        if not isinstance(req, NapalmExecutionRequest):
+            req = NapalmExecutionRequest.model_validate(req.model_dump())
+            req.connection_args = cls.convert_conn_args(req.connection_args)
+
+        return cls(conn_args=req.connection_args, args=req.driver_args, dry_run=req.dry_run)
+
+    @classmethod
     def convert_conn_args(cls, conn_args: DriverConnectionArgs) -> NapalmConnectionArgs:
         """
         Convert connection arguments to NAPALM format.
@@ -60,9 +73,13 @@ class NapalmDriver(BaseDriver):
         - host -> hostname (handled by Pydantic alias)
         - device_type -> device_type (Netmiko convention to NAPALM convention)
         """
+        if conn_args.device_type is None:
+            raise ValueError("device_type is None")
+
         # Convert device_type from Netmiko to NAPALM convention (if needed)
-        conn_args.device_type = NETMIKO_DEVICE_TYPE_MAP.get(
-            conn_args.device_type, conn_args.device_type
+        conn_args.device_type = NETMIKO_DEVICE_TYPE_MAP.get(  # type: ignore
+            conn_args.device_type,
+            conn_args.device_type,  # default to itself
         )
 
         return (
@@ -74,7 +91,7 @@ class NapalmDriver(BaseDriver):
     def __init__(
         self,
         conn_args: NapalmConnectionArgs,
-        args: NapalmPullingArgs | NapalmPushingArgs = None,
+        args: Optional[NapalmPullingArgs | NapalmPushingArgs] = None,
         dry_run: bool = False,
         **kwargs,
     ):

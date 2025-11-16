@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from rq.job import Callback, Job
 
 from ..models import JobAdditionalData
-from ..models.request import PullingRequest, PushingRequest
+from ..models.request import ExecutionRequest, PullingRequest, PushingRequest
 from ..plugins import drivers, parsers, renderers, webhooks
 from ..worker.node import start_pinned_worker
 
@@ -118,6 +118,84 @@ def push(req: PushingRequest):
     return result
 
 
+def execute(req: ExecutionRequest):
+    """
+    Execute command on device.
+    """
+    if not drivers.get(req.driver):
+        raise NotImplementedError(f"Unknown 'driver' {req.driver}")
+
+    has_command = req.command is not None
+    payload = req.config if req.config is not None else req.command
+
+    # Render before execution if specified
+    if req.rendering:
+        try:
+            if not isinstance(payload, dict):
+                raise ValueError("Config/command must be a dict for rendering.")
+
+            if req.rendering.context:
+                req.rendering.context = None
+                log.warning("Context in request is overridden by config/command.")
+
+            # Do the rendering
+            render = renderers[req.rendering.name].from_rendering_request(req.rendering)
+            payload = render.render(payload)
+
+            # After payload is rendered, payload should be a str or list[str]
+            # Besides, we need to delete the rendering field
+            req.rendering = None
+        except Exception as e:
+            log.error(f"Error in rendering: {e}")
+            raise e
+
+    if isinstance(payload, str):
+        payload = [payload]
+    assert isinstance(payload, list), "Config/command must be str/list[str] after rendering."
+
+    # Init the driver
+    try:
+        dobj = drivers[req.driver].from_execution_request(req)
+    except Exception as e:
+        log.error(f"Error in initializing driver: {e}")
+        raise e
+
+    # Depend command or config, do config or send.
+    session = None
+    try:
+        session = dobj.connect()
+        if has_command:
+            result = dobj.send(session, payload)
+        else:
+            result = dobj.config(session, payload)
+        dobj.disconnect(session)
+    except Exception as e:
+        log.error(f"Error in sending config/command: {e}")
+        raise e
+    finally:
+        if session:
+            dobj.disconnect(session)
+
+    # Parsing after result is obtained
+    if req.parsing:
+        try:
+            if not isinstance(result, dict):
+                raise ValueError("Result must be a dict for parsing.")
+
+            if req.parsing.context:
+                req.parsing.context = None
+                log.warning("Context in request is overridden by output.")
+
+            parser = parsers[req.parsing.name].from_parsing_request(req.parsing)
+            for cmd in result.keys():
+                result[cmd] = parser.parse(result[cmd])
+        except Exception as e:
+            log.error(f"Error in parsing: {e}")
+            raise e
+
+    return result
+
+
 def spawn(q_name: str, host: str):
     """
     Start a worker that is pinned to a specific queue.
@@ -125,7 +203,7 @@ def spawn(q_name: str, host: str):
     start_pinned_worker(q_name=q_name, host=host)
 
 
-def rpc_callback_factory(func: Callable, timeout: Optional[float] = None):
+def rpc_callback_factory(func: Optional[Callable], timeout: Optional[float] = None):
     """
     NOTE: `rq` wraps callable into Callback object.
     When serialized, the function is lost, only the name is stored.

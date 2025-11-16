@@ -1,7 +1,8 @@
 import logging
 
-from redis import Redis
 from redis.sentinel import Sentinel
+
+from redis import Redis
 
 from ..utils import g_config
 from ..utils.config import RedisConfig

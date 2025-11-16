@@ -213,3 +213,33 @@ class ParamikoPushingRequest(PushingRequest):
             }
         }
     )
+
+
+class ParamikoExecutionRequest(PullingRequest):
+    driver: DriverName = DriverName.PARAMIKO
+    connection_args: ParamikoConnectionArgs
+    driver_args: Optional[ParamikoSendCommandArgs | ParamikoSendConfigArgs] = None
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "driver": "paramiko",
+                "queue_strategy": "fifo",
+                "connection_args": {
+                    "host": "192.168.1.100",
+                    "username": "admin",
+                    "key_filename": "/path/to/private_key",
+                    "passphrase": "key_password",
+                },
+                "config": [
+                    "echo 'Hello World' > /tmp/test.txt",
+                    "chmod 644 /tmp/test.txt",
+                ],
+                "args": {
+                    "sudo": True,
+                    "sudo_password": "sudo_pass",
+                    "timeout": 30.0,
+                },
+            }
+        }
+    )

@@ -8,8 +8,10 @@ from fastapi import APIRouter
 from ..models.common import DriverConnectionArgs
 from ..models.request import (
     BatchDeviceRequest,
+    BulkExecutionRequest,
     ConnectionTestRequest,
     DeviceRequest,
+    ExecutionRequest,
     PullingRequest,
     PushingRequest,
 )
@@ -19,6 +21,50 @@ from ..services.manager import g_mgr
 log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/device", tags=["device"])
+
+
+# TODO: Implement this as replacement of /pull, /push and /execute.
+@router.post("/exec", response_model=SubmitJobResponse, status_code=201)
+def execute_on_device(req: ExecutionRequest):
+    if req.driver is None:
+        raise ValueError("driver is required for this request")
+    req.connection_args.enforced_field_check()
+    resp = g_mgr.execute_on_device(req)
+    return SubmitJobResponse(code=201, message="success", data=resp)
+
+
+@router.post("/exec/bulk", response_model=BulkExecutionRequest, status_code=201)
+def execute_on_bulk_devices(req: BulkExecutionRequest):
+    if req.driver is None:
+        raise ValueError("driver is required for this request")
+    if req.connection_args is None:
+        raise ValueError("connection_args is required for this request")
+
+    # Create base request template excluding devices
+    base_req = ExecutionRequest.model_validate(req.model_dump(exclude={"devices"}))
+
+    expanded: list[ExecutionRequest] = []
+    for device in req.devices:
+        # Generate connection_args with device-specific overrides
+        connection_args = req.connection_args.model_copy(
+            update=device.model_dump(exclude_defaults=True, exclude_none=True, exclude_unset=True),
+            deep=True,
+        )
+        connection_args.enforced_field_check()
+
+        # Create device-specific request with updated connection
+        per_device_req = base_req.model_copy(update={"connection_args": connection_args}, deep=True)
+        expanded.append(per_device_req)
+
+    result = g_mgr.execute_on_bulk_devices(expanded)
+    if result is None:
+        return BatchSubmitJobResponse(code=200, message="success", data=None)
+
+    data = BatchSubmitJobResponse.BatchSubmitJobData(
+        succeeded=result[0],
+        failed=result[1],
+    )
+    return BatchSubmitJobResponse(code=200, message="success", data=data)
 
 
 @router.post("/execute", response_model=SubmitJobResponse, status_code=201)

@@ -4,7 +4,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from pydantic import ValidationError
 
 from . import __version__
-from .routes import device, manage, pull, push, template
+from .routes import device, manage, template
 from .server import (
     general_exception_handler,
     http_exception_handler,
@@ -30,8 +30,6 @@ app = FastAPI(
 
 # Routes
 app.include_router(device, dependencies=[Depends(verify_api_key)])  # Unified device operation
-app.include_router(pull, dependencies=[Depends(verify_api_key)])  # Backward compatibility
-app.include_router(push, dependencies=[Depends(verify_api_key)])  # Backward compatibility
 app.include_router(template, dependencies=[Depends(verify_api_key)])
 app.include_router(manage, dependencies=[Depends(verify_api_key)])
 
@@ -39,7 +37,7 @@ app.include_router(manage, dependencies=[Depends(verify_api_key)])
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(ValidationError, validation_exception_handler)
 app.add_exception_handler(ValueError, value_error_handler)
-app.add_exception_handler(Exception, handler=general_exception_handler)
+app.add_exception_handler(Exception, general_exception_handler)
 
 
 def main():
@@ -48,7 +46,7 @@ def main():
     """
     import uvicorn
 
-    setup_logging(g_config.log.config, g_config.log.level)
+    setup_logging(str(g_config.log.config), g_config.log.level)
     log.warning("Uvicorn is for testing purpose only.")
     log.warning("Use gunicorn.conf.py for production.")
 

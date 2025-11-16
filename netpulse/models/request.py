@@ -144,7 +144,7 @@ class PushingRequest(BaseModel):
     driver: DriverName = Field(..., description="Device driver (netmiko, napalm, pyeapi)")
     connection_args: DriverConnectionArgs = Field(..., description="Device connection parameters")
     config: Union[dict, List[str], str] = Field(
-        None,
+        ...,
         description="Configuration to push (string, list, or dict for template rendering)",
     )
     args: Optional[DriverArgs] = Field(None, description="Driver-specific parameters")
@@ -231,7 +231,91 @@ class BatchPushingRequest(PushingRequest):
     )
 
 
-# Removed OperationType enum, changed to determine operation type through fields in DeviceRequest
+class ExecutionRequest(BaseModel):
+    # Driver related fields
+    driver: DriverName = Field(..., description="Device driver (netmiko, napalm, pyeapi)")
+    driver_args: Optional[DriverArgs] = Field(None, description="Driver-specific parameters")
+
+    # Device connection parameters
+    connection_args: DriverConnectionArgs = Field(..., description="Device connection parameters")
+
+    # Operation to execute
+    config: Union[dict, List[str], str, None] = Field(
+        None,
+        description="configuration to apply (exclusive with command field)",
+    )
+    command: Union[dict, List[str], str, None] = Field(
+        None,
+        description="Command to execute (exclusive with config field)",
+    )
+
+    # Template handling
+    rendering: Optional[TemplateRenderRequest] = Field(
+        None, description="Configuration template rendering settings"
+    )
+    parsing: Optional[TemplateParseRequest] = Field(
+        None, description="Output template parsing settings"
+    )
+
+    # Queue settings
+    queue_strategy: Optional[QueueStrategy] = Field(
+        None,
+        description="Queue strategy (fifo/pinned). Auto-selected by driver if not specified",
+    )
+    ttl: Optional[int] = Field(300, description="Task timeout in seconds", ge=1, le=3600)
+
+    # Webhook callback
+    webhook: Optional[WebHook] = Field(None, description="Webhook callback after task completion")
+
+    @model_validator(mode="after")
+    def check_exclusive_fields(self):
+        if (self.config is None) == (self.command is None):
+            raise ValueError("Either `config` or `command` must be set, but not both")
+        return self
+
+    @model_validator(mode="after")
+    def check_payload_type(self):
+        valid_payload = self.config if self.config is not None else self.command
+        if (self.rendering is not None) == isinstance(valid_payload, dict):
+            raise ValueError("`rendering` should be set when command/config is a dict")
+        return self
+
+    @model_validator(mode="after")
+    def set_queue_strategy_default(self):
+        """Auto-select queue strategy based on driver type"""
+        if self.queue_strategy is None:
+            if self.driver in [DriverName.NETMIKO, DriverName.NAPALM]:
+                # SSH/long connection drivers use pinned strategy
+                self.queue_strategy = QueueStrategy.PINNED
+            else:
+                # HTTP/stateless drivers use fifo strategy
+                self.queue_strategy = QueueStrategy.FIFO
+        return self
+
+    # TODO: Add more validations as needed
+
+    model_config = ConfigDict(
+        extra="allow",
+        json_schema_extra={
+            "example": {
+                "driver": "netmiko",
+                "connection_args": {
+                    "device_type": "cisco_ios",
+                    "host": "172.17.0.1",
+                    "username": "admin",
+                    "password": "admin",
+                },
+                "config": "interface GigabitEthernet0/1\n description Something",
+            }
+        },
+    )
+
+
+class BulkExecutionRequest(ExecutionRequest):
+    devices: List[DriverConnectionArgs] = Field(
+        ...,
+        description="Device list for batch operation. Overrides fields in connection_args",
+    )
 
 
 class DeviceRequest(BaseModel):

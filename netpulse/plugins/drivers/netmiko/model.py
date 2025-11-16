@@ -1,9 +1,9 @@
 from typing import Any, Dict, Optional
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 
 from ....models import DriverArgs, DriverConnectionArgs, DriverName
-from ....models.request import PullingRequest, PushingRequest
+from ....models.request import ExecutionRequest, PullingRequest, PushingRequest
 
 
 class NetmikoConnectionArgs(DriverConnectionArgs):
@@ -107,10 +107,10 @@ class NetmikoSendConfigSetArgs(DriverArgs):
 
 
 class NetmikoPullingRequest(PullingRequest):
-    driver: DriverName = "netmiko"
+    driver: DriverName = DriverName.NETMIKO
     connection_args: NetmikoConnectionArgs
     args: Optional[NetmikoSendCommandArgs] = None
-    enable_mode: Optional[bool] = False
+    enable_mode: bool = False
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -133,10 +133,37 @@ class NetmikoPullingRequest(PullingRequest):
 
 
 class NetmikoPushingRequest(PushingRequest):
-    driver: DriverName = "netmiko"
+    driver: DriverName = DriverName.NETMIKO
     connection_args: NetmikoConnectionArgs
     args: Optional[NetmikoSendConfigSetArgs] = None
     save: bool = False
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "driver": "netmiko",
+                "queue_strategy": "pinned",
+                "connection_args": {
+                    "device_type": "cisco_ios",
+                    "host": "172.17.0.1",
+                    "port": "10005",
+                    "username": "admin",
+                    "password": "admin",
+                },
+                "config": ["hostname cat"],
+                "save": True,
+            }
+        }
+    )
+
+
+class NetmikoExecutionRequest(ExecutionRequest):
+    driver: DriverName = DriverName.NETMIKO
+    connection_args: NetmikoConnectionArgs
+    driver_args: Optional[NetmikoSendConfigSetArgs | NetmikoSendCommandArgs] = None
+
+    save: bool = Field(False, description="Save configuration after execution")
+    enable_mode: bool = Field(True, description="Enter privileged mode for execution")
 
     model_config = ConfigDict(
         json_schema_extra={

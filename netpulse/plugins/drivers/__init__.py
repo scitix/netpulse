@@ -1,4 +1,4 @@
-from ...models.request import PullingRequest, PushingRequest
+from ...models.request import ExecutionRequest, PullingRequest, PushingRequest
 
 
 class BaseDriver:
@@ -14,6 +14,11 @@ class BaseDriver:
     @classmethod
     def from_pushing_request(cls, req: PushingRequest) -> "BaseDriver":
         """Create driver instance from a pushing request."""
+        raise NotImplementedError
+
+    @classmethod
+    def from_execution_request(cls, req: ExecutionRequest) -> "BaseDriver":
+        """Create driver instance from a execution request."""
         raise NotImplementedError
 
     def __init__(self, **kwargs):

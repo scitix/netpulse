@@ -34,7 +34,7 @@ class ScrubFilter(logging.Filter):
             return message
 
 
-def setup_logging(log_config_filename: str, overrided_level: Optional[str] = None):
+def setup_logging(log_config_filename: str, overridden_level: Optional[str] = None):
     try:
         from yaml import CSafeLoader as SafeLoader
     except ImportError:
@@ -43,12 +43,12 @@ def setup_logging(log_config_filename: str, overrided_level: Optional[str] = Non
     with open(log_config_filename) as f:
         log_config_dict = yaml.load(f, Loader=SafeLoader)
 
-    if overrided_level:
+    if overridden_level:
         for handler in log_config_dict["handlers"].values():
-            handler["level"] = overrided_level
+            handler["level"] = overridden_level
         for logger in log_config_dict["loggers"].values():
-            logger["level"] = overrided_level
-        log_config_dict["root"]["level"] = overrided_level
+            logger["level"] = overridden_level
+        log_config_dict["root"]["level"] = overridden_level
 
     logging.config.dictConfig(log_config_dict)
 

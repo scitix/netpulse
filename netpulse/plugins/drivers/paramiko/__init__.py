@@ -55,6 +55,11 @@ class ParamikoDriver(BaseDriver):
             req = ParamikoPushingRequest.model_validate(req.model_dump())
         return cls(args=req.args, conn_args=req.connection_args)
 
+    @classmethod
+    def from_execution_request(cls, req):
+        # FIXME: implement execution request handling
+        pass
+
     def __init__(
         self,
         args: Optional[ParamikoSendCommandArgs | ParamikoSendConfigArgs],

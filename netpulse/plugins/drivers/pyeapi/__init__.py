@@ -7,6 +7,7 @@ from .. import BaseDriver
 from .model import (
     PyeapiArg,
     PyeapiConnectionArg,
+    PyeapiExecutionRequest,
     PyeapiPullingRequest,
     PyeapiPushingRequest,
 )
@@ -34,12 +35,23 @@ class PyeapiDriver(BaseDriver):
             args=req.args,
         )
 
+    @classmethod
+    def from_execution_request(cls, req: PyeapiExecutionRequest) -> "PyeapiDriver":
+        if not isinstance(req, PyeapiExecutionRequest):
+            req = PyeapiExecutionRequest.model_validate(req.model_dump())
+        return cls(
+            conn_args=req.connection_args,
+            enabled=req.enable_mode,
+            save=req.save,
+            args=req.driver_args,
+        )
+
     def __init__(
         self,
         conn_args: PyeapiConnectionArg,
         enabled: bool,
         save: bool = True,
-        args: PyeapiArg = None,
+        args: Optional[PyeapiArg] = None,
         **kwargs,
     ):
         """

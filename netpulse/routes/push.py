@@ -20,7 +20,7 @@ def push(req: PushingRequest):
 
 
 @router.post("/batch", response_model=BatchSubmitJobResponse, status_code=201)
-def pull_in_batch(req: BatchPushingRequest):
+def push_in_batch(req: BatchPushingRequest):
     if req.driver is None:
         raise ValueError("driver is required for this request")
     if req.connection_args is None:

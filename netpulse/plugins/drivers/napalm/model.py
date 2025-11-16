@@ -7,7 +7,7 @@ from ....models import (
     DriverConnectionArgs,
     DriverName,
 )
-from ....models.request import PullingRequest, PushingRequest
+from ....models.request import ExecutionRequest, PullingRequest, PushingRequest
 
 
 class NapalmConnectionArgs(DriverConnectionArgs):
@@ -51,7 +51,7 @@ class NapalmPullingRequest(PullingRequest):
     NAPALM pulling request
     """
 
-    driver: DriverName = "napalm"
+    driver: DriverName = DriverName.NAPALM
     connection_args: NapalmConnectionArgs
     args: Optional[NapalmPullingArgs] = None
     enable_mode: Optional[bool] = False
@@ -79,10 +79,43 @@ class NapalmPushingRequest(PushingRequest):
     NAPALM pushing request
     """
 
-    driver: DriverName = "napalm"
+    driver: DriverName = DriverName.NAPALM
     connection_args: NapalmConnectionArgs
     args: Optional[NapalmPushingArgs] = None
     dry_run: Optional[bool] = Field(
+        False,
+        description="If True, the config will not be pushed to the device.",
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "driver": "napalm",
+                "queue_strategy": "fifo",
+                "connection_args": {
+                    "device_type": "cisco_ios",
+                    "host": "172.17.0.1",
+                    "username": "admin",
+                    "password": "admin",
+                },
+                "config": "hostname router1\ninterface GigabitEthernet0/1\n description WAN Link",
+                "dry_run": False,
+            }
+        }
+    )
+
+
+class NapalmExecutionRequest(ExecutionRequest):
+    """
+    NAPALM execution request
+    """
+
+    driver: DriverName = DriverName.NAPALM
+    driver_args: Optional[NapalmPullingArgs | NapalmPushingArgs] = None
+    connection_args: NapalmConnectionArgs
+
+    enable_mode: bool = Field(True, description="Enter privileged mode for execution")
+    dry_run: bool = Field(
         False,
         description="If True, the config will not be pushed to the device.",
     )
