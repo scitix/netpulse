@@ -181,11 +181,10 @@ def load_scheduler() -> dict[str, Type[BaseScheduler]]:
     ).load()
 
 
-# NOTE: Type hints added just for Ruff. Pylance could infer the type w/o hints.
-drivers: Dict[str, Type[BaseDriver]] = LazyDictProxy(load_drivers)
-webhooks: Dict[str, Type[BaseWebHookCaller]] = LazyDictProxy(load_webhooks)
-renderers: Dict[str, Type[BaseTemplateRenderer]] = LazyDictProxy(load_template_renderers)
-parsers: Dict[str, Type[BaseTemplateParser]] = LazyDictProxy(load_template_parsers)
-schedulers: Dict[str, Type[BaseScheduler]] = LazyDictProxy(load_scheduler)
+drivers: Dict[str, Type[BaseDriver]] = LazyDictProxy(load_drivers)  # type: ignore
+webhooks: Dict[str, Type[BaseWebHookCaller]] = LazyDictProxy(load_webhooks)  # type: ignore
+renderers: Dict[str, Type[BaseTemplateRenderer]] = LazyDictProxy(load_template_renderers)  # type: ignore
+parsers: Dict[str, Type[BaseTemplateParser]] = LazyDictProxy(load_template_parsers)  # type: ignore
+schedulers: Dict[str, Type[BaseScheduler]] = LazyDictProxy(load_scheduler)  # type: ignore
 
 __all__ = ["drivers", "parsers", "renderers", "schedulers", "webhooks"]
