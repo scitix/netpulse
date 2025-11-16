@@ -163,7 +163,7 @@ class NetmikoExecutionRequest(ExecutionRequest):
     driver_args: Optional[NetmikoSendConfigSetArgs | NetmikoSendCommandArgs] = None
 
     save: bool = Field(False, description="Save configuration after execution")
-    enable_mode: bool = Field(True, description="Enter privileged mode for execution")
+    enable_mode: bool = Field(False, description="Enter privileged mode for execution")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -179,6 +179,7 @@ class NetmikoExecutionRequest(ExecutionRequest):
                 },
                 "config": ["hostname cat"],
                 "save": True,
+                "enable_mode": True,
             }
         }
     )

@@ -261,7 +261,7 @@ def rpc_webhook_callback(*args):
 
 def rpc_exception_callback(
     job: Job, conn, exc_type: type[BaseException], exc_value: BaseException, tb
-) -> JobAdditionalData:
+) -> JobAdditionalData | None:
     """
     Handle exceptions that occur during RPC job execution.
 
