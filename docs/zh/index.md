@@ -64,6 +64,7 @@ NetPulse 是一个**服务端网络自动化控制器**，通过 RESTful API 提
 - **持久化连接** - 通过SSH长连接技术提升操作效率
 - **分布式架构** - 支持多节点部署和水平扩展
 - **多驱动支持** - Netmiko、NAPALM、PyEAPI、Paramiko等多种驱动
+- **Vault 凭据管理** - 集成 HashiCorp Vault，安全存储和管理设备凭据
 - **模板支持** - 支持Jinja2、TextFSM、TTP模板引擎
 - **批量操作** - 支持大规模设备管理和配置
 
@@ -102,6 +103,7 @@ bash ./scripts/docker_auto_deploy.sh
 ### API 参考
 - [API概览](api/api-overview.md) - API 接口说明
 - [设备操作 API](api/device-api.md) - 设备操作接口
+- [Vault 凭据管理 API](api/credential-api.md) - Vault 凭据管理接口
 - [API示例](api/api-examples.md) - 使用示例
 - [驱动选择](drivers/index.md) - 驱动选择
 
@@ -132,6 +134,9 @@ A: 系统会根据驱动自动选择。Netmiko/NAPALM默认用Pinned（连接复
 
 **Q: 如何获取命令执行结果？**  
 A: 提交任务后获得任务ID，然后通过 `/job?id=xxx` 接口查询结果。
+
+**Q: 如何安全地管理设备凭据？**  
+A: 使用 Vault 凭据管理功能，将凭据存储在 HashiCorp Vault 中，在设备操作时通过 `credential_ref` 引用，避免在请求中直接传递密码。详见 [Vault 凭据管理 API](api/credential-api.md)。
 
 ## 获取帮助
 

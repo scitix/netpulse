@@ -156,11 +156,63 @@ response = requests.post(
     }
 )
 
+result = response.json()
+job_id = result["data"]["id"]
+print(f"Job ID: {job_id}")
+
+# Query task result (poll until completion)
+import time
+while True:
+    job_response = requests.get(
+        f"http://localhost:9000/job?id={job_id}",
+        headers={"X-API-KEY": "your_key"}
+    )
+    job_data = job_response.json()["data"][0]
+    status = job_data["status"]
+    
+    if status == "finished":
+        print(f"Result: {job_data['result']['retval']}")
+        break
+    elif status == "failed":
+        print(f"Failed: {job_data['result']['error']}")
+        break
+    else:
+        print(f"Status: {status}, waiting...")
+        time.sleep(1)
+```
+
+**Note**: Just provide connection parameters and command, other parameters use default values. After task submission, poll to query the result.
+
+### Scenario 1a: Simple Query Using Vault Credentials
+
+**Requirement**: Execute query using credentials stored in Vault
+
+```python
+response = requests.post(
+    "http://localhost:9000/device/execute",
+    headers={
+        "X-API-KEY": "your_key",
+        "Content-Type": "application/json"
+    },
+    json={
+        "driver": "netmiko",
+        "connection_args": {
+            "device_type": "cisco_ios",
+            "host": "192.168.1.1",
+            "credential_ref": "sites/hq/admin"  # Use Vault credential reference
+        },
+        "command": "show version"
+    }
+)
+
 job_id = response.json()["data"]["id"]
 print(f"Job ID: {job_id}")
 ```
 
-**Note**: Just provide connection parameters and command, other parameters use default values.
+!!! tip "credential_ref Priority"
+    If both `credential_ref` and `username`/`password` are provided, `credential_ref` takes priority. The system will automatically read credentials from Vault and inject them into `connection_args`.
+
+See: [Vault Credential Management API](./credential-api.md)
 
 ### Scenario 2: Configuration Push (Need to Save)
 
@@ -241,16 +293,76 @@ Required for all operations, used to establish device connection.
 |-----------|------|-------------|---------|
 | device_type | string | Device type | `cisco_ios`, `juniper_junos`, `arista_eos` |
 | host | string | Device IP address | `192.168.1.1` |
-| username | string | Login username | `admin` |
-| password | string | Login password | `password123` |
+| username | string | Login username (or use `credential_ref`) | `admin` |
+| password | string | Login password (or use `credential_ref`) | `password123` |
+| credential_ref | string | Vault credential reference (recommended) | `sites/hq/admin` |
 
 **Optional Parameters**:
 | Parameter | Type | Default | Use Case |
 |-----------|------|---------|----------|
 | port | integer | 22 | Non-standard SSH port |
 | timeout | integer | 30 | Connection timeout (seconds), can be increased for slow networks |
+| credential_ref | string/object | - | Vault credential reference (recommended, avoids passing passwords in requests) |
 | secret | string | - | Privileged mode password (enable password) |
 | enable_mode | boolean | true | Whether to enter privileged mode for configuration operations |
+
+#### Using Vault Credentials (credential_ref)
+
+Use `credential_ref` to reference credentials stored in Vault, avoiding directly passing passwords in requests for better security.
+
+**Supported Formats**:
+
+1. **String Format** (simplest):
+   ```json
+   {
+     "credential_ref": "sites/hq/admin"
+   }
+   ```
+
+2. **Dictionary Format**:
+   ```json
+   {
+     "credential_ref": {
+       "path": "sites/hq/admin"
+     }
+   }
+   ```
+
+3. **Full Format**:
+   ```json
+   {
+     "credential_ref": {
+       "provider": "vault",
+       "path": "sites/hq/admin",
+       "username_key": "username",
+       "password_key": "password"
+     }
+   }
+   ```
+
+**Usage Example**:
+
+```bash
+curl -X POST "http://localhost:9000/device/execute" \
+  -H "X-API-KEY: your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "driver": "netmiko",
+    "connection_args": {
+      "device_type": "cisco_ios",
+      "host": "192.168.1.1",
+      "credential_ref": "sites/hq/admin"
+    },
+    "command": "show version"
+  }'
+```
+
+!!! tip "credential_ref Priority"
+    - If both `credential_ref` and `username`/`password` are provided, `credential_ref` takes priority
+    - System will read credentials from Vault and inject them into `connection_args`
+    - Credentials are cached to avoid repeated reads
+
+See: [Vault Credential Management API](./credential-api.md)
 
 > **Tip**: Different drivers may have additional parameters in `connection_args`, see driver-specific documentation for details.
 
@@ -293,7 +405,7 @@ Driver-specific parameters, vary by driver type and operation type. **Most scena
 }
 ```
 
-> **Detailed Parameter Description**: Please refer to driver-specific documentation ([Netmiko](../drivers/netmiko.md), [NAPALM](../drivers/napalm.md), [PyEAPI](../drivers/pyeapi.md), [Paramiko](../drivers/paramiko.md))
+> **See**: Driver-specific documentation ([Netmiko](../drivers/netmiko.md), [NAPALM](../drivers/napalm.md), [PyEAPI](../drivers/pyeapi.md), [Paramiko](../drivers/paramiko.md))
 
 ### options
 
@@ -715,7 +827,7 @@ response = requests.post(
 
 ## Best Practices
 
-> **For detailed best practices guide, see**: [API Best Practices](./api-best-practices.md)
+> **See**: [API Best Practices](./api-best-practices.md)
 
 ### Quick Tips
 

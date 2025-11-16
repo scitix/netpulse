@@ -62,6 +62,14 @@ NetPulse provides the following API endpoints, all of which require API Key auth
 | `POST` | `/template/render/{name}` | Render using specified engine | [Template Operation API](./template-api.md) |
 | `POST` | `/template/parse` | Template parsing (auto-detect parser) | [Template Operation API](./template-api.md) |
 | `POST` | `/template/parse/{name}` | Parse using specified parser | [Template Operation API](./template-api.md) |
+| **Vault Credential Management** | | | |
+| `POST` | `/credential/vault/test` | Test Vault connection | [Vault Credential Management API](./credential-api.md) |
+| `POST` | `/credential/vault/create` | Create/update credential | [Vault Credential Management API](./credential-api.md) |
+| `POST` | `/credential/vault/read` | Read credential | [Vault Credential Management API](./credential-api.md) |
+| `POST` | `/credential/vault/delete` | Delete credential | [Vault Credential Management API](./credential-api.md) |
+| `POST` | `/credential/vault/list` | List credential paths | [Vault Credential Management API](./credential-api.md) |
+| `POST` | `/credential/vault/metadata` | Get credential metadata | [Vault Credential Management API](./credential-api.md) |
+| `POST` | `/credential/vault/batch-read` | Batch read credentials | [Vault Credential Management API](./credential-api.md) |
 | **Job Management** | | | |
 | `GET` | `/job` | Query job status and results | [Job Management API](./job-api.md) |
 | `DELETE` | `/job` | Cancel job | [Job Management API](./job-api.md) |
@@ -85,7 +93,7 @@ Device Operation API provides device query, configuration, and connection testin
 - PyEAPI (Arista-specific) - HTTP/HTTPS API
 - Paramiko (SSH) - Linux server management
 
-For detailed information, see: [Device Operation API](./device-api.md)
+See: [Device Operation API](./device-api.md)
 
 ### 2. Template Operation API
 Provides configuration template rendering and command output parsing functions.
@@ -99,7 +107,7 @@ Provides configuration template rendering and command output parsing functions.
 - TextFSM - Command output parsing
 - TTP - Configuration parsing
 
-For detailed information, see: [Template Operation API](./template-api.md)
+See: [Template Operation API](./template-api.md)
 
 ### 3. Job Management API
 Provides job status query, job cancellation, and Worker management functions.
@@ -111,7 +119,28 @@ Provides job status query, job cancellation, and Worker management functions.
 - `DELETE /worker` - Delete Worker
 - `GET /health` - System health check
 
-For detailed information, see: [Job Management API](./job-api.md)
+See: [Job Management API](./job-api.md)
+
+### 4. Vault Credential Management API
+
+Provides secure storage and management of device credentials through HashiCorp Vault integration.
+
+**Main Endpoints**:
+- `POST /credential/vault/test` - Test Vault connection
+- `POST /credential/vault/create` - Create/update credentials
+- `POST /credential/vault/read` - Read credentials (password hidden by default)
+- `POST /credential/vault/delete` - Delete credentials
+- `POST /credential/vault/list` - List credential paths
+- `POST /credential/vault/metadata` - Get credential metadata (version, timestamps, custom metadata)
+- `POST /credential/vault/batch-read` - Batch read credentials
+
+**Key Features**:
+- Secure credential storage (passwords not exposed in API requests)
+- Version control and rollback
+- Metadata management (tags, descriptions)
+- Use `credential_ref` in device operations to reference Vault credentials
+
+See: [Vault Credential Management API](./credential-api.md)
 
 ## Supported Driver Types
 
@@ -162,8 +191,9 @@ NetPulse supports two queue strategies, and the system will automatically select
 {
   "device_type": "cisco_ios",  // Device type
   "host": "192.168.1.1",      // Device IP
-  "username": "admin",         // Username
-  "password": "password"        // Password
+  "username": "admin",         // Username (or use credential_ref)
+  "password": "password",      // Password (or use credential_ref)
+  "credential_ref": "sites/hq/admin"  // Vault credential reference (recommended)
 }
 ```
 
@@ -258,6 +288,8 @@ curl -X POST -H "Content-Type: application/json" \
 ```
 
 ### 3. Execute Simple Query
+
+**Step 1: Submit Task**
 ```bash
 curl -X POST -H "Content-Type: application/json" \
   -H "X-API-KEY: your-key" \
@@ -274,7 +306,49 @@ curl -X POST -H "Content-Type: application/json" \
   http://localhost:9000/device/execute
 ```
 
-## Next Steps
+**Response** (returns job ID):
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "id": "job_123456",
+    "status": "queued",
+    "queue": "pinned_192.168.1.1"
+  }
+}
+```
+
+**Step 2: Query Task Result**
+```bash
+# Use the returned job_id to query result
+curl -X GET "http://localhost:9000/job?id=job_123456" \
+  -H "X-API-KEY: your-key"
+```
+
+**Response** (after task completion):
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [{
+    "id": "job_123456",
+    "status": "finished",
+    "result": {
+      "type": "success",
+      "retval": "Cisco IOS Software, Version 15.2..."
+    }
+  }]
+}
+```
+
+!!! tip "Job Status"
+    - `queued`: Task submitted, waiting for execution
+    - `started`: Task is executing
+    - `finished`: Task completed successfully
+    - `failed`: Task execution failed (check `result.error` for error details)
+
+## Related Documentation
 
 - [Device Operation API](./device-api.md) - Core device operation interfaces
 - [Driver Selection](../drivers/index.md) - Choose the right driver

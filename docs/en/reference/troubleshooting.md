@@ -178,6 +178,60 @@ ssh admin@192.168.1.1
 }
 ```
 
+#### Q5a: Vault Credential Access Failure
+
+**Problem Description**: Unable to get credentials when using `credential_ref`.
+
+**Troubleshooting Steps**:
+```bash
+# 1. Test Vault connection
+curl -X POST \
+  -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{}' \
+  http://localhost:9000/credential/vault/test
+
+# 2. Check if credential exists
+curl -X POST \
+  -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"path": "sites/hq/admin"}' \
+  http://localhost:9000/credential/vault/read
+
+# 3. Check Vault service status
+docker compose ps vault
+docker compose logs vault
+
+# 4. Check if Vault token is valid
+docker compose exec vault vault token lookup
+
+# 5. Check if Vault is unsealed
+docker compose exec vault vault status
+```
+
+**Common Causes**:
+- Vault service not started or not unsealed
+- Vault token invalid or expired
+- Credential path does not exist
+- Vault token has insufficient permissions
+
+**Solutions**:
+```bash
+# If Vault is not unsealed, use unseal_key to unseal
+docker compose exec vault vault operator unseal $VAULT_UNSEAL_KEY
+
+# If credential does not exist, create it
+curl -X POST \
+  -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "path": "sites/hq/admin",
+    "username": "admin",
+    "password": "your_password"
+  }' \
+  http://localhost:9000/credential/vault/create
+```
+
 #### Q6: Device Type Not Supported
 
 **Supported Device Types**:

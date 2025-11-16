@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Generic, Type, TypeVar
 
 from ..utils import g_config
+from .credentials import BaseCredentialProvider
 from .drivers import BaseDriver
 from .schedulers import BaseScheduler
 from .templates import BaseTemplateParser, BaseTemplateRenderer
@@ -181,11 +182,22 @@ def load_scheduler() -> dict[str, Type[BaseScheduler]]:
     ).load()
 
 
+def load_credential_providers() -> dict[str, Type[BaseCredentialProvider]]:
+    """Load credential provider plugins"""
+    return PluginLoader(
+        plugin_dir=g_config.plugin.credential,
+        plugin_base_cls=BaseCredentialProvider,
+        plugin_type="credential",
+        plugin_name_attr="credential_name",
+    ).load()
+
+
 # NOTE: Type hints added just for Ruff. Pylance could infer the type w/o hints.
 drivers: Dict[str, Type[BaseDriver]] = LazyDictProxy(load_drivers)
 webhooks: Dict[str, Type[BaseWebHookCaller]] = LazyDictProxy(load_webhooks)
 renderers: Dict[str, Type[BaseTemplateRenderer]] = LazyDictProxy(load_template_renderers)
 parsers: Dict[str, Type[BaseTemplateParser]] = LazyDictProxy(load_template_parsers)
 schedulers: Dict[str, Type[BaseScheduler]] = LazyDictProxy(load_scheduler)
+credentials: Dict[str, Type[BaseCredentialProvider]] = LazyDictProxy(load_credential_providers)
 
-__all__ = ["drivers", "parsers", "renderers", "schedulers", "webhooks"]
+__all__ = ["credentials", "drivers", "parsers", "renderers", "schedulers", "webhooks"]

@@ -37,6 +37,7 @@ check_env_file() {
             print_warning "Please edit .env file and update the required values:"
             print_warning "  - NETPULSE_REDIS__PASSWORD"
             print_warning "  - NETPULSE_SERVER__API_KEY"
+            print_warning "  - VAULT_TOKEN (optional, defaults to 'myroot' for development)"
             return 1
         else
             print_error ".env.example template not found!"
@@ -62,6 +63,10 @@ check_env_variables() {
         missing_vars+=("NETPULSE_SERVER__API_KEY")
     fi
     
+    if [ -z "$VAULT_TOKEN" ] || [ "$VAULT_TOKEN" = "myroot" ]; then
+        print_warning "VAULT_TOKEN not set or using default value, will use default 'myroot' for development"
+    fi
+    
     if [ ${#missing_vars[@]} -gt 0 ]; then
         print_error "Missing or default values found for required variables:"
         for var in "${missing_vars[@]}"; do
@@ -79,6 +84,7 @@ generate_secure_values() {
     
     local redis_password=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
     local api_key="np_$(openssl rand -hex 32)"
+    local vault_token="vault_$(openssl rand -hex 16)"
     
     # Create .env with secure values
     cat > .env << ENVEOF
@@ -91,6 +97,10 @@ NETPULSE_REDIS__PASSWORD=$redis_password
 # API Key (Required)
 NETPULSE_SERVER__API_KEY=$api_key
 
+# Vault Token (Required for Vault integration, core component)
+# This token is used for Vault authentication
+VAULT_TOKEN=$vault_token
+
 # Optional: Time Zone
 TZ=Asia/Shanghai
 
@@ -100,7 +110,8 @@ ENVEOF
     
     print_success "Secure environment variables generated!"
     print_warning "Your API Key: $api_key"
-    print_warning "Please save this API key securely!"
+    print_warning "Your Vault Token: $vault_token"
+    print_warning "Please save these credentials securely!"
 }
 
 check_certificates() {

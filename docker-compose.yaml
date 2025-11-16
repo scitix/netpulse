@@ -1,4 +1,27 @@
 services:
+  vault:
+    image: hashicorp/vault:latest
+    container_name: netpulse-vault
+    ports:
+      - "8200:8200"
+    environment:
+      - VAULT_ADDR=http://0.0.0.0:8200
+    volumes:
+      - vault_data:/vault/file
+      - ./vault/config.hcl:/vault/config/config.hcl:ro
+    cap_add:
+      - IPC_LOCK
+    command: ["vault", "server", "-config=/vault/config/config.hcl"]
+    networks:
+      - "netpulse-network"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "VAULT_ADDR=http://127.0.0.1:8200 vault status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   controller:
     image: localhost/netpulse-controller:latest
     build:
@@ -6,6 +29,12 @@ services:
       dockerfile: ./docker/controller.dockerfile
     env_file:
       - .env
+    environment:
+      - VAULT_TOKEN=${VAULT_TOKEN:-myroot}
+      - NETPULSE__CREDENTIAL__VAULT__URL=http://vault:8200
+      - NETPULSE__CREDENTIAL__VAULT__TOKEN=${VAULT_TOKEN:-myroot}
+      - NETPULSE__CREDENTIAL__VAULT__MOUNT_POINT=secret
+      - NETPULSE__CREDENTIAL__VAULT__TIMEOUT=30
     volumes:
       - ./config:/app/config
       - ./redis/tls:/app/redis/tls:ro
@@ -16,6 +45,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      vault:
+        condition: service_started
     restart: unless-stopped
 
   node-worker:
@@ -25,12 +56,20 @@ services:
       dockerfile: ./docker/node_worker.dockerfile
     env_file:
       - .env
+    environment:
+      - VAULT_TOKEN=${VAULT_TOKEN:-myroot}
+      - NETPULSE__CREDENTIAL__VAULT__URL=http://vault:8200
+      - NETPULSE__CREDENTIAL__VAULT__TOKEN=${VAULT_TOKEN:-myroot}
+      - NETPULSE__CREDENTIAL__VAULT__MOUNT_POINT=secret
+      - NETPULSE__CREDENTIAL__VAULT__TIMEOUT=30
     volumes:
       - ./config:/app/config
       - ./redis/tls:/app/redis/tls:ro
     depends_on:
       redis:
         condition: service_healthy
+      vault:
+        condition: service_started
     networks:
       - "netpulse-network"
     restart: unless-stopped
@@ -44,12 +83,20 @@ services:
       dockerfile: docker/fifo_worker.dockerfile
     env_file:
       - .env
+    environment:
+      - VAULT_TOKEN=${VAULT_TOKEN:-myroot}
+      - NETPULSE__CREDENTIAL__VAULT__URL=http://vault:8200
+      - NETPULSE__CREDENTIAL__VAULT__TOKEN=${VAULT_TOKEN:-myroot}
+      - NETPULSE__CREDENTIAL__VAULT__MOUNT_POINT=secret
+      - NETPULSE__CREDENTIAL__VAULT__TIMEOUT=30
     volumes:
       - ./config:/app/config
       - ./redis/tls:/app/redis/tls:ro
     depends_on:
       redis:
         condition: service_healthy
+      vault:
+        condition: service_started
     networks:
       - "netpulse-network"
     restart: unless-stopped
@@ -80,3 +127,5 @@ networks:
 volumes:
   redis_data:
     name: "netpulse-redis-data"
+  vault_data:
+    name: "netpulse-vault-data"

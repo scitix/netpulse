@@ -293,11 +293,31 @@ NetPulse improves system performance, availability, and scalability through the 
 - **Template Engines**: Can add new template formats (currently supports Jinja2, TextFSM, TTP, etc.)
 - **Scheduling Algorithms**: Can add new scheduling strategies (currently supports greedy, minimum load, etc.)
 - **Notification Mechanisms**: Can add new Webhook implementations
+- **Credential Management**: Can add new credential providers (currently supports HashiCorp Vault)
 
 **Extension Method**: Inherit corresponding base class, create class in plugin directory, system will automatically discover and load.
 
-!!! tip "Learn More"
-    For detailed plugin system introduction and development guide, please refer to [Plugin System](./plugin-system.md).
+### Credential Management: Vault Integration
+
+**Design Philosophy**: Through a plugin-based credential management system, support dynamically obtaining device authentication information from external credential storage (such as Vault).
+
+**Core Capabilities**:
+- **Credential Provider Plugins**: Support multiple credential storage backends (currently supports HashiCorp Vault)
+- **Credential Resolution**: Automatically resolve `credential_ref` and inject credentials before device operations
+- **Credential Caching**: Automatically cache credentials to avoid repeated reads and improve performance
+- **Secure Storage**: Passwords are not directly exposed in API requests, improving security
+
+**Workflow**:
+1. Client uses `credential_ref` in `connection_args` to reference Vault path
+2. After Controller receives request, it resolves credential reference through CredentialResolver
+3. CredentialResolver calls corresponding credential provider (e.g., VaultProvider) to get credentials
+4. Credentials are injected into `connection_args`, replacing `credential_ref`
+5. Worker uses injected credentials to establish device connection
+
+**Supported Credential Providers**:
+- **Vault**: HashiCorp Vault (supports KV v2 engine, version control, metadata management)
+
+See: [Vault Credential Management API](../api/credential-api.md) | [Basic Concepts](../getting-started/basic-concepts.md#4-credential-management) | [Plugin System](./plugin-system.md)
 
 ## Design Decision Explanations
 

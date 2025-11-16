@@ -4,7 +4,169 @@
 
 本文档提供了 NetPulse API 在实际业务场景中的完整使用示例，包括设备管理、配置操作、批量处理等常见场景。
 
-## 场景1: 网络设备发现
+## 场景1: Vault 凭据管理
+
+### 业务需求
+- 安全地存储和管理网络设备凭据
+- 在设备操作中使用 Vault 凭据，避免在请求中传递密码
+- 管理凭据的版本和元数据
+
+### 实现方案
+
+```python
+import requests
+from typing import Dict, List
+
+class VaultCredentialManager:
+    def __init__(self, base_url: str, api_key: str):
+        self.base_url = base_url
+        self.api_key = api_key
+        self.headers = {"X-API-KEY": api_key}
+    
+    def create_credential(self, path: str, username: str, password: str, metadata: Dict = None) -> Dict:
+        """创建或更新 Vault 凭据"""
+        payload = {
+            "path": path,
+            "username": username,
+            "password": password,
+            "metadata": metadata or {}
+        }
+        
+        response = requests.post(
+            f"{self.base_url}/credential/vault/create",
+            json=payload,
+            headers=self.headers
+        )
+        
+        return response.json()
+    
+    def read_credential(self, path: str, show_password: bool = False) -> Dict:
+        """读取 Vault 凭据"""
+        payload = {
+            "path": path,
+            "show_password": show_password
+        }
+        
+        response = requests.post(
+            f"{self.base_url}/credential/vault/read",
+            json=payload,
+            headers=self.headers
+        )
+        
+        return response.json()
+    
+    def list_credentials(self, path_prefix: str = None, recursive: bool = True) -> List[str]:
+        """列出 Vault 凭据路径"""
+        payload = {
+            "path_prefix": path_prefix,
+            "recursive": recursive
+        }
+        
+        response = requests.post(
+            f"{self.base_url}/credential/vault/list",
+            json=payload,
+            headers=self.headers
+        )
+        
+        result = response.json()
+        return result["data"]["paths"]
+    
+    def get_metadata(self, path: str) -> Dict:
+        """获取凭据元数据"""
+        payload = {"path": path}
+        
+        response = requests.post(
+            f"{self.base_url}/credential/vault/metadata",
+            json=payload,
+            headers=self.headers
+        )
+        
+        return response.json()
+    
+    def delete_credential(self, path: str) -> Dict:
+        """删除 Vault 凭据"""
+        payload = {"path": path}
+        
+        response = requests.post(
+            f"{self.base_url}/credential/vault/delete",
+            json=payload,
+            headers=self.headers
+        )
+        
+        return response.json()
+
+# 使用示例
+manager = VaultCredentialManager("http://localhost:9000", "your_api_key")
+
+# 1. 创建凭据
+result = manager.create_credential(
+    path="sites/hq/admin",
+    username="admin",
+    password="admin123",
+    metadata={"description": "HQ site admin credentials", "site": "hq"}
+)
+print(f"创建凭据: {result}")
+
+# 2. 读取凭据（不显示密码）
+credential = manager.read_credential("sites/hq/admin", show_password=False)
+print(f"凭据信息: {credential}")
+
+# 3. 列出所有站点凭据
+paths = manager.list_credentials(path_prefix="sites", recursive=True)
+print(f"站点凭据: {paths}")
+
+# 4. 获取凭据元数据
+metadata = manager.get_metadata("sites/hq/admin")
+print(f"元数据: {metadata}")
+
+# 5. 在设备操作中使用 Vault 凭据
+device_response = requests.post(
+    "http://localhost:9000/device/execute",
+    json={
+        "driver": "netmiko",
+        "connection_args": {
+            "device_type": "cisco_ios",
+            "host": "192.168.1.1",
+            "credential_ref": "sites/hq/admin"  # 使用 Vault 凭据
+        },
+        "command": "show version"
+    },
+    headers={"X-API-KEY": "your_api_key"}
+)
+print(f"设备操作结果: {device_response.json()}")
+
+# 6. 批量读取凭据
+response = requests.post(
+    "http://localhost:9000/credential/vault/batch-read",
+    headers={"X-API-KEY": "your_api_key", "Content-Type": "application/json"},
+    json={
+        "paths": ["sites/hq/admin", "sites/branch1/admin", "devices/core/backup"],
+        "show_password": False
+    }
+)
+print(f"批量读取结果: {response.json()}")
+
+# 7. 删除凭据
+result = manager.delete_credential("sites/hq/admin")
+print(f"凭据已删除: {result}")
+```
+
+### 最佳实践
+
+**路径命名**：
+- 使用层级结构：`sites/{site}/{role}`、`devices/{type}/{purpose}`
+- 保持路径描述性和一致性
+
+**元数据管理**：
+- 添加描述、标签和自定义元数据，用于生命周期管理
+- 使用元数据 API 追踪凭据变更历史
+
+**安全建议**：
+- 不在日志或 API 请求中暴露密码
+- 默认使用 `show_password: false`
+- 定期轮换密码并创建新版本
+
+## 场景2: 网络设备发现
 
 ### 业务需求
 - 发现网络中的所有设备
@@ -812,4 +974,5 @@ while True:
 
 - [API概览](./api-overview.md) - 了解所有API接口
 - [设备操作 API](./device-api.md) - 设备操作核心接口
+- [Vault 凭据管理 API](./credential-api.md) - Vault 凭据管理接口
 - [API最佳实践](./api-best-practices.md) - 使用建议和优化技巧 

@@ -24,6 +24,66 @@ curl -H "X-API-KEY: $NETPULSE_API_KEY" \
 - Use HTTPS for transmission
 - Limit API key access permissions
 
+### Device Credential Management
+
+#### Using Vault to Store Credentials (Recommended)
+
+**Best Practice**: Use HashiCorp Vault to store device credentials, avoiding directly passing passwords in API requests.
+
+```bash
+# 1. Create credentials in Vault
+curl -X POST \
+  -H "X-API-KEY: $NETPULSE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "path": "sites/hq/admin",
+    "username": "admin",
+    "password": "secure_password",
+    "metadata": {
+      "description": "HQ site admin credentials",
+      "site": "hq"
+    }
+  }' \
+  http://localhost:9000/credential/vault/create
+
+# 2. Use credential reference in device operations
+curl -X POST \
+  -H "X-API-KEY: $NETPULSE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "driver": "netmiko",
+    "connection_args": {
+      "host": "192.168.1.1",
+      "credential_ref": "sites/hq/admin",
+      "device_type": "cisco_ios"
+    },
+    "command": "show version"
+  }' \
+  http://localhost:9000/device/execute
+```
+
+#### Security Recommendations
+- **Use Vault to store credentials**: Avoid exposing passwords in code, logs, or API requests
+- **Plan credential paths**: Use hierarchical structures (e.g., `sites/{site}/{role}`) for easier management
+- **Regular password rotation**: Regularly update passwords in Vault and create new versions
+- **Principle of least privilege**: Create different Vault tokens with different permissions for different applications
+- **Credential caching**: System automatically caches credentials to avoid repeated reads
+
+#### Credential Path Naming Conventions
+
+```python
+# Recommended path structure
+credential_paths = {
+    "sites/hq/admin": "HQ site admin credentials",
+    "sites/hq/readonly": "HQ site read-only credentials",
+    "sites/branch1/admin": "Branch 1 admin credentials",
+    "devices/core/backup": "Core device backup credentials",
+    "environments/prod/admin": "Production environment admin credentials"
+}
+```
+
+See: [Vault Credential Management API](./credential-api.md)
+
 ### Request Header Settings
 
 ```bash
@@ -46,8 +106,7 @@ curl -X POST \
   "driver": "netmiko",
   "connection_args": {
     "host": "192.168.1.1",
-    "username": "admin",
-    "password": "password",
+    "credential_ref": "sites/hq/admin",
     "device_type": "cisco_ios"
   },
   "options": {
@@ -62,8 +121,7 @@ curl -X POST \
   "driver": "netmiko",
   "connection_args": {
     "host": "192.168.1.1",
-    "username": "admin",
-    "password": "password",
+    "credential_ref": "sites/hq/admin",
     "device_type": "cisco_ios"
   },
   "options": {
@@ -80,8 +138,7 @@ curl -X POST \
 {
   "connection_args": {
     "host": "192.168.1.1",
-    "username": "admin",
-    "password": "password",
+    "credential_ref": "sites/hq/admin",
     "device_type": "cisco_ios",
     "timeout": 30,
     "read_timeout": 60,
@@ -508,4 +565,5 @@ def handle_job_completed(data):
 
 - [API Overview](./api-overview.md) - Complete API documentation
 - [Device Operation API](./device-api.md) - Core device operation interfaces
+- [Vault Credential Management API](./credential-api.md) - Vault credential management interface
 - [API Examples](./api-examples.md) - Real-world application scenarios

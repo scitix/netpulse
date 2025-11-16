@@ -121,6 +121,8 @@ curl -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
     
     **Note:** Please replace the IP address, username, and password in the example with your actual device information.
 
+**Method 1: Direct username/password**
+
 ```bash
 curl -X POST \
   -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
@@ -137,13 +139,34 @@ curl -X POST \
   http://localhost:9000/device/test-connection
 ```
 
+**Method 2: Use Vault credentials (Recommended)**
+
+```bash
+curl -X POST \
+  -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "driver": "netmiko",
+    "connection_args": {
+      "host": "192.168.1.1",
+      "credential_ref": "sites/hq/admin",
+      "device_type": "cisco_ios"
+    }
+  }' \
+  http://localhost:9000/device/test-connection
+```
+
+!!! tip "Using Vault Credentials"
+    Use `credential_ref` to reference credentials stored in Vault, avoiding directly passing passwords in requests for better security. See [Vault Credential Management API](../api/credential-api.md) for details.
+
 **Connection Parameter Description:**
 
 | Parameter | Type | Required | Description |
 |:----------|:-----|:--------:|:------------|
 | `host` | string | ✅ | Device IP address |
-| `username` | string | ✅ | SSH username |
-| `password` | string | ✅ | SSH password |
+| `username` | string | ⚠️ | SSH username (or use `credential_ref`) |
+| `password` | string | ⚠️ | SSH password (or use `credential_ref`) |
+| `credential_ref` | string | ⚠️ | Vault credential reference (recommended) |
 | `device_type` | string | ✅ | Device type (e.g., cisco_ios, hp_comware, juniper_junos, etc.) |
 
 **Expected Response:**
@@ -173,7 +196,7 @@ curl -X POST \
     **Note:** This example uses a Cisco IOS device. For other vendor devices, please refer to the corresponding device type and command syntax.
 
 ```bash
-# Execute command
+# Execute command (using Vault credentials)
 response=$(curl -s -X POST \
   -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
   -H "Content-Type: application/json" \
@@ -181,8 +204,7 @@ response=$(curl -s -X POST \
     "driver": "netmiko",
     "connection_args": {
       "host": "192.168.1.1",
-      "username": "admin",
-      "password": "your_password",
+      "credential_ref": "sites/hq/admin",
       "device_type": "cisco_ios"
     },
     "command": "show version"

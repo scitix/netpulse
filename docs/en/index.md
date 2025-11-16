@@ -64,6 +64,7 @@ Traditional client-side tools need to be installed on every machine, and each pr
 - **Persistent Connections** - Improved operation efficiency through SSH long connection technology
 - **Distributed Architecture** - Supports multi-node deployment and horizontal scaling
 - **Multi-Driver Support** - Multiple drivers including Netmiko, NAPALM, PyEAPI, Paramiko
+- **Vault Credential Management** - Integrated HashiCorp Vault for secure storage and management of device credentials
 - **Template Support** - Supports Jinja2, TextFSM, TTP template engines
 - **Batch Operations** - Supports large-scale device management and configuration
 
@@ -102,6 +103,7 @@ If you are using NetPulse for the first time, we recommend reading the documenta
 ### API Reference
 - [API Overview](api/api-overview.md) - API interface documentation
 - [Device Operation API](api/device-api.md) - Device operation interfaces
+- [Vault Credential Management API](api/credential-api.md) - Vault credential management interface
 - [API Examples](api/api-examples.md) - Usage examples
 - [Driver Selection](drivers/index.md) - Driver selection
 
@@ -132,6 +134,9 @@ A: The system will automatically select based on the driver. Netmiko/NAPALM defa
 
 **Q: How to get command execution results?**  
 A: After submitting a task, you get a task ID, then query results through the `/job?id=xxx` interface.
+
+**Q: How to securely manage device credentials?**  
+A: Use the Vault credential management feature to store credentials in HashiCorp Vault, and reference them via `credential_ref` in device operations to avoid directly passing passwords in requests. See [Vault Credential Management API](api/credential-api.md) for details.
 
 ## Get Help
 

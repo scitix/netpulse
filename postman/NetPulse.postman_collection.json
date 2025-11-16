@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "d1f438db-a94c-400d-9709-dea8a05935cd",
+		"_postman_id": "806c7970-e2de-4466-a325-43e5a47f65b5",
 		"name": "NetPulse API Collection -v 0.2",
 		"description": "NetPulse 网络设备管理 API",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
@@ -461,6 +461,96 @@
 			"name": "Device Connection Testing",
 			"item": [
 				{
+					"name": "Netmiko连接测试 - 使用Vault凭据",
+					"item": [
+						{
+							"name": "简化格式 - 字符串路径",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"credential_ref\": \"sites/hq/readonly\",\n    \"timeout\": 30\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/test-connection",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"test-connection"
+									]
+								},
+								"description": "最简格式 - 直接使用路径字符串（推荐）"
+							},
+							"response": []
+						},
+						{
+							"name": "简化格式 - 字典路径",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"credential_ref\": {\n      \"path\": \"sites/hq/readonly\"\n    },\n    \"timeout\": 30\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/test-connection",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"test-connection"
+									]
+								},
+								"description": "简化字典格式 - 只需提供path，provider默认为vault"
+							},
+							"response": []
+						},
+						{
+							"name": "完整格式 - 所有参数",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"credential_ref\": {\n      \"provider\": \"vault\",\n      \"path\": \"sites/hq/readonly\",\n      \"username_key\": \"username\",\n      \"password_key\": \"password\"\n    },\n    \"timeout\": 30\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/test-connection",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"test-connection"
+									]
+								},
+								"description": "完整格式 - 适用于需要自定义字段名的场景"
+							},
+							"response": []
+						}
+					],
+					"description": "Netmiko连接测试 - 使用Vault凭据引用（支持多种格式）"
+				},
+				{
 					"name": "Netmiko连接测试 - 基础",
 					"event": [
 						{
@@ -690,6 +780,34 @@
 									]
 								},
 								"description": "最简单的单命令查询 - 不使用任何高级参数"
+							},
+							"response": []
+						},
+						{
+							"name": "基础查询 - 使用Vault凭据（简化格式）",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"credential_ref\": \"sites/hq/readonly\"\n  },\n  \"command\": \"display version\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/execute",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"execute"
+									]
+								},
+								"description": "使用Vault凭据引用 - 最简格式（推荐）"
 							},
 							"response": []
 						},
@@ -1020,6 +1138,62 @@
 							"response": []
 						},
 						{
+							"name": "基础配置 - 使用Vault凭据",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"credential_ref\": {\n      \"provider\": \"vault\",\n      \"path\": \"sites/hq/admin\",\n      \"username_key\": \"username\",\n      \"password_key\": \"password\"\n    }\n  },\n  \"config\": \"hostname NetPulse-SW01\",\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/execute",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"execute"
+									]
+								},
+								"description": "使用Vault凭据引用的单配置推送 - 安全凭据管理"
+							},
+							"response": []
+						},
+						{
+							"name": "基础配置 - 使用设备特定Vault凭据（实际测试案例）",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"hp_comware\",\n    \"host\": \"10.154.254.1\",\n    \"credential_ref\": \"ops/10.154.254.1\"\n  },\n  \"config\": \"sysname NetPulse-Test\",\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/execute",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"execute"
+									]
+								},
+								"description": "实际测试案例 - 使用设备特定Vault凭据进行配置推送（H3C设备）"
+							},
+							"response": []
+						},
+						{
 							"name": "基础配置 - 带driver_args",
 							"request": {
 								"method": "POST",
@@ -1234,6 +1408,34 @@
 							"response": []
 						},
 						{
+							"name": "基础数据收集 - 使用Vault凭据",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"eos\",\n    \"hostname\": \"{{device_host}}\",\n    \"credential_ref\": \"sites/hq/readonly\"\n  },\n  \"command\": \"get_facts\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/execute",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"execute"
+									]
+								},
+								"description": "NAPALM使用Vault凭据引用 - 安全凭据管理"
+							},
+							"response": []
+						},
+						{
 							"name": "多方法组合查询",
 							"request": {
 								"method": "POST",
@@ -1420,6 +1622,34 @@
 							"response": []
 						},
 						{
+							"name": "基础eAPI查询 - 使用Vault凭据",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"credential_ref\": \"sites/hq/readonly\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"command\": \"show version\",\n  \"driver_args\": {\n    \"encoding\": \"json\",\n    \"format\": \"json\"\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/execute",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"execute"
+									]
+								},
+								"description": "PyEAPI使用Vault凭据引用 - 安全凭据管理"
+							},
+							"response": []
+						},
+						{
 							"name": "多命令JSON查询",
 							"request": {
 								"method": "POST",
@@ -1602,6 +1832,34 @@
 									]
 								},
 								"description": "Paramiko基础单命令查询 - 系统信息"
+							},
+							"response": []
+						},
+						{
+							"name": "基础查询 - 使用Vault凭据",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"credential_ref\": \"sites/hq/readonly\",\n    \"port\": 22,\n    \"timeout\": 30.0\n  },\n  \"command\": \"uname -a\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/execute",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"execute"
+									]
+								},
+								"description": "Paramiko使用Vault凭据引用 - 安全凭据管理"
 							},
 							"response": []
 						},
@@ -1944,6 +2202,62 @@
 							"response": []
 						},
 						{
+							"name": "批量查询 - 使用Vault凭据（简化格式）",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"credential_ref\": \"sites/hq/readonly\"\n  },\n  \"devices\": [\n    {\"host\": \"{{device_host}}\"},\n    {\"host\": \"{{device_host_2}}\"},\n    {\"host\": \"{{device_host_3}}\"}\n  ],\n  \"command\": [\n    \"show version\",\n    \"show ip interface brief\",\n    \"show vlan brief\"\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/bulk",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"bulk"
+									]
+								},
+								"description": "批量查询 - 使用Vault凭据引用（最简格式，推荐）"
+							},
+							"response": []
+						},
+						{
+							"name": "批量查询 - 使用设备特定Vault凭据（实际测试案例）",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"hp_comware\",\n    \"credential_ref\": \"ops/10.154.254.1\"\n  },\n  \"devices\": [\n    {\"host\": \"10.154.254.1\"}\n  ],\n  \"command\": [\n    \"dis version\",\n    \"dis device\",\n    \"dis interface brief\"\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/bulk",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"bulk"
+									]
+								},
+								"description": "实际测试案例 - 使用设备特定Vault凭据进行批量查询（H3C设备）"
+							},
+							"response": []
+						},
+						{
 							"name": "Cisco设备批量查询",
 							"request": {
 								"method": "POST",
@@ -2030,6 +2344,34 @@
 									]
 								},
 								"description": "多厂商设备信息收集 - 自动设备发现和清单管理"
+							},
+							"response": []
+						},
+						{
+							"name": "多厂商设备信息收集 - 使用Vault凭据",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"credential_ref\": {\n      \"provider\": \"vault\",\n      \"path\": \"sites/hq/readonly\",\n      \"username_key\": \"username\",\n      \"password_key\": \"password\"\n    },\n    \"timeout\": 60\n  },\n  \"devices\": [\n    {\n      \"host\": \"{{device_host}}\",\n      \"device_type\": \"cisco_ios\",\n      \"site\": \"HQ\",\n      \"role\": \"core\"\n    },\n    {\n      \"host\": \"{{device_host_2}}\",\n      \"device_type\": \"cisco_nxos\",\n      \"site\": \"Branch1\",\n      \"role\": \"access\"\n    },\n    {\n      \"host\": \"{{device_host_3}}\",\n      \"device_type\": \"juniper_junos\",\n      \"site\": \"Branch2\",\n      \"role\": \"edge\"\n    }\n  ],\n  \"command\": \"show version\",\n  \"driver_args\": {\n    \"read_timeout\": 45,\n    \"strip_prompt\": true,\n    \"normalize\": true\n  },\n  \"options\": {\n    \"ttl\": 600,\n    \"webhook\": {\n      \"url\": \"https://inventory.company.com/device-discovery\",\n      \"method\": \"POST\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {{inventory_token}}\"\n      }\n    }\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/bulk",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"bulk"
+									]
+								},
+								"description": "多厂商设备信息收集 - 使用Vault凭据引用（推荐用于生产环境）"
 							},
 							"response": []
 						},
@@ -2128,182 +2470,6 @@
 				}
 			],
 			"description": "各种批量设备操作场景"
-		},
-		{
-			"name": "Legacy Pull API (/pull/*) discard",
-			"item": [
-				{
-					"name": "Pull - 基础命令",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show version\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/pull",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"pull"
-							]
-						},
-						"description": "Legacy Pull API - 基础命令执行"
-					},
-					"response": []
-				},
-				{
-					"name": "Pull - 带模板解析",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show ip interface brief\",\n  \"parsing\": {\n    \"name\": \"textfsm\",\n    \"template\": \"Value INTERFACE (\\\\S+)\\nValue IP ([\\\\d\\\\.]+)\\nValue STATUS (\\\\S+)\\n\\nStart\\n  ^${INTERFACE}\\\\s+${IP}\\\\s+\\\\w+\\\\s+\\\\w+\\\\s+${STATUS} -> Record\"\n  }\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/pull",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"pull"
-							]
-						},
-						"description": "Legacy Pull API - 带TextFSM模板解析"
-					},
-					"response": []
-				},
-				{
-					"name": "Pull Batch - 批量执行",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"devices\": [\n    {\"host\": \"{{device_host}}\"},\n    {\"host\": \"{{device_host_2}}\"},\n    {\"host\": \"{{device_host_3}}\"}\n  ],\n  \"command\": \"show version\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/pull/batch",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"pull",
-								"batch"
-							]
-						},
-						"description": "Legacy Pull API - 批量设备命令执行"
-					},
-					"response": []
-				}
-			],
-			"description": "传统Pull API - 用于向后兼容"
-		},
-		{
-			"name": "Legacy Push API (/push/*) discard",
-			"item": [
-				{
-					"name": "Push - 基础配置",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"config\": [\n    \"interface GigabitEthernet0/2\",\n    \"description Legacy Push API配置\",\n    \"no shutdown\"\n  ]\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/push",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"push"
-							]
-						},
-						"description": "Legacy Push API - 基础配置推送"
-					},
-					"response": []
-				},
-				{
-					"name": "Push - 带模板渲染",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"config\": {\n    \"interface\": \"GigabitEthernet0/3\",\n    \"description\": \"模板渲染配置的接口\",\n    \"vlan\": 200\n  },\n  \"rendering\": {\n    \"name\": \"jinja2\",\n    \"template\": \"interface {{ interface }}\\n description {{ description }}\\n switchport mode access\\n switchport access vlan {{ vlan }}\\n no shutdown\"\n  }\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/push",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"push"
-							]
-						},
-						"description": "Legacy Push API - 带Jinja2模板渲染"
-					},
-					"response": []
-				},
-				{
-					"name": "Push Batch - 批量配置",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"devices\": [\n    {\"host\": \"{{device_host}}\"},\n    {\"host\": \"{{device_host_2}}\"},\n    {\"host\": \"{{device_host_3}}\"}\n  ],\n  \"config\": \"clock timezone EST -5\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/push/batch",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"push",
-								"batch"
-							]
-						},
-						"description": "Legacy Push API - 批量时区配置推送"
-					},
-					"response": []
-				}
-			],
-			"description": "传统Push API - 用于向后兼容"
 		},
 		{
 			"name": "Template Operations",
@@ -2527,6 +2693,215 @@
 			"description": "模板渲染和解析功能 - 支持所有模板引擎"
 		},
 		{
+			"name": "Vault Credential Management",
+			"item": [
+				{
+					"name": "Test Vault Connection",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/credential/vault/test",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"credential",
+								"vault",
+								"test"
+							]
+						},
+						"description": "测试Vault连接和认证"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Credential",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"path\": \"sites/hq/readonly\",\n  \"username\": \"admin\",\n  \"password\": \"admin123\",\n  \"metadata\": {\n    \"description\": \"HQ site readonly credentials\",\n    \"site\": \"HQ\",\n    \"role\": \"readonly\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/credential/vault/create",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"credential",
+								"vault",
+								"create"
+							]
+						},
+						"description": "创建或更新Vault中的凭据"
+					},
+					"response": []
+				},
+				{
+					"name": "Read Credential",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"path\": \"sites/hq/readonly\",\n  \"show_password\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/credential/vault/read",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"credential",
+								"vault",
+								"read"
+							]
+						},
+						"description": "读取Vault中的凭据（默认隐藏密码）"
+					},
+					"response": []
+				},
+				{
+					"name": "List Credentials",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"path_prefix\": \"sites/\",\n  \"recursive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/credential/vault/list",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"credential",
+								"vault",
+								"list"
+							]
+						},
+						"description": "列出Vault中的凭据路径"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Credential",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"path\": \"sites/hq/readonly\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/credential/vault/delete",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"credential",
+								"vault",
+								"delete"
+							]
+						},
+						"description": "删除Vault中的凭据"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Metadata",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"path\": \"sites/hq/readonly\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/credential/vault/metadata",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"credential",
+								"vault",
+								"metadata"
+							]
+						},
+						"description": "获取凭据元数据 - 使用Vault原生metadata API (GET /v1/{mount}/metadata/{path})，返回版本信息、创建时间、更新时间、自定义元数据（用于生命周期管理和标签管理）"
+					},
+					"response": []
+				},
+				{
+					"name": "Batch Read Credentials",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"paths\": [\n    \"sites/hq/readonly\",\n    \"sites/branch1/admin\",\n    \"devices/core/backup\"\n  ],\n  \"show_password\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/credential/vault/batch-read",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"credential",
+								"vault",
+								"batch-read"
+							]
+						},
+						"description": "批量读取凭据 - 应用层封装（非Vault原生API），内部循环调用单个读取API，适用于批量操作场景（减少客户端API调用次数，但Vault端仍为多次调用）"
+					},
+					"response": []
+				}
+			],
+			"description": "Vault凭据管理API - 基本的CRUD操作和高级功能"
+		},
+		{
 			"name": "Advanced Scenarios - Advanced",
 			"item": [
 				{
@@ -2723,6 +3098,18 @@
 		{
 			"key": "proxy_password",
 			"value": "your_proxy_password"
+		},
+		{
+			"key": "vault_credential_path",
+			"value": "sites/hq/readonly"
+		},
+		{
+			"key": "test_device_host",
+			"value": "10.154.254.1"
+		},
+		{
+			"key": "test_credential_path",
+			"value": "ops/10.154.254.1"
 		}
 	]
 }

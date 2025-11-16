@@ -24,6 +24,66 @@ curl -H "X-API-KEY: $NETPULSE_API_KEY" \
 - 使用HTTPS进行传输
 - 限制API密钥的访问权限
 
+### 设备凭据管理
+
+#### 使用 Vault 存储凭据（推荐）
+
+**最佳实践**：使用 HashiCorp Vault 存储设备凭据，避免在 API 请求中直接传递密码。
+
+```bash
+# 1. 创建凭据到 Vault
+curl -X POST \
+  -H "X-API-KEY: $NETPULSE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "path": "sites/hq/admin",
+    "username": "admin",
+    "password": "secure_password",
+    "metadata": {
+      "description": "HQ site admin credentials",
+      "site": "hq"
+    }
+  }' \
+  http://localhost:9000/credential/vault/create
+
+# 2. 在设备操作中使用凭据引用
+curl -X POST \
+  -H "X-API-KEY: $NETPULSE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "driver": "netmiko",
+    "connection_args": {
+      "host": "192.168.1.1",
+      "credential_ref": "sites/hq/admin",
+      "device_type": "cisco_ios"
+    },
+    "command": "show version"
+  }' \
+  http://localhost:9000/device/execute
+```
+
+#### 安全建议
+- **使用 Vault 存储凭据**：避免在代码、日志、API 请求中暴露密码
+- **凭据路径规划**：使用层级结构（如 `sites/{site}/{role}`）便于管理
+- **定期轮换密码**：定期更新 Vault 中的密码并创建新版本
+- **最小权限原则**：为不同应用创建不同权限的 Vault token
+- **凭据缓存**：系统会自动缓存凭据，避免重复读取
+
+#### 凭据路径命名规范
+
+```python
+# 推荐的路径结构
+credential_paths = {
+    "sites/hq/admin": "HQ站点管理员凭据",
+    "sites/hq/readonly": "HQ站点只读凭据",
+    "sites/branch1/admin": "分支1管理员凭据",
+    "devices/core/backup": "核心设备备份凭据",
+    "environments/prod/admin": "生产环境管理员凭据"
+}
+```
+
+参考：[Vault 凭据管理 API](./credential-api.md)
+
 ### 请求头设置
 
 ```bash
@@ -46,8 +106,7 @@ curl -X POST \
   "driver": "netmiko",
   "connection_args": {
     "host": "192.168.1.1",
-    "username": "admin",
-    "password": "password",
+    "credential_ref": "sites/hq/admin",
     "device_type": "cisco_ios"
   },
   "options": {
@@ -62,8 +121,7 @@ curl -X POST \
   "driver": "netmiko",
   "connection_args": {
     "host": "192.168.1.1",
-    "username": "admin",
-    "password": "password",
+    "credential_ref": "sites/hq/admin",
     "device_type": "cisco_ios"
   },
   "options": {
@@ -80,8 +138,7 @@ curl -X POST \
 {
   "connection_args": {
     "host": "192.168.1.1",
-    "username": "admin",
-    "password": "password",
+    "credential_ref": "sites/hq/admin",
     "device_type": "cisco_ios",
     "timeout": 30,
     "read_timeout": 60,
@@ -508,4 +565,5 @@ def handle_job_completed(data):
 
 - [API概览](./api-overview.md) - 完整的API文档
 - [设备操作 API](./device-api.md) - 设备操作核心接口
+- [Vault 凭据管理 API](./credential-api.md) - Vault 凭据管理接口
 - [API示例](./api-examples.md) - 实际应用场景 

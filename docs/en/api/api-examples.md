@@ -4,7 +4,162 @@
 
 This document provides complete usage examples of NetPulse API in actual business scenarios, including device management, configuration operations, batch processing, and other common scenarios.
 
-## Scenario 1: Network Device Discovery
+## Scenario 1: Vault Credential Management
+
+### Business Requirements
+- Securely store device credentials in Vault
+- Use credential references in device operations
+- Manage credential lifecycle (create, read, update, delete)
+
+### Implementation
+
+```python
+import requests
+from typing import Dict, Optional
+
+class VaultCredentialManager:
+    def __init__(self, base_url: str, api_key: str):
+        self.base_url = base_url
+        self.headers = {
+            "X-API-KEY": api_key,
+            "Content-Type": "application/json"
+        }
+    
+    def create_credential(self, path: str, username: str, password: str, metadata: Optional[Dict] = None) -> Dict:
+        """Create credential in Vault"""
+        payload = {
+            "path": path,
+            "username": username,
+            "password": password
+        }
+        if metadata:
+            payload["metadata"] = metadata
+        
+        response = requests.post(
+            f"{self.base_url}/credential/vault/create",
+            headers=self.headers,
+            json=payload
+        )
+        return response.json()
+    
+    def read_credential(self, path: str, show_password: bool = False) -> Dict:
+        """Read credential from Vault"""
+        payload = {
+            "path": path,
+            "show_password": show_password
+        }
+        response = requests.post(
+            f"{self.base_url}/credential/vault/read",
+            headers=self.headers,
+            json=payload
+        )
+        return response.json()
+    
+    def list_credentials(self, path_prefix: str = "", recursive: bool = True) -> Dict:
+        """List credential paths"""
+        payload = {
+            "path_prefix": path_prefix,
+            "recursive": recursive
+        }
+        response = requests.post(
+            f"{self.base_url}/credential/vault/list",
+            headers=self.headers,
+            json=payload
+        )
+        return response.json()
+    
+    def get_metadata(self, path: str) -> Dict:
+        """Get credential metadata"""
+        payload = {"path": path}
+        response = requests.post(
+            f"{self.base_url}/credential/vault/metadata",
+            headers=self.headers,
+            json=payload
+        )
+        return response.json()
+    
+    def delete_credential(self, path: str) -> Dict:
+        """Delete credential from Vault"""
+        payload = {"path": path}
+        response = requests.post(
+            f"{self.base_url}/credential/vault/delete",
+            headers=self.headers,
+            json=payload
+        )
+        return response.json()
+
+# Usage Example
+manager = VaultCredentialManager("http://localhost:9000", "your-api-key")
+
+# 1. Create credential
+result = manager.create_credential(
+    path="sites/hq/admin",
+    username="admin",
+    password="secure_password",
+    metadata={"description": "HQ site admin credentials", "site": "hq"}
+)
+print(f"Credential created: {result}")
+
+# 2. Read credential (password hidden by default)
+result = manager.read_credential("sites/hq/admin", show_password=False)
+print(f"Credential: {result}")
+
+# 3. Use credential in device operation
+response = requests.post(
+    "http://localhost:9000/device/execute",
+    headers={"X-API-KEY": "your-api-key", "Content-Type": "application/json"},
+    json={
+        "driver": "netmiko",
+        "connection_args": {
+            "device_type": "cisco_ios",
+            "host": "192.168.1.1",
+            "credential_ref": "sites/hq/admin"  # Reference Vault credential
+        },
+        "command": "show version"
+    }
+)
+print(f"Device operation result: {response.json()}")
+
+# 4. List all credentials
+result = manager.list_credentials(path_prefix="sites", recursive=True)
+print(f"Credential paths: {result['data']['paths']}")
+
+# 5. Get credential metadata
+result = manager.get_metadata("sites/hq/admin")
+print(f"Metadata: {result}")
+
+# 6. Batch read credentials
+response = requests.post(
+    "http://localhost:9000/credential/vault/batch-read",
+    headers={"X-API-KEY": "your-api-key", "Content-Type": "application/json"},
+    json={
+        "paths": ["sites/hq/admin", "sites/branch1/admin", "devices/core/backup"],
+        "show_password": False
+    }
+)
+print(f"Batch read result: {response.json()}")
+
+# 7. Delete credential
+result = manager.delete_credential("sites/hq/admin")
+print(f"Credential deleted: {result}")
+```
+
+### Best Practices
+
+**Path Naming**:
+- Use hierarchical structure: `sites/{site}/{role}`, `devices/{type}/{purpose}`
+- Keep paths descriptive and consistent
+
+**Metadata Management**:
+- Add descriptions, tags, and custom metadata for lifecycle management
+- Use metadata API to track credential changes
+
+**Security**:
+- Never expose passwords in logs or API requests
+- Use `show_password: false` by default
+- Regularly rotate passwords and create new versions
+
+## Scenario 2: Network Device Discovery
 
 ### Business Requirements
 - Discover all devices in the network
@@ -812,4 +967,5 @@ while True:
 
 - [API Overview](./api-overview.md) - Learn about all API interfaces
 - [Device Operation API](./device-api.md) - Core device operation interfaces
+- [Vault Credential Management API](./credential-api.md) - Vault credential management interface
 - [API Best Practices](./api-best-practices.md) - Usage recommendations and optimization tips

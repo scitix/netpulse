@@ -121,6 +121,8 @@ curl -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
     
     **注意：** 请将示例中的 IP 地址、用户名和密码替换为您的实际设备信息。
 
+**方式1：直接传递用户名密码**
+
 ```bash
 curl -X POST \
   -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
@@ -137,13 +139,34 @@ curl -X POST \
   http://localhost:9000/device/test-connection
 ```
 
+**方式2：使用 Vault 凭据（推荐）**
+
+```bash
+curl -X POST \
+  -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "driver": "netmiko",
+    "connection_args": {
+      "host": "192.168.1.1",
+      "credential_ref": "sites/hq/admin",
+      "device_type": "cisco_ios"
+    }
+  }' \
+  http://localhost:9000/device/test-connection
+```
+
+!!! tip "使用 Vault 凭据"
+    使用 `credential_ref` 引用 Vault 中存储的凭据，避免在请求中直接传递密码，更安全。详见 [Vault 凭据管理 API](../api/credential-api.md)。
+
 **连接参数说明：**
 
 | 参数 | 类型 | 必需 | 说明 |
 |:-----|:-----|:----:|:-----|
 | `host` | string | ✅ | 设备IP地址 |
-| `username` | string | ✅ | SSH用户名 |
-| `password` | string | ✅ | SSH密码 |
+| `username` | string | ⚠️ | SSH用户名（或使用 `credential_ref`） |
+| `password` | string | ⚠️ | SSH密码（或使用 `credential_ref`） |
+| `credential_ref` | string | ⚠️ | Vault 凭据引用（推荐使用） |
 | `device_type` | string | ✅ | 设备类型（如：cisco_ios, hp_comware, juniper_junos等） |
 
 **预期响应：**
@@ -173,7 +196,7 @@ curl -X POST \
     **注意：** 本示例使用Cisco IOS设备，其他厂商设备请参考相应的设备类型和命令语法。
 
 ```bash
-# 执行命令
+# 执行命令（使用 Vault 凭据）
 response=$(curl -s -X POST \
   -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
   -H "Content-Type: application/json" \
@@ -181,8 +204,7 @@ response=$(curl -s -X POST \
     "driver": "netmiko",
     "connection_args": {
       "host": "192.168.1.1",
-      "username": "admin",
-      "password": "your_password",
+      "credential_ref": "sites/hq/admin",
       "device_type": "cisco_ios"
     },
     "command": "show version"

@@ -41,6 +41,17 @@ plugin:
   webhook: netpulse/plugins/webhooks/
   template: netpulse/plugins/templates/
   scheduler: netpulse/plugins/schedulers/
+  credential: netpulse/plugins/credentials/
+
+# Credential plugin configuration (Vault is deployed as core component in containerized deployment)
+# When using docker-compose, configuration is automatically set via environment variables
+# To manually configure or use external Vault, uncomment and modify the following
+# credential:
+#   vault:
+#     url: "http://vault:8200"  # Use service name for containerized deployment, actual address for external
+#     token: "${VAULT_TOKEN}"
+#     mount_point: "secret"
+#     timeout: 30
 
 log:
   config: config/log-config.yaml

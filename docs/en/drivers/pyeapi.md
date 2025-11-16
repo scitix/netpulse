@@ -4,7 +4,7 @@
 
 PyEAPI driver is based on [Device Operation API](../api/device-api.md), providing dedicated operation functions for Arista devices, implementing device query and configuration management through HTTP/HTTPS API.
 
-> **Important Note**: This document focuses on PyEAPI driver-specific parameters and usage. For general API endpoints (`POST /device/execute`), request format, response format, etc., please refer to [Device Operation API](../api/device-api.md).
+> **Note**: This document focuses on PyEAPI driver-specific parameters and usage. For general API endpoints (`POST /device/execute`), request format, response format, etc., see [Device Operation API](../api/device-api.md).
 
 ## Driver Features
 
@@ -41,6 +41,33 @@ PyEAPI driver is based on [Device Operation API](../api/device-api.md), providin
   }
 }
 ```
+
+#### Basic eAPI Query - Using Vault Credentials
+
+**Request**
+```json
+{
+  "driver": "pyeapi",
+  "connection_args": {
+    "host": "192.168.1.1",
+    "credential_ref": "sites/hq/admin",
+    "transport": "https",
+    "port": 443
+  },
+  "command": "show version",
+  "driver_args": {
+    "encoding": "json",
+    "format": "json"
+  },
+  "options": {
+    "queue_strategy": "fifo",
+    "ttl": 300
+  }
+}
+```
+
+!!! tip "Using Vault Credentials"
+    Use `credential_ref` to reference credentials stored in Vault, avoiding directly passing passwords in requests. The system will automatically read credentials from Vault and inject them into connection parameters. See: [Vault Credential Management API](../api/credential-api.md)
 
 #### Multiple Command JSON Query
 
@@ -651,7 +678,7 @@ print(f"Configuration push result: {result}")
 
 ## PyEAPI Driver-Specific Parameters
 
-> **Note**: For general connection parameters (host, username, password, etc.), please refer to parameter descriptions in [Device Operation API](../api/device-api.md). This section only describes PyEAPI driver-specific parameters.
+> **Note**: For general connection parameters (host, username, password, etc.), see [Device Operation API](../api/device-api.md). This section only describes PyEAPI driver-specific parameters.
 
 ### connection_args Specific Parameters
 
@@ -668,14 +695,14 @@ print(f"Configuration push result: {result}")
 
 PyEAPI driver's `driver_args` supports arbitrary parameters (`extra="allow"`), all parameters are directly passed to pyeapi's `enable()` or `config()` methods.
 
-> **Important Note**: All parameters in `driver_args` are directly passed to the underlying pyeapi library. Parameters used in documentation examples (such as `encoding`, `format`, `timestamps`, `expand`, `detail`, `autoComplete`, `expandAliases`, etc.) need to be used according to the actual support of the pyeapi library. For specific supported parameters, please refer to [pyeapi official documentation](https://github.com/arista-eosplus/pyeapi).
+> **Note**: All parameters in `driver_args` are directly passed to the underlying pyeapi library. Parameters used in documentation examples (such as `encoding`, `format`, `timestamps`, `expand`, `detail`, `autoComplete`, `expandAliases`, etc.) need to be used according to the actual support of the pyeapi library. For specific supported parameters, see [pyeapi official documentation](https://github.com/arista-eosplus/pyeapi).
 
-**Common Parameter Examples** (actual support please refer to pyeapi documentation):
+**Common Parameter Examples** (actual support see pyeapi documentation):
 - `encoding`: Encoding format (for enable method)
 - `format`: Output format (for enable method, such as `json`)
-- For other parameters, please refer to [pyeapi official documentation](https://github.com/arista-eosplus/pyeapi)
+- For other parameters, see [pyeapi official documentation](https://github.com/arista-eosplus/pyeapi)
 
-> **Note**: `options` parameter is a global option, common to all drivers. For detailed description, please refer to [Device Operation API](../api/device-api.md).
+> **Note**: `options` parameter is a global option, common to all drivers. See: [Device Operation API](../api/device-api.md)
 
 **PyEAPI Recommended Configuration**:
 - `queue_strategy`: Recommended to use `"fifo"`, HTTP stateless connection

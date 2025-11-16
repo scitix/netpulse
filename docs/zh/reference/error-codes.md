@@ -43,9 +43,10 @@ NetPulse API 使用标准 HTTP 状态码：
 | `200` | OK | 请求成功 |
 | `201` | Created | 任务创建成功 |
 | `400` | Bad Request | 请求参数错误、验证失败 |
-| `403` | Forbidden | API 密钥无效或缺失 |
-| `404` | Not Found | 资源不存在（如模板引擎未找到） |
+| `403` | Forbidden | API 密钥无效或缺失、Vault 凭据访问被拒绝 |
+| `404` | Not Found | 资源不存在（如模板引擎未找到、Vault 凭据不存在） |
 | `500` | Internal Server Error | 服务器内部错误 |
+| `503` | Service Unavailable | Vault 服务不可用 |
 
 ## 常见错误情况
 
@@ -153,6 +154,8 @@ NetPulse API 使用标准 HTTP 状态码：
 - `ConnectionError`: 设备连接失败
 - `TimeoutError`: 操作超时
 - `AuthenticationError`: 设备认证失败
+- `CredentialError`: Vault 凭据错误（凭据不存在、访问被拒绝等）
+- `VaultConnectionError`: Vault 服务连接失败
 - 其他 Python 异常类型
 
 ## 错误处理示例
@@ -183,9 +186,13 @@ def call_api(url, api_key, data=None):
         
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 403:
-            print("API 密钥错误，请检查配置")
+            print("API 密钥错误或 Vault 凭据访问被拒绝，请检查配置")
         elif e.response.status_code == 400:
             print("请求参数错误")
+        elif e.response.status_code == 404:
+            print("资源不存在（可能是 Vault 凭据路径不存在）")
+        elif e.response.status_code == 503:
+            print("Vault 服务不可用，请检查 Vault 服务状态")
         else:
             print(f"HTTP 错误: {e.response.status_code}")
         return None

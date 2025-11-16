@@ -14,6 +14,7 @@ Query job status and results.
 - Supports querying by job ID, queue, status, node, host, and other conditions
 - Returns detailed job information, including execution time, results, error information
 - Supports pagination and filtering
+- **ID query has highest priority**: If `id` parameter is provided, other filter conditions will be ignored
 
 **Query Parameters**:
 
@@ -62,9 +63,9 @@ curl -X GET "http://localhost:9000/job?host=192.168.1.1" \
       "ended_at": "2024-01-01T12:00:05+08:00",
       "worker": "worker_001",
       "result": {
-        "type": "success",
-        "retval": "Cisco IOS Software, Version 15.2...",
-        "error": null
+        "type": "success",           // Result type: "success" or "failure"
+        "retval": "Cisco IOS Software, Version 15.2...",  // Return value on success (command output)
+        "error": null                // Error object on failure: {"type": "error_type", "message": "error_message"}
       },
       "duration": 3.0,
       "queue_time": 1.0

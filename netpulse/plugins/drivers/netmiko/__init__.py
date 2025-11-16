@@ -181,7 +181,9 @@ class NetmikoDriver(BaseDriver):
                 log.info("Reusing existing connection")
             else:
                 log.info(f"Creating new connection to {self.conn_args.host}...")
-                session = ConnectHandler(**self.conn_args.model_dump())
+                # Exclude credential_ref and other non-netmiko fields
+                conn_dict = self.conn_args.model_dump(exclude={"credential_ref"}, exclude_none=True)
+                session = ConnectHandler(**conn_dict)
                 if self.conn_args.keepalive:
                     self._set_persisted_session(session, self.conn_args)
             return session

@@ -1,7 +1,7 @@
 from enum import Enum
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
 
 class QueueStrategy(str, Enum):
@@ -70,6 +70,21 @@ class NodeInfo(BaseModel):
         return self.hostname == value.hostname
 
 
+class CredentialReference(BaseModel):
+    """Credential reference model.
+
+    Supports multiple formats:
+    1. Full format: {"provider": "vault", "path": "sites/hq/readonly", ...}
+    2. Short format: {"path": "sites/hq/readonly"}  # provider defaults to "vault"
+    3. String format: "sites/hq/readonly"  # handled by DriverConnectionArgs validator
+    """
+
+    provider: str = Field("vault", description="Credential provider name, defaults to 'vault'")
+    path: str = Field(..., description="Credential path in Vault, supports hierarchical structure")
+    username_key: Optional[str] = Field("username", description="Username field name")
+    password_key: Optional[str] = Field("password", description="Password field name")
+
+
 class WebHook(BaseModel):
     class WebHookMethod(str, Enum):
         GET = "GET"
@@ -112,6 +127,13 @@ class DriverConnectionArgs(BaseModel):
     host: Optional[str] = Field(None, description="Device IP address")
     username: Optional[str] = Field(None, description="Device username")
     password: Optional[str] = Field(None, description="Device password")
+    credential_ref: Optional[Union[CredentialReference, str, Dict[str, Any]]] = Field(
+        None,
+        description=(
+            "Credential reference from credential provider. "
+            "Supports: string path, dict with path, or full CredentialReference object"
+        ),
+    )
 
     model_config = ConfigDict(
         extra="allow",
@@ -124,6 +146,49 @@ class DriverConnectionArgs(BaseModel):
             }
         },
     )
+
+    @field_validator("credential_ref", mode="before")
+    @classmethod
+    def normalize_credential_ref(cls, v):
+        """Normalize credential_ref to CredentialReference object.
+
+        Supports string path, dict with path, or CredentialReference object.
+        """
+        if v is None:
+            return None
+
+        if isinstance(v, str):
+            # String format: just the path
+            return CredentialReference(path=v)
+
+        if isinstance(v, dict):
+            # Dict format: ensure it has path
+            if "path" not in v:
+                raise ValueError("credential_ref dict must contain 'path' field")
+            return CredentialReference(**v)
+
+        # Already a CredentialReference object
+        return v
+
+    @model_validator(mode="after")
+    def validate_credentials(self):
+        """
+        Validate credential configuration: must provide direct credentials or credential reference,
+        but not both.
+
+        Note: Some drivers may only need username (e.g., key authentication), not password,
+        so only check if username exists, don't require password.
+        """
+        has_direct_creds = self.username is not None
+        has_credential_ref = self.credential_ref is not None
+
+        if not has_direct_creds and not has_credential_ref:
+            raise ValueError("Must provide username or credential reference")
+
+        if has_direct_creds and has_credential_ref:
+            raise ValueError("Cannot provide both direct credentials and credential reference")
+
+        return self
 
     def enforced_field_check(self):
         """

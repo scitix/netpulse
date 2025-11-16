@@ -49,6 +49,13 @@ redis:
     host_to_node_map: netpulse:host_to_node_map
     node_info_map: netpulse:node_info_map
 
+credential:
+  vault:
+    url: http://localhost:8200          # Vault server URL
+    token: ${VAULT_TOKEN}               # Vault authentication token
+    mount_point: secret                 # KV v2 mount point
+    timeout: 5                          # Connection timeout (seconds)
+
 plugin:
   driver: netpulse/plugins/drivers/      # Device driver plugin directory
   webhook: netpulse/plugins/webhooks/    # Webhook plugin directory
@@ -85,7 +92,7 @@ export NETPULSE_WORKER__PINNED_PER_NODE=64
 !!! note "Environment Variable Priority"
     Environment variables have higher priority than configuration file. Nested configuration items use double underscore `__` to connect, such as `NETPULSE_REDIS__TLS__ENABLED`.
 
-For detailed environment variable list, please refer to [Environment Variables Reference](./environment-variables.md).
+See: [Environment Variables Reference](./environment-variables.md)
 
 ## Log Configuration
 
@@ -148,6 +155,63 @@ job:
   ttl: 3600
   timeout: 600
 
+credential:
+  vault:
+    url: http://localhost:8200
+    token: ${VAULT_TOKEN}
+    mount_point: secret
+    timeout: 5
+
 log:
   level: INFO
 ```
+
+## Vault Configuration
+
+NetPulse integrates with HashiCorp Vault for secure credential management. Vault configuration can be set through environment variables or `config.yaml`.
+
+### Configuration Methods
+
+**Method 1: Environment Variables (Recommended)**
+```bash
+export NETPULSE__CREDENTIAL__VAULT__URL=http://localhost:8200
+export NETPULSE__CREDENTIAL__VAULT__TOKEN=your-vault-token
+export NETPULSE__CREDENTIAL__VAULT__MOUNT_POINT=secret
+export NETPULSE__CREDENTIAL__VAULT__TIMEOUT=5
+```
+
+**Method 2: config.yaml**
+```yaml
+credential:
+  vault:
+    url: http://localhost:8200
+    token: ${VAULT_TOKEN}
+    mount_point: secret
+    timeout: 5
+```
+
+### Automatic Configuration (Docker Deployment)
+
+When using Docker Compose deployment, Vault is automatically initialized and configured. The deployment script (`docker_auto_deploy.sh`) will:
+1. Initialize Vault if needed
+2. Generate `unseal_key` and `root_token`
+3. Update `.env` file with `VAULT_UNSEAL_KEY` and `VAULT_TOKEN`
+4. Enable KV v2 secret engine at `secret/` path
+
+### Using credential_ref in Device Operations
+
+After configuring Vault, you can use `credential_ref` in device operations:
+
+```json
+{
+  "driver": "netmiko",
+  "connection_args": {
+    "device_type": "cisco_ios",
+    "host": "192.168.1.1",
+    "credential_ref": "sites/hq/admin"
+  },
+  "command": "show version"
+}
+```
+
+See: [Vault Credential Management API](../api/credential-api.md)

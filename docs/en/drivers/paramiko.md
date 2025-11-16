@@ -4,7 +4,7 @@
 
 The Paramiko driver is used to manage Linux servers (Ubuntu, CentOS, Debian, etc.) through SSH protocol, supporting command execution, file transfer, configuration management, and other operations.
 
-> **Important**: This document focuses on Paramiko driver parameters and usage. For general API endpoints (`POST /device/execute`), request format, response format, etc., please refer to [Device Operation API](../api/device-api.md).
+> **Note**: This document focuses on Paramiko driver parameters and usage. For general API endpoints (`POST /device/execute`), request format, response format, etc., see [Device Operation API](../api/device-api.md).
 
 ## Driver Features
 
@@ -88,6 +88,32 @@ Execute a single command to view system information.
 - Default SSH port 22
 - Default connection timeout 30 seconds
 - Default host key policy is "auto_add" (auto accept)
+
+---
+
+### Example 1a: Execute Command Using Vault Credentials
+
+Execute commands using credentials stored in Vault, avoiding directly passing passwords in requests.
+
+**Required Fields**:
+- `connection_args.credential_ref`: Vault credential path (replaces username/password)
+
+```json
+{
+  "driver": "paramiko",
+  "connection_args": {
+    "host": "192.168.1.100",
+    "credential_ref": "servers/prod/admin"
+  },
+  "command": "uname -a"
+}
+```
+
+**Notes**:
+- Use `credential_ref` to reference credentials stored in Vault
+- System will automatically read username and password from Vault
+- More secure, avoids exposing passwords in requests
+- See: [Vault Credential Management API](../api/credential-api.md)
 
 ---
 

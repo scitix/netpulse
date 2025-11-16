@@ -67,3 +67,21 @@ Time To Live for connections or cache, unit: seconds.
 
 ### Webhook
 Event notification mechanism, sends notifications when tasks complete or status changes.
+
+### Vault
+HashiCorp Vault, a secrets management system used to securely store and manage network device credentials.
+
+### credential_ref
+Credential reference, used in device operations to reference credentials stored in Vault, avoiding directly passing passwords in requests.
+
+### KV v2
+Vault's Key-Value storage engine version 2, supports version control, metadata management, and soft delete functionality.
+
+### unseal_key
+Vault unseal key, used to unseal a Vault instance (Vault is sealed by default after startup).
+
+### root_token
+Vault root token, used for authentication and accessing Vault, has full control permissions.
+
+### mount_point
+Vault mount point, the mount path for KV v2 engine, default value is `secret`.

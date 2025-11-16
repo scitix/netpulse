@@ -181,7 +181,34 @@ NetPulse 采用异步任务处理机制，支持大规模并发操作和任务�
     - **任务元数据**: 默认1800秒(30分钟)，可通过`ttl`配置
     - **支持自定义**: 在API请求中通过`options.ttl`参数调整
 
-### 4. 连接复用 (Connection Reuse)
+### 4. 凭据管理 (Credential Management)
+
+NetPulse 集成 HashiCorp Vault 进行凭据管理，安全存储和管理设备用户名和密码。
+
+**主要特性**：
+- **安全存储**：密码存储在 Vault 中，不在 API 请求中暴露
+- **版本控制**：支持凭据版本历史和回滚
+- **元数据管理**：支持标签、描述等元数据，用于生命周期管理
+- **权限控制**：通过 Vault 的权限策略控制访问
+
+**使用方式**：
+1. **存储凭据**：使用 Vault 凭据管理 API 在 Vault 中创建凭据
+2. **引用凭据**：在 `connection_args` 中使用 `credential_ref` 引用 Vault 路径
+3. **自动注入**：系统自动从 Vault 读取凭据并注入到连接参数中
+
+**路径命名建议**：
+```
+sites/{site_name}/{role}          # 站点凭据
+devices/{device_type}/{purpose}    # 设备类型凭据
+environments/{env}/{role}          # 环境凭据
+```
+
+!!! tip "凭据缓存"
+    系统会自动缓存凭据，避免重复读取，提升性能。
+
+参考：[Vault 凭据管理 API](../api/credential-api.md)
+
+### 5. 连接复用 (Connection Reuse)
 
 NetPulse 使用长连接技术提高性能，这是系统高性能的关键特性之一。
 
@@ -207,7 +234,7 @@ NetPulse 使用长连接技术提高性能，这是系统高性能的关键特�
 
 ---
 
-### 5. 监控和日志 (Monitoring & Logging)
+### 6. 监控和日志 (Monitoring & Logging)
 
 NetPulse 提供基础的监控和日志系统：
 

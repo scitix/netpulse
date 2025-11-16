@@ -67,3 +67,21 @@ NetPulse 的核心组件，提供 RESTful API 接口，负责接收请求、验�
 
 ### Webhook
 事件通知机制，当任务完成或状态变化时发送通知。
+
+### Vault
+HashiCorp Vault，用于安全存储和管理网络设备凭据的密钥管理系统。
+
+### credential_ref
+凭据引用，在设备操作中引用 Vault 中存储的凭据，避免在请求中直接传递密码。
+
+### KV v2
+Vault 的键值存储引擎版本 2，支持版本控制、元数据管理和软删除功能。
+
+### unseal_key
+Vault 解封密钥，用于解封 Vault 实例（Vault 启动后默认处于密封状态）。
+
+### root_token
+Vault 根令牌，用于认证和访问 Vault，拥有完全控制权限。
+
+### mount_point
+Vault 挂载点，KV v2 引擎的挂载路径，默认值为 `secret`。

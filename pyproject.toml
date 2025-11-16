@@ -54,6 +54,9 @@ dependencies = [
     "ntc_templates~=7.7.0",
     "ttp~=0.9.5",
     "ttp-templates~=0.3.7",
+
+    # Credentials
+    "hvac~=2.4.0",
 ]
 
 [project.optional-dependencies]

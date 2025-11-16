@@ -1,7 +1,7 @@
 
 # 插件系统
 
-NetPulse 的插件架构通过四种核心插件类型提供扩展能力，使用延迟加载机制按需加载。
+NetPulse 的插件架构通过五种核心插件类型提供扩展能力，使用延迟加载机制按需加载。
 
 ## 插件与驱动的关系
 
@@ -20,12 +20,16 @@ graph TB
     Plugin --> Template[模板插件<br/>Template Plugin]
     Plugin --> Scheduler[调度器插件<br/>Scheduler Plugin]
     Plugin --> Webhook[Webhook插件<br/>Webhook Plugin]
+    Plugin --> Credential[凭据管理插件<br/>Credential Plugin]
     
     Driver --> Netmiko[Netmiko驱动]
     Driver --> NAPALM[NAPALM驱动]
     Driver --> PyEAPI[PyEAPI驱动]
     Driver --> Paramiko[Paramiko驱动]
     Driver --> Custom[自定义驱动...]
+    
+    Credential --> Vault[Vault凭据提供者]
+    Credential --> CustomCred[自定义凭据提供者...]
     
     style Plugin fill:#E6F4EA,stroke:#4B8B3B,stroke-width:3px
     style Driver fill:#E6F2FA,stroke:#3D7E9A,stroke-width:2px
@@ -40,19 +44,20 @@ graph TB
 |------|---------------|----------------|
 | **概念层级** | 架构层面的扩展机制 | 插件的一种具体类型 |
 | **作用范围** | 系统多个维度的扩展 | 仅用于设备交互 |
-| **包含类型** | 驱动、模板、调度器、Webhook | 仅设备驱动 |
+| **包含类型** | 驱动、模板、调度器、Webhook、凭据管理 | 仅设备驱动 |
 | **基类** | 多种基类（BaseDriver、BaseScheduler 等） | `BaseDriver` |
 | **目录位置** | `netpulse/plugins/` 下的多个子目录 | `netpulse/plugins/drivers/` |
 | **使用场景** | 系统功能扩展的通用机制 | 连接和操作网络设备 |
 
 ### 为什么需要插件系统？
 
-插件系统是 NetPulse 扩展能力的基础，支持在四个维度进行扩展：
+插件系统是 NetPulse 扩展能力的基础，支持在五个维度进行扩展：
 
 1. **驱动插件**：支持新的设备类型和协议
 2. **模板插件**：支持新的模板引擎和解析方式
 3. **调度器插件**：支持新的任务调度算法
 4. **Webhook 插件**：支持新的通知机制
+5. **凭据管理插件**：支持新的凭据存储后端
 
 这种设计使得 NetPulse 可以在不修改核心代码的情况下，通过插件扩展功能，降低二次开发成本。
 
@@ -63,11 +68,13 @@ graph TD
         Template[模板插件]
         Scheduler[调度器插件]
         WebHook[网络钩子插件]
+        Credential[凭据管理插件]
     end
     Driver -->|目录: drivers| DriverDir[/netpulse/plugins/drivers/]
     Template -->|目录: templates| TemplateDir[/netpulse/plugins/templates/]
     Scheduler -->|目录: schedulers| SchedulerDir[/netpulse/plugins/schedulers/]
     WebHook -->|目录: webhooks| WebHookDir[/netpulse/plugins/webhooks/]
+    Credential -->|目录: credentials| CredentialDir[/netpulse/plugins/credentials/]
 ```
 
 ## 插件类型详解
@@ -137,6 +144,34 @@ graph TD
 **核心方法**：
 - `call(req, job, result)`：调用 Webhook，发送任务结果
 
+### 5. 凭据管理插件（Credential Plugins）
+
+**职责**：从外部凭据存储系统获取设备认证信息
+
+| 属性 | 说明 |
+|------|------|
+| **基类** | `BaseCredentialProvider` |
+| **名称属性** | `provider_name` |
+| **目录** | `netpulse/plugins/credentials/` |
+| **全局变量** | 通过 `CredentialResolver` 管理 |
+| **内置实现** | Vault（HashiCorp Vault） |
+
+**核心方法**：
+- `get_credentials(reference)`：根据凭据引用获取用户名和密码
+- `validate_connection()`：验证与凭据存储系统的连接
+
+**工作流程**：
+1. 客户端在 `connection_args` 中使用 `credential_ref` 引用凭据路径
+2. `CredentialResolver` 根据 `provider` 字段选择对应的凭据提供者
+3. 凭据提供者从外部存储（如 Vault）读取凭据
+4. 凭据被注入到 `connection_args` 中，替换 `credential_ref`
+5. Worker 使用注入后的凭据建立设备连接
+
+**支持的凭据提供者**：
+- **Vault**：HashiCorp Vault（支持 KV v2 引擎，版本控制，元数据管理）
+
+参考：[Vault 凭据管理 API](../api/credential-api.md)
+
 ## 插件系统架构
 
 ### 核心组件
@@ -166,6 +201,7 @@ graph TD
 | `renderers` | 模板渲染器 | `template_name` | `BaseTemplateRenderer` |
 | `parsers` | 模板解析器 | `template_name` | `BaseTemplateParser` |
 | `schedulers` | 调度器 | `scheduler_name` | `BaseScheduler` |
+| - | 凭据管理 | `provider_name` | `BaseCredentialProvider`（通过 CredentialResolver 管理） |
 
 ### 插件目录结构
 
@@ -187,8 +223,10 @@ netpulse/plugins/
 │   ├── greedy/
 │   ├── least_load/
 │   └── ...
-└── webhooks/         # Webhook 插件
-    └── basic/
+├── webhooks/         # Webhook 插件
+│   └── basic/
+└── credentials/      # 凭据管理插件
+    └── vault/
 ```
 
 **注册要求**：插件类必须在 `__init__.py` 中通过 `__all__` 列表导出，例如：
@@ -297,6 +335,12 @@ plugin:
    - 每次请求可以动态选择不同的 Webhook 实现
    - 示例：`{"webhook": {"name": "basic", ...}}`
 
+5. **凭据管理插件**：
+   - 在 `connection_args` 中通过 `credential_ref` 指定
+   - 系统自动根据 `provider` 字段选择对应的凭据提供者
+   - 示例：`{"connection_args": {"credential_ref": "sites/hq/admin"}}`
+   - 默认使用 Vault 提供者，可通过 `credential_ref.provider` 指定其他提供者
+
 
 ## 插件开发指南
 
@@ -332,3 +376,4 @@ plugin:
 - **[模板系统](./template-system.md)** - 模板渲染和解析功能
 - **[任务调度器](./scheduler-system.md)** - 任务调度算法和负载均衡
 - **[Webhook系统](./webhook-system.md)** - 任务结果通知机制
+- **[Vault 凭据管理 API](../api/credential-api.md)** - 凭据管理功能和使用说明

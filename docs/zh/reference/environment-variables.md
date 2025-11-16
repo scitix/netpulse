@@ -88,6 +88,23 @@
 | `NETPULSE_PLUGIN__TEMPLATE` | 模板插件目录 | `netpulse/plugins/templates/` |
 | `NETPULSE_PLUGIN__SCHEDULER` | 调度器插件目录 | `netpulse/plugins/schedulers/` |
 
+## Vault 配置
+
+| 环境变量 | 说明 | 默认值 |
+|---------|------|--------|
+| `VAULT_UNSEAL_KEY` | Vault 解封密钥（用于解封 Vault） | - |
+| `VAULT_TOKEN` | Vault 根令牌（用于认证和访问 Vault） | - |
+| `NETPULSE__CREDENTIAL__VAULT__URL` | Vault 服务器地址 | `http://vault:8200` |
+| `NETPULSE__CREDENTIAL__VAULT__TOKEN` | Vault 认证令牌（通常与 `VAULT_TOKEN` 相同） | - |
+| `NETPULSE__CREDENTIAL__VAULT__MOUNT_POINT` | Vault KV v2 挂载点 | `secret` |
+| `NETPULSE__CREDENTIAL__VAULT__TIMEOUT` | Vault 连接超时时间（秒） | `30` |
+
+!!! note "Vault 配置说明"
+    - `VAULT_UNSEAL_KEY` 和 `VAULT_TOKEN` 在首次部署时由 `docker_auto_deploy.sh` 脚本自动生成并写入 `.env`
+    - `VAULT_UNSEAL_KEY` 用于解封 Vault（容器重启后需要解封）
+    - `VAULT_TOKEN` 用于应用代码访问 Vault API
+    - 详细说明请参考 [Vault 配置说明](../../vault/README.md)
+
 ## 其他配置
 
 | 环境变量 | 说明 | 默认值 |
@@ -118,6 +135,11 @@ NETPULSE_REDIS__TLS__ENABLED=true
 NETPULSE_REDIS__TLS__CA=/etc/redis/tls/ca.crt
 NETPULSE_REDIS__TLS__CERT=/etc/redis/tls/client.crt
 NETPULSE_REDIS__TLS__KEY=/etc/redis/tls/client.key
+
+# Vault 配置（Docker 部署时自动生成）
+VAULT_UNSEAL_KEY=your-vault-unseal-key
+VAULT_TOKEN=your-vault-root-token
+
 NETPULSE_WORKER__PINNED_PER_NODE=64
 NETPULSE_LOG__LEVEL=INFO
 ```

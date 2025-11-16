@@ -70,6 +70,7 @@ plugins:
             API Reference: API参考
             API Overview: API概览
             Device Operation API: 设备操作API
+            Vault Credential Management API: Vault凭据管理API
             Template Operation API: 模板操作API
             Job Management API: 任务管理API
             API Examples: API示例
@@ -142,6 +143,7 @@ nav:
   - API Reference:
       - API Overview: en/api/api-overview.md
       - Device Operation API: en/api/device-api.md
+      - Vault Credential Management API: en/api/credential-api.md
       - Template Operation API: en/api/template-api.md
       - Job Management API: en/api/job-api.md
       - API Examples: en/api/api-examples.md

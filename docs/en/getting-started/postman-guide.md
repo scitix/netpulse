@@ -38,10 +38,24 @@ Create environment `NetPulse Local` and configure the following variables:
 - **Job Management**: Job management
 - **Worker Management**: Worker process management
 - **Device Connection Testing**: Device connection testing
+- **Vault Credential Management**: Vault credential management (create, read, delete, list, metadata, batch read)
 - **Netmiko Driver**: Netmiko driver operations
 - **NAPALM Driver**: NAPALM driver operations
 - **PyEAPI Driver**: PyEAPI driver operations
+- **Paramiko Driver**: Paramiko driver operations (Linux servers)
 - **Batch Operations**: Batch operations
 - **Template Operations**: Template operations
+
+!!! tip "Vault Credential Management"
+    In the Postman collection, you can find complete Vault credential management API examples, including:
+    - Test Vault connection
+    - Create/update credentials
+    - Read credentials (with password hiding support)
+    - Delete credentials
+    - List credential paths
+    - Get credential metadata
+    - Batch read credentials
+    
+    Also, driver examples include versions using Vault credentials.
 
 ---

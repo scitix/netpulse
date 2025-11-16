@@ -4,7 +4,7 @@
 
 NAPALM driver is based on [Device Operation API](../api/device-api.md), providing cross-vendor standardized network device operation functions, supporting mainstream vendor devices such as Cisco, Juniper, Arista, HP, etc.
 
-> **Important Note**: This document focuses on NAPALM driver-specific parameters and usage. For general API endpoints (`POST /device/execute`), request format, response format, etc., please refer to [Device Operation API](../api/device-api.md).
+> **Note**: This document focuses on NAPALM driver-specific parameters and usage. For general API endpoints (`POST /device/execute`), request format, response format, etc., see [Device Operation API](../api/device-api.md).
 
 ## Driver Features
 
@@ -36,6 +36,32 @@ NAPALM driver is based on [Device Operation API](../api/device-api.md), providin
   }
 }
 ```
+
+#### Basic Data Collection - Using Vault Credentials
+
+**Request**
+```json
+{
+  "driver": "napalm",
+  "connection_args": {
+    "device_type": "ios",
+    "hostname": "192.168.1.1",
+    "credential_ref": "sites/hq/admin"
+  },
+  "command": [
+    "get_facts",
+    "get_interfaces",
+    "get_interfaces_ip"
+  ],
+  "options": {
+    "queue_strategy": "fifo",
+    "ttl": 300
+  }
+}
+```
+
+!!! tip "Using Vault Credentials"
+    Use `credential_ref` to reference credentials stored in Vault, avoiding directly passing passwords in requests. The system will automatically read credentials from Vault and inject them into connection parameters. See: [Vault Credential Management API](../api/credential-api.md)
 
 #### Multi-Method Combination Query
 

@@ -4,7 +4,7 @@
 
 Netmiko driver is based on [Device Operation API](../api/device-api.md), providing SSH-based network device operation functions, supporting mainstream vendor devices such as Cisco, Juniper, Arista, Huawei, etc.
 
-> **Important Note**: This document focuses on Netmiko driver-specific parameters and usage. For general API endpoints (`POST /device/execute`), request format, response format, etc., please refer to [Device Operation API](../api/device-api.md).
+> **Note**: This document focuses on Netmiko driver-specific parameters and usage. For general API endpoints (`POST /device/execute`), request format, response format, etc., see [Device Operation API](../api/device-api.md).
 
 ## Driver Features
 
@@ -78,6 +78,28 @@ Netmiko driver is based on [Device Operation API](../api/device-api.md), providi
   }
 }
 ```
+
+#### Basic Query - Using Vault Credentials
+
+**Request**
+```json
+{
+  "driver": "netmiko",
+  "connection_args": {
+    "device_type": "cisco_ios",
+    "host": "192.168.1.1",
+    "credential_ref": "sites/hq/admin"
+  },
+  "command": "show version",
+  "options": {
+    "queue_strategy": "pinned",
+    "ttl": 300
+  }
+}
+```
+
+!!! tip "Using Vault Credentials"
+    Use `credential_ref` to reference credentials stored in Vault, avoiding directly passing passwords in requests. The system will automatically read credentials from Vault and inject them into connection parameters. See: [Vault Credential Management API](../api/credential-api.md)
 
 #### Slow Device Optimization
 

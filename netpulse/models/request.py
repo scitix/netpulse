@@ -407,6 +407,13 @@ class DeviceRequest(BaseModel):
         if not self.is_pull_operation():
             raise ValueError("Cannot convert non-pull request to PullingRequest")
 
+        # Resolve credential reference if present
+        connection_args = self.connection_args
+        if connection_args.credential_ref is not None:
+            from ..services.credential_resolver import g_credential_resolver
+
+            connection_args = g_credential_resolver.resolve_credentials(connection_args)
+
         # Ensure driver_args is properly serialized for RQ
         args = self.driver_args
         if args is not None and hasattr(args, "model_dump"):
@@ -415,7 +422,7 @@ class DeviceRequest(BaseModel):
 
         return PullingRequest(
             driver=self.driver,
-            connection_args=self.connection_args,
+            connection_args=connection_args,
             command=self.command,
             args=args,
             queue_strategy=self.options.get("queue_strategy"),
@@ -429,12 +436,19 @@ class DeviceRequest(BaseModel):
         if not self.is_push_operation():
             raise ValueError("Cannot convert non-push request to PushingRequest")
 
+        # Resolve credential reference if present
+        connection_args = self.connection_args
+        if connection_args.credential_ref is not None:
+            from ..services.credential_resolver import g_credential_resolver
+
+            connection_args = g_credential_resolver.resolve_credentials(connection_args)
+
         # Get enable_mode from connection_args, default to True for config operations
-        enable_mode = getattr(self.connection_args, "enable_mode", True)
+        enable_mode = getattr(connection_args, "enable_mode", True)
 
         return PushingRequest(
             driver=self.driver,
-            connection_args=self.connection_args,
+            connection_args=connection_args,
             config=self.config,
             args=self.driver_args,
             enable_mode=enable_mode,

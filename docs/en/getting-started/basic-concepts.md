@@ -181,7 +181,36 @@ Submit Job → Queue Waiting → Executing → Execution Complete
     - **Job Metadata**: Default 1800 seconds (30 minutes), configurable via `ttl`
     - **Supports Customization**: Adjust via `options.ttl` parameter in API request
 
-### 4. Connection Reuse (Connection Reuse)
+### 4. Credential Management (Credential Management)
+
+NetPulse integrates with HashiCorp Vault to securely store and manage device credentials.
+
+#### Main Features
+
+- **Secure Storage**: Passwords are stored in Vault, not exposed in API requests
+- **Version Control**: Supports credential version history and rollback
+- **Metadata Management**: Supports tags, descriptions, and other metadata for lifecycle management
+- **Access Control**: Controls access through Vault's permission policies
+
+#### Usage
+
+1. **Store Credentials**: Use Vault Credential Management API to create credentials in Vault
+2. **Reference Credentials**: Use `credential_ref` in `connection_args` to reference Vault paths
+3. **Automatic Injection**: System automatically reads credentials from Vault and injects them into connection parameters
+
+**Path Naming Recommendations**:
+```
+sites/{site_name}/{role}          # Site credentials
+devices/{device_type}/{purpose}    # Device type credentials
+environments/{env}/{role}          # Environment credentials
+```
+
+!!! tip "Credential Caching"
+    System automatically caches credentials to avoid repeated reads, improving performance.
+
+See: [Vault Credential Management API](../api/credential-api.md)
+
+### 5. Connection Reuse (Connection Reuse)
 
 NetPulse uses long connection technology to improve performance, which is one of the key features for high system performance.
 
@@ -207,7 +236,7 @@ NetPulse uses long connection technology to improve performance, which is one of
 
 ---
 
-### 5. Monitoring and Logging (Monitoring & Logging)
+### 6. Monitoring and Logging (Monitoring & Logging)
 
 NetPulse provides basic monitoring and logging systems:
 

@@ -14,6 +14,7 @@
 - 支持按任务ID、队列、状态、节点、主机等条件查询
 - 返回任务详细信息，包括执行时间、结果、错误信息
 - 支持分页和过滤
+- **按ID查询优先级最高**：如果提供了 `id` 参数，其他过滤条件将被忽略
 
 **查询参数**:
 
@@ -62,9 +63,9 @@ curl -X GET "http://localhost:9000/job?host=192.168.1.1" \
       "ended_at": "2024-01-01T12:00:05+08:00",
       "worker": "worker_001",
       "result": {
-        "type": "success",
-        "retval": "Cisco IOS Software, Version 15.2...",
-        "error": null
+        "type": "success",           // 结果类型: "success" 或 "failure"
+        "retval": "Cisco IOS Software, Version 15.2...",  // 成功时的返回值（命令输出）
+        "error": null                // 失败时的错误信息对象: {"type": "错误类型", "message": "错误消息"}
       },
       "duration": 3.0,
       "queue_time": 1.0

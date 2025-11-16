@@ -38,10 +38,24 @@
 - **Job Management**：任务管理
 - **Worker Management**：工作进程管理
 - **Device Connection Testing**：设备连接测试
+- **Vault Credential Management**：Vault 凭据管理（创建、读取、删除、列表、元数据、批量读取）
 - **Netmiko Driver**：Netmiko 驱动操作
 - **NAPALM Driver**：NAPALM 驱动操作
 - **PyEAPI Driver**：PyEAPI 驱动操作
+- **Paramiko Driver**：Paramiko 驱动操作（Linux服务器）
 - **Batch Operations**：批量操作
 - **Template Operations**：模板操作
+
+!!! tip "Vault 凭据管理"
+    在 Postman 集合中，您可以找到完整的 Vault 凭据管理 API 示例，包括：
+    - 测试 Vault 连接
+    - 创建/更新凭据
+    - 读取凭据（支持隐藏密码）
+    - 删除凭据
+    - 列出凭据路径
+    - 获取凭据元数据
+    - 批量读取凭据
+    
+    同时，各驱动示例中也包含了使用 Vault 凭据的版本。
 
 ---

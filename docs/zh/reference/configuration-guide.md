@@ -58,6 +58,13 @@ plugin:
 log:
   config: config/log-config.yaml  # 日志配置文件路径
   level: INFO                      # 日志级别：DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+credential:
+  vault:                           # Vault 凭据管理配置
+    url: http://vault:8200         # Vault 服务器地址
+    token: ${VAULT_TOKEN}          # Vault 认证令牌（从环境变量读取）
+    mount_point: secret            # KV v2 挂载点
+    timeout: 30                    # 连接超时时间（秒）
 ```
 
 ## 环境变量
@@ -86,6 +93,61 @@ export NETPULSE_WORKER__PINNED_PER_NODE=64
     环境变量的优先级高于配置文件。嵌套配置项使用双下划线 `__` 连接，如 `NETPULSE_REDIS__TLS__ENABLED`。
 
 详细的环境变量列表请参考 [环境变量参考](./environment-variables.md)。
+
+## Vault 配置
+
+NetPulse 支持使用 HashiCorp Vault 进行凭据管理，可以安全地存储和管理网络设备的用户名和密码。
+
+### 配置说明
+
+Vault 配置可以通过环境变量或配置文件设置：
+
+**环境变量方式（推荐）**：
+```bash
+VAULT_TOKEN=your-vault-root-token
+NETPULSE__CREDENTIAL__VAULT__URL=http://vault:8200
+NETPULSE__CREDENTIAL__VAULT__TOKEN=${VAULT_TOKEN}
+NETPULSE__CREDENTIAL__VAULT__MOUNT_POINT=secret
+NETPULSE__CREDENTIAL__VAULT__TIMEOUT=30
+```
+
+**配置文件方式**：
+```yaml
+credential:
+  vault:
+    url: http://vault:8200
+    token: ${VAULT_TOKEN}
+    mount_point: secret
+    timeout: 30
+```
+
+### Docker 部署时的自动配置
+
+使用 `docker_auto_deploy.sh` 脚本部署时，Vault 会自动初始化：
+
+1. **首次部署**：脚本会自动初始化 Vault，生成 `VAULT_UNSEAL_KEY` 和 `VAULT_TOKEN`
+2. **自动写入 .env**：密钥会自动写入 `.env` 文件
+3. **自动解封**：容器重启后，脚本会自动解封 Vault
+
+### 使用 Vault 存储凭据
+
+在任务请求中使用 `credential_ref` 引用 Vault 中存储的凭据：
+
+```json
+{
+  "host": "192.168.1.1",
+  "driver": "netmiko",
+  "credential_ref": "secret/data/sites/hq/admin",
+  "command": "show version"
+}
+```
+
+系统会自动从 Vault 读取 `secret/data/sites/hq/admin` 路径下的凭据。
+
+!!! tip "Vault 路径格式"
+    KV v2 引擎的路径格式为 `secret/data/{path}`，其中 `secret` 是挂载点，`data` 是 KV v2 的固定前缀。
+
+参考：[Vault 配置说明](../../vault/README.md)
 
 ## 日志配置
 

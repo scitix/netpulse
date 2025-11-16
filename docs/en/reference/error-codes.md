@@ -43,9 +43,10 @@ NetPulse API uses standard HTTP status codes:
 | `200` | OK | Request successful |
 | `201` | Created | Task created successfully |
 | `400` | Bad Request | Request parameter error, validation failed |
-| `403` | Forbidden | API key invalid or missing |
-| `404` | Not Found | Resource not found (e.g., template engine not found) |
+| `403` | Forbidden | API key invalid or missing, Vault credential access denied |
+| `404` | Not Found | Resource not found (e.g., template engine not found, Vault credential not found) |
 | `500` | Internal Server Error | Server internal error |
+| `503` | Service Unavailable | Vault service unavailable |
 
 ## Common Error Situations
 
@@ -153,6 +154,8 @@ When task execution fails, error information is included in task result:
 - `ConnectionError`: Device connection failed
 - `TimeoutError`: Operation timeout
 - `AuthenticationError`: Device authentication failed
+- `CredentialError`: Vault credential error (credential not found, access denied, etc.)
+- `VaultConnectionError`: Vault service connection failed
 - Other Python exception types
 
 ## Error Handling Examples
@@ -183,9 +186,13 @@ def call_api(url, api_key, data=None):
         
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 403:
-            print("API key error, please check configuration")
+            print("API key error or Vault credential access denied, please check configuration")
         elif e.response.status_code == 400:
             print("Request parameter error")
+        elif e.response.status_code == 404:
+            print("Resource not found (may be Vault credential path does not exist)")
+        elif e.response.status_code == 503:
+            print("Vault service unavailable, please check Vault service status")
         else:
             print(f"HTTP Error: {e.response.status_code}")
         return None

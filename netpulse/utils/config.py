@@ -72,11 +72,38 @@ class RedisConfig(BaseModel):
     key: RedisKeyConfig = RedisKeyConfig()
 
 
+class VaultConfig(BaseSettings):
+
+    """Vault configuration."""
+
+    url: str = Field(..., description="Vault server URL")
+    token: str = Field(..., description="Vault access token, supports env var ${VAULT_TOKEN}")
+    mount_point: str = Field("secret", description="KV store mount point")
+    timeout: int = Field(30, description="Connection timeout in seconds")
+
+    model_config = SettingsConfigDict(
+        env_prefix="NETPULSE__CREDENTIAL__VAULT__",
+        env_nested_delimiter="__",
+    )
+
+
+class CredentialConfig(BaseSettings):
+    """Credential plugin configuration."""
+
+    vault: Optional[VaultConfig] = None
+
+    model_config = SettingsConfigDict(
+        env_prefix="NETPULSE__CREDENTIAL__",
+        env_nested_delimiter="__",
+    )
+
+
 class PluginConfig(BaseModel):
     driver: DirectoryPath = Path("netpulse/plugins/drivers/")
     webhook: DirectoryPath = Path("netpulse/plugins/webhooks/")
     template: DirectoryPath = Path("netpulse/plugins/templates/")
     scheduler: DirectoryPath = Path("netpulse/plugins/schedulers/")
+    credential: DirectoryPath = Path("netpulse/plugins/credentials/")
 
 
 class LogConfig(BaseModel):
@@ -89,6 +116,7 @@ class AppConfig(BaseSettings):
     worker: WorkerConfig
     redis: RedisConfig
     plugin: PluginConfig
+    credential: Optional[CredentialConfig] = None
     # With default values
     job: JobConfig = JobConfig()
     log: LogConfig = LogConfig()
@@ -128,10 +156,51 @@ class AppConfig(BaseSettings):
     def get_fifo_queue_name() -> str:
         return "FifoQ"
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Auto-create CredentialConfig from environment if vault env vars are present
+        if self.credential is None:
+            # Check if vault environment variables are set
+            vault_url = os.getenv("NETPULSE__CREDENTIAL__VAULT__URL")
+            vault_token = os.getenv("NETPULSE__CREDENTIAL__VAULT__TOKEN") or os.getenv("VAULT_TOKEN")
+            if vault_url and vault_token:
+                try:
+                    vault_config = VaultConfig(
+                        url=vault_url,
+                        token=vault_token,
+                        mount_point=os.getenv("NETPULSE__CREDENTIAL__VAULT__MOUNT_POINT", "secret"),
+                        timeout=int(os.getenv("NETPULSE__CREDENTIAL__VAULT__TIMEOUT", "30")),
+                    )
+                    self.credential = CredentialConfig(vault=vault_config)
+                except Exception as e:
+                    log.warning(f"Failed to create Vault config from environment: {e}")
+                    # If Vault config creation fails, leave credential as None
+                    pass
+
 
 def initialize_config() -> AppConfig:
     try:
-        return AppConfig()
+        config = AppConfig()
+        # Auto-create CredentialConfig from environment if vault env vars are present
+        if config.credential is None:
+            # Check if vault environment variables are set
+            vault_url = os.getenv("NETPULSE__CREDENTIAL__VAULT__URL")
+            vault_token = os.getenv("NETPULSE__CREDENTIAL__VAULT__TOKEN") or os.getenv("VAULT_TOKEN")
+            if vault_url and vault_token:
+                try:
+                    vault_config = VaultConfig(
+                        url=vault_url,
+                        token=vault_token,
+                        mount_point=os.getenv("NETPULSE__CREDENTIAL__VAULT__MOUNT_POINT", "secret"),
+                        timeout=int(os.getenv("NETPULSE__CREDENTIAL__VAULT__TIMEOUT", "30")),
+                    )
+                    config.credential = CredentialConfig(vault=vault_config)
+                    log.info("Vault configuration loaded from environment variables")
+                except Exception as e:
+                    log.warning(f"Failed to create Vault config from environment: {e}")
+                    import traceback
+                    log.debug(traceback.format_exc())
+        return config
     except ValidationError as e:
         log.error(f"Error in reading config: {e}")
         raise e

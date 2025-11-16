@@ -1,6 +1,6 @@
 # Plugin System
 
-NetPulse's plugin architecture provides extensibility through four core plugin types, using lazy loading mechanism to load on demand.
+NetPulse's plugin architecture provides extensibility through five core plugin types, using lazy loading mechanism to load on demand.
 
 ## Relationship Between Plugins and Drivers
 
@@ -19,12 +19,16 @@ graph TB
     Plugin --> Template[Template Plugin<br/>Template Plugin]
     Plugin --> Scheduler[Scheduler Plugin<br/>Scheduler Plugin]
     Plugin --> Webhook[Webhook Plugin<br/>Webhook Plugin]
+    Plugin --> Credential[Credential Plugin<br/>Credential Plugin]
     
     Driver --> Netmiko[Netmiko Driver]
     Driver --> NAPALM[NAPALM Driver]
     Driver --> PyEAPI[PyEAPI Driver]
     Driver --> Paramiko[Paramiko Driver]
     Driver --> Custom[Custom Driver...]
+    
+    Credential --> Vault[Vault Credential Provider]
+    Credential --> CustomCred[Custom Credential Provider...]
     
     style Plugin fill:#E6F4EA,stroke:#4B8B3B,stroke-width:3px
     style Driver fill:#E6F2FA,stroke:#3D7E9A,stroke-width:2px
@@ -39,19 +43,20 @@ graph TB
 |-----------|--------|--------|
 | **Concept Level** | Extension mechanism at architecture level | A specific type of plugin |
 | **Scope** | Extensions in multiple dimensions of system | Only for device interaction |
-| **Included Types** | Drivers, templates, schedulers, Webhooks | Only device drivers |
+| **Included Types** | Drivers, templates, schedulers, Webhooks, credential management | Only device drivers |
 | **Base Class** | Multiple base classes (BaseDriver, BaseScheduler, etc.) | `BaseDriver` |
 | **Directory Location** | Multiple subdirectories under `netpulse/plugins/` | `netpulse/plugins/drivers/` |
 | **Use Cases** | General mechanism for system function extension | Connect and operate network devices |
 
 ### Why Plugin System?
 
-Plugin system is the foundation of NetPulse's extensibility, supporting extensions in four dimensions:
+Plugin system is the foundation of NetPulse's extensibility, supporting extensions in five dimensions:
 
 1. **Driver Plugins**: Support new device types and protocols
 2. **Template Plugins**: Support new template engines and parsing methods
 3. **Scheduler Plugins**: Support new task scheduling algorithms
 4. **Webhook Plugins**: Support new notification mechanisms
+5. **Credential Management Plugins**: Support new credential storage backends
 
 This design allows NetPulse to extend functionality through plugins without modifying core code, reducing secondary development costs.
 
@@ -62,11 +67,13 @@ graph TD
         Template[Template Plugin]
         Scheduler[Scheduler Plugin]
         WebHook[Webhook Plugin]
+        Credential[Credential Plugin]
     end
     Driver -->|Directory: drivers| DriverDir[/netpulse/plugins/drivers/]
     Template -->|Directory: templates| TemplateDir[/netpulse/plugins/templates/]
     Scheduler -->|Directory: schedulers| SchedulerDir[/netpulse/plugins/schedulers/]
     WebHook -->|Directory: webhooks| WebHookDir[/netpulse/plugins/webhooks/]
+    Credential -->|Directory: credentials| CredentialDir[/netpulse/plugins/credentials/]
 ```
 
 ## Plugin Type Details
@@ -136,6 +143,34 @@ graph TD
 **Core Methods**:
 - `call(req, job, result)`: Call Webhook, send task results
 
+### 5. Credential Management Plugins
+
+**Responsibility**: Get device authentication information from external credential storage systems
+
+| Attribute | Description |
+|-----------|-------------|
+| **Base Class** | `BaseCredentialProvider` |
+| **Name Attribute** | `provider_name` |
+| **Directory** | `netpulse/plugins/credentials/` |
+| **Global Variable** | Managed through `CredentialResolver` |
+| **Built-in Implementation** | Vault (HashiCorp Vault) |
+
+**Core Methods**:
+- `get_credentials(reference)`: Get username and password based on credential reference
+- `validate_connection()`: Validate connection with credential storage system
+
+**Workflow**:
+1. Client uses `credential_ref` in `connection_args` to reference credential path
+2. `CredentialResolver` selects corresponding credential provider based on `provider` field
+3. Credential provider reads credentials from external storage (e.g., Vault)
+4. Credentials are injected into `connection_args`, replacing `credential_ref`
+5. Worker uses injected credentials to establish device connection
+
+**Supported Credential Providers**:
+- **Vault**: HashiCorp Vault (supports KV v2 engine, version control, metadata management)
+
+See: [Vault Credential Management API](../api/credential-api.md)
+
 ## Plugin System Architecture
 
 ### Core Components
@@ -165,6 +200,7 @@ System exposes plugin dictionaries through global variables in `netpulse/plugins
 | `renderers` | Template Renderer | `template_name` | `BaseTemplateRenderer` |
 | `parsers` | Template Parser | `template_name` | `BaseTemplateParser` |
 | `schedulers` | Scheduler | `scheduler_name` | `BaseScheduler` |
+| - | Credential Management | `provider_name` | `BaseCredentialProvider` (managed through CredentialResolver) |
 
 ### Plugin Directory Structure
 
@@ -186,8 +222,10 @@ netpulse/plugins/
 │   ├── greedy/
 │   ├── least_load/
 │   └── ...
-└── webhooks/         # Webhook plugins
-    └── basic/
+├── webhooks/         # Webhook plugins
+│   └── basic/
+└── credentials/      # Credential management plugins
+    └── vault/
 ```
 
 **Registration Requirements**: Plugin class must be exported through `__all__` list in `__init__.py`, for example:
@@ -296,6 +334,12 @@ Different plugin types have different usage methods:
    - Can dynamically select different Webhook implementations for each request
    - Example: `{"webhook": {"name": "basic", ...}}`
 
+5. **Credential Management Plugin**:
+   - Specified through `credential_ref` in `connection_args`
+   - System automatically selects corresponding credential provider based on `provider` field
+   - Example: `{"connection_args": {"credential_ref": "sites/hq/admin"}}`
+   - Defaults to Vault provider, can specify other providers through `credential_ref.provider`
+
 
 ## Plugin Development Guide
 
@@ -331,3 +375,4 @@ Detailed implementation and usage instructions for each plugin type:
 - **[Template System](./template-system.md)** - Template rendering and parsing functionality
 - **[Task Scheduler](./scheduler-system.md)** - Task scheduling algorithms and load balancing
 - **[Webhook System](./webhook-system.md)** - Task result notification mechanism
+- **[Vault Credential Management API](../api/credential-api.md)** - Credential management functionality and usage instructions

@@ -4,7 +4,7 @@
 
 PyEAPI 驱动基于[设备操作 API](../api/device-api.md)，提供Arista设备的专用操作功能，通过HTTP/HTTPS API实现设备查询和配置管理。
 
-> **重要提示**：本文档专注于PyEAPI驱动的特定参数和用法。通用API端点（`POST /device/execute`）、请求格式、响应格式等请参考[设备操作 API](../api/device-api.md)。
+> **注意**：本文档专注于PyEAPI驱动的特定参数和用法。通用API端点（`POST /device/execute`）、请求格式、响应格式等，参考：[设备操作 API](../api/device-api.md)
 
 ## 驱动特点
 
@@ -41,6 +41,33 @@ PyEAPI 驱动基于[设备操作 API](../api/device-api.md)，提供Arista设备
   }
 }
 ```
+
+#### 基础eAPI查询 - 使用Vault凭据
+
+**请求**
+```json
+{
+  "driver": "pyeapi",
+  "connection_args": {
+    "host": "192.168.1.1",
+    "credential_ref": "sites/hq/admin",
+    "transport": "https",
+    "port": 443
+  },
+  "command": "show version",
+  "driver_args": {
+    "encoding": "json",
+    "format": "json"
+  },
+  "options": {
+    "queue_strategy": "fifo",
+    "ttl": 300
+  }
+}
+```
+
+!!! tip "使用 Vault 凭据"
+    使用 `credential_ref` 引用 Vault 中存储的凭据，避免在请求中直接传递密码。系统会自动从 Vault 读取凭据并注入到连接参数中。详见 [Vault 凭据管理 API](../api/credential-api.md)。
 
 #### 多命令JSON查询
 
@@ -651,7 +678,7 @@ print(f"配置推送结果: {result}")
 
 ## PyEAPI驱动特定参数
 
-> **注意**：通用连接参数（host、username、password等）请参考[设备操作 API](../api/device-api.md)中的参数说明。本节只说明PyEAPI驱动特有的参数。
+> **注意**：通用连接参数（host、username、password等），参考：[设备操作 API](../api/device-api.md)。本节只说明PyEAPI驱动特有的参数。
 
 ### connection_args 特定参数
 
@@ -668,14 +695,14 @@ print(f"配置推送结果: {result}")
 
 PyEAPI 驱动的 `driver_args` 支持任意参数（`extra="allow"`），所有参数会直接传递给 pyeapi 的 `enable()` 或 `config()` 方法。
 
-> **重要提示**：`driver_args` 中的所有参数都会直接传递给底层 pyeapi 库。文档中示例使用的参数（如 `encoding`、`format`、`timestamps`、`expand`、`detail`、`autoComplete`、`expandAliases` 等）需要根据 pyeapi 库的实际支持情况使用。具体支持的参数请参考 [pyeapi 官方文档](https://github.com/arista-eosplus/pyeapi)。
+> **注意**：`driver_args` 中的所有参数都会直接传递给底层 pyeapi 库。文档中示例使用的参数（如 `encoding`、`format`、`timestamps`、`expand`、`detail`、`autoComplete`、`expandAliases` 等）需要根据 pyeapi 库的实际支持情况使用。具体支持的参数参考 [pyeapi 官方文档](https://github.com/arista-eosplus/pyeapi)。
 
-**常用参数示例**（实际支持情况请参考 pyeapi 文档）：
+**常用参数示例**（实际支持情况参考 pyeapi 文档）：
 - `encoding`: 编码格式（用于 enable 方法）
 - `format`: 输出格式（用于 enable 方法，如 `json`）
-- 其他参数请参考 [pyeapi 官方文档](https://github.com/arista-eosplus/pyeapi)
+- 其他参数参考 [pyeapi 官方文档](https://github.com/arista-eosplus/pyeapi)
 
-> **注意**：`options` 参数是全局选项，所有驱动通用。详细说明请参考[设备操作 API](../api/device-api.md)。
+> **注意**：`options` 参数是全局选项，所有驱动通用。参考：[设备操作 API](../api/device-api.md)
 
 **PyEAPI推荐配置**：
 - `queue_strategy`: 推荐使用 `"fifo"`，HTTP无状态连接

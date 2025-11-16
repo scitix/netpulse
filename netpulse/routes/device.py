@@ -14,6 +14,7 @@ from ..models.request import (
     PushingRequest,
 )
 from ..models.response import BatchSubmitJobResponse, ConnectionTestResponse, SubmitJobResponse
+from ..services.credential_resolver import g_credential_resolver
 from ..services.manager import g_mgr
 
 log = logging.getLogger(__name__)
@@ -49,6 +50,8 @@ def bulk_device_operation(req: BatchDeviceRequest):
                 ),
                 deep=True,
             )
+            if connection_args.credential_ref is not None:
+                connection_args = g_credential_resolver.resolve_credentials(connection_args)
             connection_args.enforced_field_check()
 
             per_device_req = base_req.model_copy(
@@ -76,6 +79,8 @@ def bulk_device_operation(req: BatchDeviceRequest):
                 ),
                 deep=True,
             )
+            if connection_args.credential_ref is not None:
+                connection_args = g_credential_resolver.resolve_credentials(connection_args)
             connection_args.enforced_field_check()
 
             per_device_req = base_req.model_copy(
@@ -95,6 +100,8 @@ def bulk_device_operation(req: BatchDeviceRequest):
 
 @router.post("/test-connection", response_model=ConnectionTestResponse, status_code=200)
 def test_device_connection(req: ConnectionTestRequest):
+    if req.connection_args.credential_ref is not None:
+        req.connection_args = g_credential_resolver.resolve_credentials(req.connection_args)
     req.connection_args.enforced_field_check()
 
     start_time = time.time()

@@ -68,6 +68,14 @@ NetPulse 提供以下API端点，所有端点都需要API Key认证。
 | `GET` | `/worker` | 查询Worker状态 | [任务管理 API](./job-api.md) |
 | `DELETE` | `/worker` | 删除Worker | [任务管理 API](./job-api.md) |
 | `GET` | `/health` | 系统健康检查 | [任务管理 API](./job-api.md) |
+| **Vault 凭据管理** | | | |
+| `POST` | `/credential/vault/test` | 测试 Vault 连接 | [Vault 凭据管理 API](./credential-api.md) |
+| `POST` | `/credential/vault/create` | 创建/更新凭据 | [Vault 凭据管理 API](./credential-api.md) |
+| `POST` | `/credential/vault/read` | 读取凭据 | [Vault 凭据管理 API](./credential-api.md) |
+| `POST` | `/credential/vault/delete` | 删除凭据 | [Vault 凭据管理 API](./credential-api.md) |
+| `POST` | `/credential/vault/list` | 列出凭据路径 | [Vault 凭据管理 API](./credential-api.md) |
+| `POST` | `/credential/vault/metadata` | 获取凭据元数据 | [Vault 凭据管理 API](./credential-api.md) |
+| `POST` | `/credential/vault/batch-read` | 批量读取凭据 | [Vault 凭据管理 API](./credential-api.md) |
 
 ## API 分类
 
@@ -85,7 +93,7 @@ NetPulse 提供以下API端点，所有端点都需要API Key认证。
 - PyEAPI (Arista专用) - HTTP/HTTPS API
 - Paramiko (SSH) - Linux服务器管理
 
-详细说明请参考：[设备操作 API](./device-api.md)
+参考：[设备操作 API](./device-api.md)
 
 ### 2. 模板操作 API
 提供配置模板渲染和命令输出解析功能。
@@ -99,7 +107,7 @@ NetPulse 提供以下API端点，所有端点都需要API Key认证。
 - TextFSM - 命令输出解析
 - TTP - 配置解析
 
-详细说明请参考：[模板操作 API](./template-api.md)
+参考：[模板操作 API](./template-api.md)
 
 ### 3. 任务管理 API
 提供任务状态查询、任务取消和Worker管理功能。
@@ -111,7 +119,26 @@ NetPulse 提供以下API端点，所有端点都需要API Key认证。
 - `DELETE /worker` - 删除Worker
 - `GET /health` - 系统健康检查
 
-详细说明请参考：[任务管理 API](./job-api.md)
+参考：[任务管理 API](./job-api.md)
+
+### 4. Vault 凭据管理 API
+提供对 HashiCorp Vault 的完整 CRUD 操作，用于安全地存储和管理网络设备凭据。
+
+**主要端点**：
+- `POST /credential/vault/test` - 测试 Vault 连接
+- `POST /credential/vault/create` - 创建/更新凭据
+- `POST /credential/vault/read` - 读取凭据
+- `POST /credential/vault/delete` - 删除凭据
+- `POST /credential/vault/list` - 列出凭据路径
+- `POST /credential/vault/metadata` - 获取凭据元数据（版本、时间戳等）
+- `POST /credential/vault/batch-read` - 批量读取凭据
+
+**特性**：
+- 支持版本控制和历史记录
+- 支持自定义元数据（标签、描述等）
+- 在设备操作中通过 `credential_ref` 引用凭据
+
+参考：[Vault 凭据管理 API](./credential-api.md)
 
 ## 支持的驱动类型
 
@@ -162,10 +189,14 @@ NetPulse 支持两种队列策略，系统会根据驱动类型自动选择合�
 {
   "device_type": "cisco_ios",  // 设备类型
   "host": "192.168.1.1",      // 设备IP
-  "username": "admin",         // 用户名
-  "password": "password"        // 密码
+  "username": "admin",         // 用户名（或使用 credential_ref）
+  "password": "password",       // 密码（或使用 credential_ref）
+  "credential_ref": "sites/hq/admin"  // Vault 凭据引用（可选）
 }
 ```
+
+!!! tip "使用 Vault 凭据"
+    可以使用 `credential_ref` 引用 Vault 中存储的凭据，避免在请求中直接传递密码。详见 [Vault 凭据管理 API](./credential-api.md)。
 
 **操作参数** - 二选一：
 - `command`：查询操作（如 `"show version"`）
@@ -258,6 +289,8 @@ curl -X POST -H "Content-Type: application/json" \
 ```
 
 ### 3. 执行简单查询
+
+**步骤1：提交任务**
 ```bash
 curl -X POST -H "Content-Type: application/json" \
   -H "X-API-KEY: your-key" \
@@ -274,7 +307,49 @@ curl -X POST -H "Content-Type: application/json" \
   http://localhost:9000/device/execute
 ```
 
-## 下一步
+**响应**（返回任务ID）：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "id": "job_123456",
+    "status": "queued",
+    "queue": "pinned_192.168.1.1"
+  }
+}
+```
+
+**步骤2：查询任务结果**
+```bash
+# 使用返回的job_id查询结果
+curl -X GET "http://localhost:9000/job?id=job_123456" \
+  -H "X-API-KEY: your-key"
+```
+
+**响应**（任务完成后）：
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [{
+    "id": "job_123456",
+    "status": "finished",
+    "result": {
+      "type": "success",
+      "retval": "Cisco IOS Software, Version 15.2..."
+    }
+  }]
+}
+```
+
+!!! tip "任务状态说明"
+    - `queued`: 任务已提交，等待执行
+    - `started`: 任务正在执行
+    - `finished`: 任务执行成功
+    - `failed`: 任务执行失败（查看 `result.error` 获取错误信息）
+
+## 相关文档
 
 - [设备操作 API](./device-api.md) - 设备操作核心接口
 - [驱动选择](../drivers/index.md) - 选择合适的驱动

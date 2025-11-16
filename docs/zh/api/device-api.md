@@ -156,11 +156,55 @@ response = requests.post(
     }
 )
 
-job_id = response.json()["data"]["id"]
+result = response.json()
+job_id = result["data"]["id"]
 print(f"任务ID: {job_id}")
+
+# 查询任务结果（轮询直到完成）
+import time
+while True:
+    job_response = requests.get(
+        f"http://localhost:9000/job?id={job_id}",
+        headers={"X-API-KEY": "your_key"}
+    )
+    job_data = job_response.json()["data"][0]
+    status = job_data["status"]
+    
+    if status == "finished":
+        print(f"执行结果: {job_data['result']['retval']}")
+        break
+    elif status == "failed":
+        print(f"执行失败: {job_data['result']['error']}")
+        break
+    else:
+        print(f"任务状态: {status}，等待中...")
+        time.sleep(1)
 ```
 
-**说明**：只需提供连接参数和命令，其他参数使用默认值。
+**说明**：只需提供连接参数和命令，其他参数使用默认值。任务提交后需要轮询查询结果。
+
+**使用 Vault 凭据的版本**：
+
+```python
+response = requests.post(
+    "http://localhost:9000/device/execute",
+    headers={
+        "X-API-KEY": "your_key",
+        "Content-Type": "application/json"
+    },
+    json={
+        "driver": "netmiko",
+        "connection_args": {
+            "device_type": "cisco_ios",
+            "host": "192.168.1.1",
+            "credential_ref": "sites/hq/admin"  # 使用 Vault 凭据
+        },
+        "command": "show version"
+    }
+)
+```
+
+**说明**：使用 `credential_ref` 引用 Vault 中的凭据，无需在请求中传递密码。
 
 ### 场景2：配置推送（需要保存）
 
@@ -241,16 +285,75 @@ response = requests.post(
 |------|------|------|------|
 | device_type | string | 设备类型 | `cisco_ios`, `juniper_junos`, `arista_eos` |
 | host | string | 设备IP地址 | `192.168.1.1` |
-| username | string | 登录用户名 | `admin` |
-| password | string | 登录密码 | `password123` |
+| username | string | 登录用户名（或使用 `credential_ref`） | `admin` |
+| password | string | 登录密码（或使用 `credential_ref`） | `password123` |
 
 **可选参数**：
 | 参数 | 类型 | 默认值 | 使用场景 |
 |------|------|--------|----------|
+| credential_ref | string/object | - | Vault 凭据引用（推荐使用，避免在请求中传递密码） |
 | port | integer | 22 | 非标准SSH端口 |
 | timeout | integer | 30 | 连接超时时间（秒），慢速网络可增大 |
 | secret | string | - | 特权模式密码（enable密码） |
 | enable_mode | boolean | true | 配置操作是否进入特权模式 |
+
+#### 使用 Vault 凭据（credential_ref）
+
+可以使用 `credential_ref` 引用 Vault 中存储的凭据，避免在请求中直接传递密码，提高安全性。
+
+**支持的格式**：
+
+1. **字符串格式**（最简单）：
+   ```json
+   {
+     "credential_ref": "sites/hq/admin"
+   }
+   ```
+
+2. **字典格式**：
+   ```json
+   {
+     "credential_ref": {
+       "path": "sites/hq/admin"
+     }
+   }
+   ```
+
+3. **完整格式**：
+   ```json
+   {
+     "credential_ref": {
+       "provider": "vault",
+       "path": "sites/hq/admin",
+       "username_key": "username",
+       "password_key": "password"
+     }
+   }
+   ```
+
+**使用示例**：
+
+```bash
+curl -X POST "http://localhost:9000/device/execute" \
+  -H "X-API-KEY: your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "driver": "netmiko",
+    "connection_args": {
+      "device_type": "cisco_ios",
+      "host": "192.168.1.1",
+      "credential_ref": "sites/hq/admin"
+    },
+    "command": "show version"
+  }'
+```
+
+!!! tip "credential_ref 优先级"
+    - 如果同时提供了 `credential_ref` 和 `username`/`password`，`credential_ref` 优先
+    - 系统会从 Vault 读取凭据并注入到 `connection_args` 中
+    - 凭据会被缓存，避免重复读取
+
+参考：[Vault 凭据管理 API](./credential-api.md)
 
 > **提示**：不同驱动的 `connection_args` 可能有额外参数，详见各驱动文档。
 

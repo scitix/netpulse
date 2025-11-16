@@ -4,7 +4,7 @@
 
 Paramiko 驱动用于管理Linux服务器（Ubuntu、CentOS、Debian等），通过SSH协议执行命令、传输文件、管理配置等操作。
 
-> **重要提示**：本文档专注于Paramiko驱动的参数和用法。通用API端点（`POST /device/execute`）、请求格式、响应格式等请参考[设备操作 API](../api/device-api.md)。
+> **注意**：本文档专注于Paramiko驱动的参数和用法。通用API端点（`POST /device/execute`）、请求格式、响应格式等，参考：[设备操作 API](../api/device-api.md)
 
 ## 驱动特点
 
@@ -88,6 +88,32 @@ Paramiko 驱动用于管理Linux服务器（Ubuntu、CentOS、Debian等），通
 - 默认使用SSH端口22
 - 默认连接超时30秒
 - 默认主机密钥策略为"auto_add"（自动接受）
+
+---
+
+### 示例1a：使用Vault凭据执行命令
+
+使用 Vault 中存储的凭据执行命令，避免在请求中直接传递密码。
+
+**必选字段**：
+- `connection_args.credential_ref`：Vault 凭据路径（替代 username/password）
+
+```json
+{
+  "driver": "paramiko",
+  "connection_args": {
+    "host": "192.168.1.100",
+    "credential_ref": "servers/prod/admin"
+  },
+  "command": "uname -a"
+}
+```
+
+**说明**：
+- 使用 `credential_ref` 引用 Vault 中存储的凭据
+- 系统会自动从 Vault 读取用户名和密码
+- 更安全，避免在请求中暴露密码
+- 详见 [Vault 凭据管理 API](../api/credential-api.md)
 
 ---
 

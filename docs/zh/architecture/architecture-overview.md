@@ -293,11 +293,31 @@ NetPulse 通过以下三个核心设计来提升系统性能、可用性和扩�
 - **模板引擎**：可添加新的模板格式（当前支持 Jinja2、TextFSM、TTP 等）
 - **调度算法**：可添加新的调度策略（当前支持贪婪、最小负载等）
 - **通知机制**：可添加新的 Webhook 实现
+- **凭据管理**：可添加新的凭据提供者（当前支持 HashiCorp Vault）
 
 **扩展方式**：继承对应基类，在插件目录创建类，系统会自动发现和加载。
 
-!!! tip "了解更多"
-    详细的插件系统介绍和开发指南请参考 [插件系统](./plugin-system.md)。
+### 凭据管理：Vault 集成
+
+**设计理念**：通过插件化的凭据管理系统，支持从外部凭据存储（如 Vault）动态获取设备认证信息。
+
+**核心能力**：
+- **凭据提供者插件**：支持多种凭据存储后端（当前支持 HashiCorp Vault）
+- **凭据解析**：在设备操作前自动解析 `credential_ref` 并注入凭据
+- **凭据缓存**：自动缓存凭据，避免重复读取，提升性能
+- **安全存储**：密码不直接暴露在 API 请求中，提高安全性
+
+**工作流程**：
+1. 客户端在 `connection_args` 中使用 `credential_ref` 引用 Vault 路径
+2. Controller 接收请求后，通过 CredentialResolver 解析凭据引用
+3. CredentialResolver 调用对应的凭据提供者（如 VaultProvider）获取凭据
+4. 凭据被注入到 `connection_args` 中，替换 `credential_ref`
+5. Worker 使用注入后的凭据建立设备连接
+
+**支持的凭据提供者**：
+- **Vault**：HashiCorp Vault（支持 KV v2 引擎，版本控制，元数据管理）
+
+参考：[Vault 凭据管理 API](../api/credential-api.md) | [基础概念](../getting-started/basic-concepts.md#4-凭据管理-credential-management) | [插件系统](./plugin-system.md)
 
 ## 设计决策说明
 

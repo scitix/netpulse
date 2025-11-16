@@ -4,7 +4,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from pydantic import ValidationError
 
 from . import __version__
-from .routes import device, manage, pull, push, template
+from .routes import credential, device, manage, pull, push, template
 from .server import (
     general_exception_handler,
     http_exception_handler,
@@ -34,6 +34,7 @@ app.include_router(pull, dependencies=[Depends(verify_api_key)])  # Backward com
 app.include_router(push, dependencies=[Depends(verify_api_key)])  # Backward compatibility
 app.include_router(template, dependencies=[Depends(verify_api_key)])
 app.include_router(manage, dependencies=[Depends(verify_api_key)])
+app.include_router(credential, dependencies=[Depends(verify_api_key)])  # Credential management
 
 # Exception handlers
 app.add_exception_handler(HTTPException, http_exception_handler)

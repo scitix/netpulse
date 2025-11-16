@@ -4,7 +4,7 @@
 
 NAPALM 驱动基于[设备操作 API](../api/device-api.md)，提供跨厂商标准化的网络设备操作功能，支持Cisco、Juniper、Arista、HP等主流厂商设备。
 
-> **重要提示**：本文档专注于NAPALM驱动的特定参数和用法。通用API端点（`POST /device/execute`）、请求格式、响应格式等请参考[设备操作 API](../api/device-api.md)。
+> **注意**：本文档专注于NAPALM驱动的特定参数和用法。通用API端点（`POST /device/execute`）、请求格式、响应格式等，参考：[设备操作 API](../api/device-api.md)
 
 ## 驱动特点
 
@@ -36,6 +36,32 @@ NAPALM 驱动基于[设备操作 API](../api/device-api.md)，提供跨厂商标
   }
 }
 ```
+
+#### 基础数据收集 - 使用Vault凭据
+
+**请求**
+```json
+{
+  "driver": "napalm",
+  "connection_args": {
+    "device_type": "ios",
+    "hostname": "192.168.1.1",
+    "credential_ref": "sites/hq/admin"
+  },
+  "command": [
+    "get_facts",
+    "get_interfaces",
+    "get_interfaces_ip"
+  ],
+  "options": {
+    "queue_strategy": "fifo",
+    "ttl": 300
+  }
+}
+```
+
+!!! tip "使用 Vault 凭据"
+    使用 `credential_ref` 引用 Vault 中存储的凭据，避免在请求中直接传递密码。系统会自动从 Vault 读取凭据并注入到连接参数中。详见 [Vault 凭据管理 API](../api/credential-api.md)。
 
 #### 多方法组合查询
 
@@ -618,7 +644,7 @@ print(f"配置推送结果: {result}")
 | message | string | - | 配置提交消息（仅用于配置操作，传递给commit_config） |
 | revert_in | integer | - | 配置确认时间（秒），用于自动回滚（仅用于配置操作，传递给commit_config） |
 
-> **注意**：`options` 参数是全局选项，所有驱动通用。详细说明请参考[设备操作 API](../api/device-api.md)。
+> **注意**：`options` 参数是全局选项，所有驱动通用。参考：[设备操作 API](../api/device-api.md)
 
 **NAPALM推荐配置**：
 - `queue_strategy`: 推荐使用 `"fifo"`，适合HTTP/SSH短连接
@@ -671,7 +697,7 @@ print(f"配置推送结果: {result}")
 - 配置操作默认使用merge模式（增量配置）
 - 利用rollback功能进行配置回滚（rollback作为命令调用）
 
-> **详细的最佳实践请参考**：[API最佳实践](../api/api-best-practices.md)
+> **参考**：[API最佳实践](../api/api-best-practices.md)
 
 ## 故障排除
 

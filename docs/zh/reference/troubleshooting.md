@@ -178,6 +178,60 @@ ssh admin@192.168.1.1
 }
 ```
 
+#### Q5a: Vault 凭据访问失败
+
+**问题描述**: 使用 `credential_ref` 时无法获取凭据。
+
+**排查步骤**:
+```bash
+# 1. 测试 Vault 连接
+curl -X POST \
+  -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{}' \
+  http://localhost:9000/credential/vault/test
+
+# 2. 检查凭据是否存在
+curl -X POST \
+  -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"path": "sites/hq/admin"}' \
+  http://localhost:9000/credential/vault/read
+
+# 3. 检查 Vault 服务状态
+docker compose ps vault
+docker compose logs vault
+
+# 4. 检查 Vault token 是否有效
+docker compose exec vault vault token lookup
+
+# 5. 检查 Vault 是否已解封
+docker compose exec vault vault status
+```
+
+**常见原因**:
+- Vault 服务未启动或未解封
+- Vault token 无效或过期
+- 凭据路径不存在
+- Vault token 权限不足
+
+**解决方案**:
+```bash
+# 如果 Vault 未解封，使用 unseal_key 解封
+docker compose exec vault vault operator unseal $VAULT_UNSEAL_KEY
+
+# 如果凭据不存在，创建凭据
+curl -X POST \
+  -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "path": "sites/hq/admin",
+    "username": "admin",
+    "password": "your_password"
+  }' \
+  http://localhost:9000/credential/vault/create
+```
+
 #### Q6: 设备类型不支持
 
 **支持的设备类型**:
