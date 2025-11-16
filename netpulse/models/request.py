@@ -276,7 +276,7 @@ class ExecutionRequest(BaseModel):
     @model_validator(mode="after")
     def check_payload_type(self):
         valid_payload = self.config if self.config is not None else self.command
-        if (self.rendering is not None) == isinstance(valid_payload, dict):
+        if (self.rendering is not None) != isinstance(valid_payload, dict):
             raise ValueError("`rendering` should be set when command/config is a dict")
         return self
 
