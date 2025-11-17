@@ -7,9 +7,9 @@ services:
     environment:
       - TZ=Asia/Shanghai
     volumes:
-      - ./redis/redis.conf:/etc/redis/redis.conf
-      - ./redis/tls:/etc/redis/tls
-      - ./redis/data:/data
+      - ./redis/redis.conf:/etc/redis/redis.conf:z
+      - ./redis/tls:/etc/redis/tls:z
+      - ./redis/data:/data:z
     command:
       - redis-server
       - /etc/redis/redis.conf
