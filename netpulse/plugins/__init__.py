@@ -20,22 +20,22 @@ class PluginLoader(Generic[T]):
 
     def __init__(
         self,
-        plugin_dir: str,
-        plugin_base_cls: Type[T],
-        plugin_type: str = "plugin",
-        plugin_name_attr: str = "plugin_name",
+        load_dir: Path,
+        base_cls: Type[T],
+        ptype: str = "plugin",
+        name_attr: str = "plugin_name",
     ):
         """
         Args:
-            plugin_dir: plugin directory
-            plugin_base_cls: base class for plugins
-            plugin_type: type of plugin
-            plugin_name_attr: name attribute for plugin
+            load_dir: plugin directory
+            base_cls: base class for plugins
+            ptype: type of plugin
+            name_attr: name attribute for plugin
         """
-        self.base_class = plugin_base_cls
-        self.type = plugin_type
-        self.name_attr = plugin_name_attr
-        self.load_dir = Path(plugin_dir)
+        self.base_class = base_cls
+        self.type = ptype
+        self.name_attr = name_attr
+        self.load_dir = load_dir
 
     def load(self) -> Dict[str, Type[T]]:
         """Load plugin from directory"""
@@ -75,11 +75,11 @@ class PluginLoader(Generic[T]):
     def _process_module(self, module: Any, plugin_dict: Dict[str, Type[T]]) -> None:
         """Process a single plugin module"""
         for name in getattr(module, "__all__", []):
-            cls = getattr(module, name, None)
+            cls: Type[T] | None = getattr(module, name, None)
             if self._is_valid_class(cls):
-                plugin_name = getattr(cls, self.name_attr, None)
+                plugin_name: str | None = getattr(cls, self.name_attr, None)
                 if plugin_name:
-                    plugin_dict[plugin_name] = cls
+                    plugin_dict[plugin_name] = cls  # type: ignore
                     log.info(f"Loaded {self.type}: {plugin_name}")
 
 
@@ -134,50 +134,50 @@ class LazyDictProxy(Generic[T]):
 def load_drivers() -> dict[str, Type[BaseDriver]]:
     """Load driver plugins"""
     return PluginLoader(
-        plugin_dir=g_config.plugin.driver,
-        plugin_base_cls=BaseDriver,
-        plugin_type="driver",
-        plugin_name_attr="driver_name",
+        load_dir=g_config.plugin.driver,
+        base_cls=BaseDriver,
+        ptype="driver",
+        name_attr="driver_name",
     ).load()
 
 
 def load_webhooks() -> dict[str, Type[BaseWebHookCaller]]:
     """Load webhook plugins"""
     return PluginLoader(
-        plugin_dir=g_config.plugin.webhook,
-        plugin_base_cls=BaseWebHookCaller,
-        plugin_type="webhook",
-        plugin_name_attr="webhook_name",
+        load_dir=g_config.plugin.webhook,
+        base_cls=BaseWebHookCaller,
+        ptype="webhook",
+        name_attr="webhook_name",
     ).load()
 
 
 def load_template_renderers() -> dict[str, Type[BaseTemplateRenderer]]:
     """Load template renderer plugins"""
     return PluginLoader(
-        plugin_dir=g_config.plugin.template,
-        plugin_base_cls=BaseTemplateRenderer,
-        plugin_type="template",
-        plugin_name_attr="template_name",
+        load_dir=g_config.plugin.template,
+        base_cls=BaseTemplateRenderer,
+        ptype="template",
+        name_attr="template_name",
     ).load()
 
 
 def load_template_parsers() -> dict[str, Type[BaseTemplateParser]]:
     """Load template parser plugins"""
     return PluginLoader(
-        plugin_dir=g_config.plugin.template,
-        plugin_base_cls=BaseTemplateParser,
-        plugin_type="template",
-        plugin_name_attr="template_name",
+        load_dir=g_config.plugin.template,
+        base_cls=BaseTemplateParser,
+        ptype="template",
+        name_attr="template_name",
     ).load()
 
 
 def load_scheduler() -> dict[str, Type[BaseScheduler]]:
     """Load scheduler plugins"""
     return PluginLoader(
-        plugin_dir=g_config.plugin.scheduler,
-        plugin_base_cls=BaseScheduler,
-        plugin_type="scheduler",
-        plugin_name_attr="scheduler_name",
+        load_dir=g_config.plugin.scheduler,
+        base_cls=BaseScheduler,
+        ptype="scheduler",
+        name_attr="scheduler_name",
     ).load()
 
 
