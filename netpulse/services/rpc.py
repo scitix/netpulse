@@ -10,112 +10,11 @@ from pydantic import ValidationError
 from rq.job import Callback, Job
 
 from ..models import JobAdditionalData
-from ..models.request import ExecutionRequest, PullingRequest, PushingRequest
+from ..models.request import ExecutionRequest
 from ..plugins import drivers, parsers, renderers, webhooks
 from ..worker.node import start_pinned_worker
 
 log = logging.getLogger(__name__)
-
-
-def pull(req: PullingRequest):
-    if isinstance(req.command, str):
-        cmds = [req.command]
-    else:
-        cmds = req.command
-
-    if not drivers.get(req.driver):
-        raise NotImplementedError(f"Unknown 'driver' {req.driver}")
-
-    # Init the driver
-    try:
-        dobj = drivers[req.driver].from_pulling_request(req)
-    except Exception as e:
-        log.error(f"Error in initializing driver: {e}")
-        raise e
-
-    # Do the work
-    session = None
-    try:
-        session = dobj.connect()
-        result = dobj.send(session, cmds)
-        dobj.disconnect(session)
-    except Exception as e:
-        log.error(f"Error in sending command: {e}")
-        raise e
-    finally:
-        if session:
-            dobj.disconnect(session)
-
-    if req.parsing:
-        try:
-            if not isinstance(result, dict):
-                raise ValueError("Result must be a dict for parsing.")
-
-            if req.parsing.context:
-                req.parsing.context = None
-                log.warning("Context in request is discarded.")
-
-            parser = parsers[req.parsing.name].from_parsing_request(req.parsing)
-            for cmd in result.keys():
-                result[cmd] = parser.parse(result[cmd])
-        except Exception as e:
-            log.error(f"Error in parsing: {e}")
-            raise e
-
-    return result
-
-
-def push(req: PushingRequest):
-    if not drivers.get(req.driver):
-        raise NotImplementedError(f"Unknown 'driver' {req.driver}")
-
-    # Handle template rendering if specified
-    if req.rendering:
-        try:
-            if not isinstance(req.config, dict):
-                raise ValueError("Config must be a dict for rendering.")
-
-            if req.rendering.context:
-                req.rendering.context = None
-                log.warning("Context in request is discarded")
-
-            render = renderers[req.rendering.name].from_rendering_request(req.rendering)
-            req.config = render.render(req.config)
-
-            # After req.config is rendered, we need to delete the rendering field
-            req.rendering = None
-        except Exception as e:
-            log.error(f"Error in rendering: {e}")
-            raise e
-
-    if isinstance(req.config, dict):
-        raise ValueError("Config must be a list[str] or str when not using rendering.")
-
-    if isinstance(req.config, str):
-        config = [req.config]
-    else:
-        config = req.config
-
-    # Init the driver
-    try:
-        dobj = drivers[req.driver].from_pushing_request(req)
-    except Exception as e:
-        log.error(f"Error in initializing driver: {e}")
-        raise e
-
-    session = None
-    try:
-        session = dobj.connect()
-        result = dobj.config(session, config)
-        dobj.disconnect(session)
-    except Exception as e:
-        log.error(f"Error in sending config: {e}")
-        raise e
-    finally:
-        if session:
-            dobj.disconnect(session)
-
-    return result
 
 
 def execute(req: ExecutionRequest):
@@ -238,7 +137,7 @@ def rpc_webhook_callback(*args):
         # failed, will call rpc_exception_handler at first
         job = args[0]
         result = rpc_exception_callback(*args)
-        result = result.error
+        result = result.error if result else "Unknown Error"
     else:
         # Should never happen
         log.warning("Webhook handler is called with unexpected args.")
@@ -246,9 +145,13 @@ def rpc_webhook_callback(*args):
 
     # To cut down Redis memory usage, we get req from job.kwargs,
     # which is not elegant, but it is a trade-off.
-    req = job.kwargs.get("req", None)  # type: PullingRequest | PushingRequest
+    req: ExecutionRequest = job.kwargs.get("req", None)
     if req is None:
         log.warning("Webhook handler is called without `req` in job.kwargs.")
+        return
+
+    if req.webhook is None:
+        log.error("Webhook handler is called without any webhook in request.")
         return
 
     try:
@@ -277,7 +180,6 @@ def rpc_exception_callback(
         log.error(f"Error in validating job metadata: {e}, skipping exception.")
         return None
 
-    assert meta is not None
     meta.error = (exc_type.__name__, str(exc_value))
 
     job.meta = meta.model_dump()

@@ -30,7 +30,7 @@ class Jinja2Renderer(BaseTemplateRenderer):
 
         self.template = Template(**options)
 
-    def render(self, context: dict) -> str:
+    def render(self, context: dict | None) -> str:
         """
         Render a template string with context
         """

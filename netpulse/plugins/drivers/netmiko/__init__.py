@@ -11,8 +11,6 @@ from .. import BaseDriver
 from .model import (
     NetmikoConnectionArgs,
     NetmikoExecutionRequest,
-    NetmikoPullingRequest,
-    NetmikoPushingRequest,
     NetmikoSendCommandArgs,
     NetmikoSendConfigSetArgs,
 )
@@ -148,24 +146,6 @@ class NetmikoDriver(BaseDriver):
         cls._monitor_stop_event = None
 
     @classmethod
-    def from_pulling_request(cls, req: NetmikoPullingRequest):
-        # Pydantic don't have implicit conversion, we have to do it explicitly
-        if not isinstance(req, NetmikoPullingRequest):
-            req = NetmikoPullingRequest.model_validate(obj=req.model_dump())
-        return cls(args=req.args, conn_args=req.connection_args, enabled=req.enable_mode)
-
-    @classmethod
-    def from_pushing_request(cls, req: NetmikoPushingRequest):
-        if not isinstance(req, NetmikoPushingRequest):
-            req = NetmikoPushingRequest.model_validate(obj=req.model_dump())
-        return cls(
-            args=req.args,
-            conn_args=req.connection_args,
-            enabled=req.enable_mode,
-            save=req.save,
-        )
-
-    @classmethod
     def from_execution_request(cls, req: NetmikoExecutionRequest):
         if not isinstance(req, NetmikoExecutionRequest):
             req = NetmikoExecutionRequest.model_validate(obj=req.model_dump())
@@ -175,6 +155,19 @@ class NetmikoDriver(BaseDriver):
             enabled=req.enable_mode,
             save=req.save,
         )
+
+    @classmethod
+    def validate(cls, req: NetmikoExecutionRequest) -> None:
+        """
+        Validate the request without creating the driver instance.
+
+        Raises:
+            pydantic.ValidationError: If the request model validation fails
+                (e.g., missing required fields, invalid field types).
+        """
+        # Validate the request model using Pydantic
+        if not isinstance(req, NetmikoExecutionRequest):
+            NetmikoExecutionRequest.model_validate(obj=req.model_dump())
 
     def __init__(
         self,

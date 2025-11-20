@@ -1,18 +1,15 @@
 import logging
 from inspect import signature
-from typing import Optional
 
 from napalm.base import NetworkDriver, get_network_driver
 
 from .. import BaseDriver
 from .model import (
     DriverConnectionArgs,
+    NapalmCliArgs,
+    NapalmCommitConfigArgs,
     NapalmConnectionArgs,
     NapalmExecutionRequest,
-    NapalmPullingArgs,
-    NapalmPullingRequest,
-    NapalmPushingArgs,
-    NapalmPushingRequest,
 )
 
 log = logging.getLogger(__name__)
@@ -33,28 +30,6 @@ class NapalmDriver(BaseDriver):
     driver_name = "napalm"
 
     @classmethod
-    def from_pulling_request(cls, req: NapalmPullingRequest) -> "NapalmDriver":
-        """
-        Create driver instance from a pulling request.
-        """
-        if not isinstance(req, NapalmPullingRequest):
-            req = NapalmPullingRequest.model_validate(req.model_dump())
-            req.connection_args = cls.convert_conn_args(req.connection_args)
-
-        return cls(conn_args=req.connection_args, args=req.args)
-
-    @classmethod
-    def from_pushing_request(cls, req: NapalmPushingRequest) -> "NapalmDriver":
-        """
-        Create driver instance from a pushing request.
-        """
-        if not isinstance(req, NapalmPushingRequest):
-            req = NapalmPushingRequest.model_validate(req.model_dump())
-            req.connection_args = cls.convert_conn_args(req.connection_args)
-
-        return cls(conn_args=req.connection_args, args=req.args, dry_run=req.dry_run)
-
-    @classmethod
     def from_execution_request(cls, req: NapalmExecutionRequest) -> "NapalmDriver":
         """
         Create driver instance from an execution request.
@@ -63,7 +38,28 @@ class NapalmDriver(BaseDriver):
             req = NapalmExecutionRequest.model_validate(req.model_dump())
             req.connection_args = cls.convert_conn_args(req.connection_args)
 
+        # Set default driver_args if not provided
+        if req.driver_args is None:
+            req.driver_args = NapalmCliArgs() if req.command else NapalmCommitConfigArgs()
+
         return cls(conn_args=req.connection_args, args=req.driver_args, dry_run=req.dry_run)
+
+    @classmethod
+    def validate(cls, req: NapalmExecutionRequest) -> None:
+        """
+        Validate the request without creating the driver instance.
+
+        Raises:
+            pydantic.ValidationError: If the request model validation fails
+                (e.g., missing required fields, invalid field types).
+            ValueError: If device_type is None in connection_args.
+        """
+        # Validate the request model
+        if not isinstance(req, NapalmExecutionRequest):
+            req = NapalmExecutionRequest.model_validate(req.model_dump())
+
+        # Validate connection args and device_type conversion
+        cls.convert_conn_args(req.connection_args)
 
     @classmethod
     def convert_conn_args(cls, conn_args: DriverConnectionArgs) -> NapalmConnectionArgs:
@@ -91,7 +87,7 @@ class NapalmDriver(BaseDriver):
     def __init__(
         self,
         conn_args: NapalmConnectionArgs,
-        args: Optional[NapalmPullingArgs | NapalmPushingArgs] = None,
+        args: NapalmCliArgs | NapalmCommitConfigArgs,
         dry_run: bool = False,
         **kwargs,
     ):
@@ -135,10 +131,12 @@ class NapalmDriver(BaseDriver):
             log.error(f"Connection failed: {e}")
             raise e
 
-    def send(self, session: NetworkDriver, command: list[str]) -> dict[str]:
+    def send(self, session: NetworkDriver, command: list[str]) -> dict[str, str]:
         """
         Send commands to the device.
         """
+        assert isinstance(self.args, NapalmCliArgs)
+
         if not command:
             log.warning("No command provided")
             return {}
@@ -183,17 +181,21 @@ class NapalmDriver(BaseDriver):
 
         return result
 
-    def config(self, session: NetworkDriver, config: list[str]):
+    def config(self, session: NetworkDriver, cfg: list[str]):
         """
         Configure the device.
         """
-        if not config:
+        assert isinstance(self.args, NapalmCommitConfigArgs)
+
+        if not cfg:
             log.warning("No configuration provided")
             return {}
 
         # Process config format
-        if isinstance(config, list):
-            config: str = config[0] if len(config) == 1 else "\n".join(config)
+        if isinstance(cfg, list):
+            cfg_text = cfg[0] if len(cfg) == 1 else "\n".join(cfg)
+        else:
+            cfg_text = str(cfg)
 
         try:
             session.open()
@@ -203,7 +205,7 @@ class NapalmDriver(BaseDriver):
 
         # Load candidate configuration
         try:
-            session.load_merge_candidate(config=config)
+            session.load_merge_candidate(config=cfg_text)
             diff = session.compare_config()
         except Exception as e:
             log.error(f"Configuration comparison failed: {e}")

@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional
 from pydantic import ConfigDict, Field
 
 from ....models import DriverArgs, DriverConnectionArgs, DriverName
-from ....models.request import ExecutionRequest, PullingRequest, PushingRequest
+from ....models.request import ExecutionRequest
 
 
 class NetmikoConnectionArgs(DriverConnectionArgs):
@@ -104,57 +104,6 @@ class NetmikoSendConfigSetArgs(DriverArgs):
     error_pattern: str = ""
     terminator: str = r"#"
     bypass_commands: Optional[str] = None
-
-
-class NetmikoPullingRequest(PullingRequest):
-    driver: DriverName = DriverName.NETMIKO
-    connection_args: NetmikoConnectionArgs
-    args: Optional[NetmikoSendCommandArgs] = None
-    enable_mode: bool = False
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "driver": "netmiko",
-                "queue_strategy": "pinned",
-                "connection_args": {
-                    "device_type": "cisco_ios",
-                    "host": "172.17.0.1",
-                    "port": "10005",
-                    "username": "admin",
-                    "password": "admin",
-                    "timeout": 10,
-                    "keepalive": 60,
-                },
-                "command": ["show vlan", "show ip interface brief"],
-            }
-        }
-    )
-
-
-class NetmikoPushingRequest(PushingRequest):
-    driver: DriverName = DriverName.NETMIKO
-    connection_args: NetmikoConnectionArgs
-    args: Optional[NetmikoSendConfigSetArgs] = None
-    save: bool = False
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "driver": "netmiko",
-                "queue_strategy": "pinned",
-                "connection_args": {
-                    "device_type": "cisco_ios",
-                    "host": "172.17.0.1",
-                    "port": "10005",
-                    "username": "admin",
-                    "password": "admin",
-                },
-                "config": ["hostname cat"],
-                "save": True,
-            }
-        }
-    )
 
 
 class NetmikoExecutionRequest(ExecutionRequest):

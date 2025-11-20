@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ....models import DriverArgs, DriverConnectionArgs
 from ....models.common import DriverName
-from ....models.request import PullingRequest, PushingRequest
+from ....models.request import ExecutionRequest
 
 
 class ParamikoConnectionArgs(DriverConnectionArgs):
@@ -149,7 +149,8 @@ class ParamikoSendConfigArgs(DriverArgs):
         return self
 
 
-class ParamikoPullingRequest(PullingRequest):
+# DEPRECATED: Use ParamikoExecutionRequest instead
+class ParamikoPullingRequest(ExecutionRequest):
     driver: DriverName = DriverName.PARAMIKO
     connection_args: ParamikoConnectionArgs
     args: Optional[ParamikoSendCommandArgs] = None
@@ -185,7 +186,8 @@ class ParamikoPullingRequest(PullingRequest):
     )
 
 
-class ParamikoPushingRequest(PushingRequest):
+# DEPRECATED: Use ParamikoExecutionRequest instead
+class ParamikoPushingRequest(ExecutionRequest):
     driver: DriverName = DriverName.PARAMIKO
     connection_args: ParamikoConnectionArgs
     args: Optional[ParamikoSendConfigArgs] = None
@@ -215,7 +217,7 @@ class ParamikoPushingRequest(PushingRequest):
     )
 
 
-class ParamikoExecutionRequest(PullingRequest):
+class ParamikoExecutionRequest(ExecutionRequest):
     driver: DriverName = DriverName.PARAMIKO
     connection_args: ParamikoConnectionArgs
     driver_args: Optional[ParamikoSendCommandArgs | ParamikoSendConfigArgs] = None

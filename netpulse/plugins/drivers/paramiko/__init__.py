@@ -7,6 +7,7 @@ import paramiko
 from .. import BaseDriver
 from .model import (
     ParamikoConnectionArgs,
+    ParamikoExecutionRequest,
     ParamikoPullingRequest,
     ParamikoPushingRequest,
     ParamikoSendCommandArgs,
@@ -56,9 +57,26 @@ class ParamikoDriver(BaseDriver):
         return cls(args=req.args, conn_args=req.connection_args)
 
     @classmethod
-    def from_execution_request(cls, req):
-        # FIXME: implement execution request handling
-        pass
+    def from_execution_request(cls, req: ParamikoExecutionRequest) -> "ParamikoDriver":
+        if not isinstance(req, ParamikoExecutionRequest):
+            req = ParamikoExecutionRequest.model_validate(req.model_dump())
+        return cls(args=req.driver_args, conn_args=req.connection_args)
+
+    @classmethod
+    def validate(cls, req) -> None:
+        """
+        Validate the request without creating the driver instance.
+
+        Raises:
+            pydantic.ValidationError: If the request model validation fails
+                (e.g., missing required fields, invalid field types).
+            ValueError: If authentication validation fails in the model_validator
+                (e.g., neither password nor key authentication provided).
+        """
+        # Validate the request model using Pydantic
+        # This will automatically trigger the @model_validator for authentication
+        if not isinstance(req, ParamikoExecutionRequest):
+            ParamikoExecutionRequest.model_validate(req.model_dump())
 
     def __init__(
         self,

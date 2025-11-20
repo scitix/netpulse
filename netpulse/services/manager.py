@@ -13,12 +13,11 @@ from rq.worker import BaseWorker
 
 from ..models import (
     DriverConnectionArgs,
-    DriverName,
     JobAdditionalData,
     NodeInfo,
     QueueStrategy,
 )
-from ..models.request import ExecutionRequest, PullingRequest, PushingRequest
+from ..models.request import ExecutionRequest
 from ..models.response import JobInResponse, WorkerInResponse
 from ..plugins import schedulers
 from ..utils import g_config
@@ -26,7 +25,6 @@ from ..utils.exceptions import JobOperationError, WorkerUnavailableError
 from .rediz import g_rdb
 from .rpc import (
     execute,
-    pull,
     push,
     rpc_callback_factory,
     rpc_exception_callback,
@@ -488,94 +486,9 @@ class Manager:
 
         return [JobInResponse.from_job(job) for job in succeeded], [hosts[i] for i in failed]
 
-    def pull_from_device(self, req: PullingRequest, driver: DriverName = None):
-        if driver is not None:
-            req.driver = driver
-
-        failure_handler, success_handler = None, None
-
-        # Add webhook handler
-        if req.webhook:
-            success_handler = failure_handler = rpc_webhook_callback
-
-        # NOTE: DO NOT change attr "req". It's hardcoded in webhook handler.
-        r = self.dispatch_rpc_job(
-            conn_arg=req.connection_args,
-            q_strategy=req.queue_strategy,
-            ttl=req.ttl,
-            func=pull,
-            kwargs={"req": req},
-            on_success=success_handler,
-            on_failure=failure_handler,
-        )
-
-        return r
-
-    def pull_from_batch_devices(self, reqs: list[PullingRequest]):
-        if not reqs or len(reqs) == 0:
-            return None
-
-        failure_handler, success_handler = None, None
-        if reqs[0].webhook:
-            success_handler = failure_handler = rpc_webhook_callback
-
-        return self.dispatch_bulk_rpc_jobs(
-            conn_args=[req.connection_args for req in reqs],
-            q_strategy=reqs[0].queue_strategy,
-            ttl=reqs[0].ttl,
-            func=pull,
-            kwargses=[{"req": req} for req in reqs],
-            on_success=success_handler,
-            on_failure=failure_handler,
-        )
-
-    def push_to_device(self, req: PushingRequest, driver: DriverName = None):
-        if driver is not None:
-            req.driver = driver
-
-        failure_handler, success_handler = None, None
-
-        # Add webhook handler
-        if req.webhook:
-            success_handler = failure_handler = rpc_webhook_callback
-
-        # NOTE: DO NOT change attr "req". It's hardcoded in webhook handler.
-        r = self.dispatch_rpc_job(
-            conn_arg=req.connection_args,
-            q_strategy=req.queue_strategy,
-            ttl=req.ttl,
-            func=push,
-            kwargs={"req": req},
-            on_success=success_handler,
-            on_failure=failure_handler,
-        )
-
-        return r
-
-    def push_to_batch_devices(self, reqs: list[PushingRequest]):
-        if not reqs or len(reqs) == 0:
-            return None
-
-        failure_handler, success_handler = None, None
-        if reqs[0].webhook:
-            success_handler = failure_handler = rpc_webhook_callback
-
-        return self.dispatch_bulk_rpc_jobs(
-            conn_args=[req.connection_args for req in reqs],
-            q_strategy=reqs[0].queue_strategy,
-            ttl=reqs[0].ttl,
-            func=push,
-            kwargses=[{"req": req} for req in reqs],
-            on_success=success_handler,
-            on_failure=failure_handler,
-        )
-
-    def execute_on_device(self, req: ExecutionRequest, driver: Optional[DriverName] = None):
+    def execute_on_device(self, req: ExecutionRequest):
         # q_strategy must be set before calling. Assert for robustness.
         assert req.queue_strategy, "Queue strategy is required for execution request"
-
-        if driver is not None:
-            req.driver = driver
 
         failure_handler, success_handler = None, None
 
@@ -598,10 +511,8 @@ class Manager:
 
     def execute_on_bulk_devices(self, reqs: list[ExecutionRequest]):
         # q_strategy must be set before calling. Assert for robustness.
+        assert reqs and len(reqs) > 0, "Empty execution request list"
         assert reqs[0].queue_strategy, "Queue strategy is required for execution request"
-
-        if not reqs or len(reqs) == 0:
-            return None
 
         failure_handler, success_handler = None, None
         if reqs[0].webhook:

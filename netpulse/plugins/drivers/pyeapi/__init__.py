@@ -8,8 +8,6 @@ from .model import (
     PyeapiArg,
     PyeapiConnectionArg,
     PyeapiExecutionRequest,
-    PyeapiPullingRequest,
-    PyeapiPushingRequest,
 )
 
 log = logging.getLogger(__name__)
@@ -17,23 +15,6 @@ log = logging.getLogger(__name__)
 
 class PyeapiDriver(BaseDriver):
     driver_name: str = "pyeapi"
-
-    @classmethod
-    def from_pulling_request(cls, req: PyeapiPullingRequest) -> "PyeapiDriver":
-        if not isinstance(req, PyeapiPullingRequest):
-            req = PyeapiPullingRequest.model_validate(req.model_dump())
-        return cls(conn_args=req.connection_args, enabled=req.enable_mode, args=req.args)
-
-    @classmethod
-    def from_pushing_request(cls, req: PyeapiPushingRequest) -> "PyeapiDriver":
-        if not isinstance(req, PyeapiPushingRequest):
-            req = PyeapiPushingRequest.model_validate(req.model_dump())
-        return cls(
-            conn_args=req.connection_args,
-            enabled=req.enable_mode,
-            save=req.save,
-            args=req.args,
-        )
 
     @classmethod
     def from_execution_request(cls, req: PyeapiExecutionRequest) -> "PyeapiDriver":
@@ -45,6 +26,19 @@ class PyeapiDriver(BaseDriver):
             save=req.save,
             args=req.driver_args,
         )
+
+    @classmethod
+    def validate(cls, req: PyeapiExecutionRequest) -> None:
+        """
+        Validate the request without creating the driver instance.
+
+        Raises:
+            pydantic.ValidationError: If the request model validation fails
+                (e.g., missing required fields, invalid field types).
+        """
+        # Validate the request model using Pydantic
+        if not isinstance(req, PyeapiExecutionRequest):
+            PyeapiExecutionRequest.model_validate(req.model_dump())
 
     def __init__(
         self,

@@ -3,7 +3,7 @@ from typing import Optional
 from pydantic import ConfigDict, Field
 
 from ....models import DriverArgs, DriverConnectionArgs
-from ....models.request import ExecutionRequest, PullingRequest, PushingRequest
+from ....models.request import ExecutionRequest
 
 
 class PyeapiConnectionArg(DriverConnectionArgs):
@@ -29,52 +29,6 @@ class PyeapiArg(DriverArgs):
     """
 
     model_config = ConfigDict(extra="allow")
-
-
-class PyeapiPullingRequest(PullingRequest):
-    connection_args: PyeapiConnectionArg
-    args: Optional[PyeapiArg] = None
-    enable_mode: bool = False
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "driver": "pyeapi",
-                "queue_strategy": "fifo",
-                "connection_args": {
-                    "host": "172.17.0.1",
-                    "username": "admin",
-                    "password": "admin",
-                    "transport": "https",
-                },
-                "command": ["show version", "show interfaces"],
-            }
-        }
-    )
-
-
-class PyeapiPushingRequest(PushingRequest):
-    connection_args: PyeapiConnectionArg
-    args: Optional[PyeapiArg] = None
-    enable_mode: bool = True
-    save: bool = True
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "driver": "pyeapi",
-                "queue_strategy": "fifo",
-                "connection_args": {
-                    "host": "172.17.0.1",
-                    "username": "admin",
-                    "password": "admin",
-                    "transport": "https",
-                },
-                "config": "hostname test-device",
-                "save": True,
-            }
-        }
-    )
 
 
 class PyeapiExecutionRequest(ExecutionRequest):
