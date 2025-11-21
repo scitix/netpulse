@@ -9,6 +9,7 @@ from .model import (
     NapalmCliArgs,
     NapalmCommitConfigArgs,
     NapalmConnectionArgs,
+    NapalmDeviceTestInfo,
     NapalmExecutionRequest,
 )
 
@@ -240,6 +241,28 @@ class NapalmDriver(BaseDriver):
         except Exception as e:
             log.error(f"Disconnection failed: {e}")
             raise e
+
+    @classmethod
+    def test(cls, connection_args: NapalmConnectionArgs) -> NapalmDeviceTestInfo:
+        conn_args = (
+            connection_args
+            if isinstance(connection_args, NapalmConnectionArgs)
+            else NapalmConnectionArgs.model_validate(connection_args.model_dump(exclude_none=True))
+        )
+        conn_args = cls.convert_conn_args(conn_args)
+
+        driver = cls(conn_args=conn_args, args=NapalmCliArgs(), dry_run=True)
+        session = None
+        try:
+            session = driver.connect()
+            session.open()
+            return NapalmDeviceTestInfo(host=conn_args.host)
+        finally:
+            if session:
+                try:
+                    session.close()
+                except Exception as e:
+                    log.warning(f"Error in disconnecting test connection: {e!s}")
 
 
 __all__ = ["NapalmDriver"]

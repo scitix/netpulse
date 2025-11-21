@@ -7,6 +7,7 @@ import paramiko
 from .. import BaseDriver
 from .model import (
     ParamikoConnectionArgs,
+    ParamikoDeviceTestInfo,
     ParamikoExecutionRequest,
     ParamikoPullingRequest,
     ParamikoPushingRequest,
@@ -496,6 +497,31 @@ class ParamikoDriver(BaseDriver):
         except Exception as e:
             log.error(f"Error downloading file: {e}")
             raise
+
+    @classmethod
+    def test(cls, connection_args: ParamikoConnectionArgs) -> ParamikoDeviceTestInfo:
+        conn_args = (
+            connection_args
+            if isinstance(connection_args, ParamikoConnectionArgs)
+            else ParamikoConnectionArgs.model_validate(
+                connection_args.model_dump(exclude_none=True)
+            )
+        )
+
+        driver = cls(args=None, conn_args=conn_args)
+        session = None
+        try:
+            session = driver.connect()
+            result = ParamikoDeviceTestInfo(host=conn_args.host)
+
+            transport = session.get_transport()
+            if transport and transport.remote_version:
+                result.remote_version = transport.remote_version
+
+            return result
+        finally:
+            if session:
+                driver.disconnect(session)
 
 
 __all__ = ["ParamikoDriver"]

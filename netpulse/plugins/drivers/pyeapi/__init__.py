@@ -7,6 +7,7 @@ from .. import BaseDriver
 from .model import (
     PyeapiArg,
     PyeapiConnectionArg,
+    PyeapiDeviceTestInfo,
     PyeapiExecutionRequest,
 )
 
@@ -118,6 +119,20 @@ class PyeapiDriver(BaseDriver):
         pyeapi uses HTTP/HTTPS connection, so no need to disconnect.
         """
         pass
+
+    @classmethod
+    def test(cls, connection_args: PyeapiConnectionArg) -> PyeapiDeviceTestInfo:
+        conn_args = (
+            connection_args
+            if isinstance(connection_args, PyeapiConnectionArg)
+            else PyeapiConnectionArg.model_validate(connection_args.model_dump(exclude_none=True))
+        )
+
+        pyeapi.connect(return_node=True, **conn_args.model_dump(exclude_none=True))
+        return PyeapiDeviceTestInfo(
+            host=conn_args.host,
+            transport=conn_args.transport or "http",
+        )
 
 
 __all__ = ["PyeapiDriver"]

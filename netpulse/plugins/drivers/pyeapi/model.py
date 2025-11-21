@@ -2,7 +2,7 @@ from typing import Optional
 
 from pydantic import ConfigDict, Field
 
-from ....models import DriverArgs, DriverConnectionArgs
+from ....models import DeviceTestInfo, DriverArgs, DriverConnectionArgs, DriverName
 from ....models.request import ExecutionRequest
 
 
@@ -53,3 +53,8 @@ class PyeapiExecutionRequest(ExecutionRequest):
             }
         }
     )
+
+
+class PyeapiDeviceTestInfo(DeviceTestInfo):
+    driver: DriverName = DriverName.PYEAPI
+    transport: Optional[str] = None

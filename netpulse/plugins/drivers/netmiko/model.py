@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional
 
 from pydantic import ConfigDict, Field
 
-from ....models import DriverArgs, DriverConnectionArgs, DriverName
+from ....models import DeviceTestInfo, DriverArgs, DriverConnectionArgs, DriverName
 from ....models.request import ExecutionRequest
 
 
@@ -132,3 +132,9 @@ class NetmikoExecutionRequest(ExecutionRequest):
             }
         }
     )
+
+
+class NetmikoDeviceTestInfo(DeviceTestInfo):
+    driver: DriverName = DriverName.NETMIKO
+    device_type: str
+    prompt: str

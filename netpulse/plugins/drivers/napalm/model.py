@@ -2,11 +2,7 @@ from typing import Any, Optional
 
 from pydantic import ConfigDict, Field
 
-from ....models import (
-    DriverArgs,
-    DriverConnectionArgs,
-    DriverName,
-)
+from ....models import DeviceTestInfo, DriverArgs, DriverConnectionArgs, DriverName
 from ....models.request import ExecutionRequest
 
 
@@ -77,3 +73,7 @@ class NapalmExecutionRequest(ExecutionRequest):
             }
         }
     )
+
+
+class NapalmDeviceTestInfo(DeviceTestInfo):
+    driver: DriverName = DriverName.NAPALM

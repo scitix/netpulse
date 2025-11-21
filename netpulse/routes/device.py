@@ -1,11 +1,9 @@
 import logging
 import time
 from datetime import datetime
-from typing import Optional, Tuple
 
 from fastapi import APIRouter
 
-from ..models.common import DriverConnectionArgs
 from ..models.request import (
     BulkExecutionRequest,
     ConnectionTestRequest,
@@ -76,17 +74,30 @@ def execute_on_bulk_devices(req: BulkExecutionRequest):
     return BatchSubmitJobResponse(code=200, message="success", data=data)
 
 
-@router.post("/test-connection", response_model=ConnectionTestResponse, status_code=200)
+@router.post("/test", response_model=ConnectionTestResponse, status_code=200)
 def test_device_connection(req: ConnectionTestRequest):
+    driver_name = str(req.driver)
+    dobj = drivers.get(driver_name, None)
+    if dobj is None:
+        raise ValueError(f"Unsupported driver: {driver_name}")
+
     start_time = time.time()
-    success, error_message, device_info = _test_connection(req.driver, req.connection_args)
-    connection_time = time.time() - start_time
+    try:
+        device_info = dobj.test(req.connection_args)
+        success = True
+        error_message = None
+    except Exception as exc:
+        device_info = None
+        success = False
+        error_message = str(exc)
+    finally:
+        connection_time = time.time() - start_time
 
     data = ConnectionTestResponse.ConnectionTestData(
         success=success,
-        connection_time=connection_time,
-        error_message=error_message,
-        device_info=device_info,
+        latency=connection_time,
+        error=error_message,
+        result=device_info,
         timestamp=datetime.now().astimezone(),
     )
 
@@ -95,143 +106,3 @@ def test_device_connection(req: ConnectionTestRequest):
         message="Connection test completed" if success else "Connection test failed",
         data=data,
     )
-
-
-def _test_connection(
-    driver: str, connection_args: DriverConnectionArgs
-) -> Tuple[bool, Optional[str], Optional[dict]]:
-    try:
-        if driver == "netmiko":
-            return _test_netmiko_connection(connection_args)
-        elif driver == "napalm":
-            return _test_napalm_connection(connection_args)
-        elif driver == "pyeapi":
-            return _test_pyeapi_connection(connection_args)
-        elif driver == "paramiko":
-            return _test_paramiko_connection(connection_args)
-        else:
-            return False, f"Unsupported driver: {driver}", None
-
-    except Exception as e:
-        return False, str(e), None
-
-
-def _test_netmiko_connection(
-    connection_args: DriverConnectionArgs,
-) -> Tuple[bool, Optional[str], Optional[dict]]:
-    try:
-        from netmiko import ConnectHandler
-
-        test_args = connection_args.model_dump(exclude_none=True)
-        connection = ConnectHandler(**test_args)
-
-        device_info = {
-            "prompt": connection.find_prompt(),
-            "device_type": test_args.get("device_type"),
-            "host": test_args.get("host"),
-        }
-
-        connection.disconnect()
-
-        return True, None, device_info
-
-    except Exception as e:
-        return False, str(e), None
-
-
-def _test_napalm_connection(
-    connection_args: DriverConnectionArgs,
-) -> Tuple[bool, Optional[str], Optional[dict]]:
-    try:
-        import napalm
-
-        test_args = connection_args.model_dump(exclude_none=True)
-
-        driver_name = test_args.get("driver") or test_args.get("device_type")
-        if not driver_name:
-            return False, "Driver name not specified for NAPALM", None
-
-        host = test_args.get("host") or test_args.get("hostname")
-        if not host:
-            return False, "Host address not specified for NAPALM", None
-
-        driver = napalm.get_network_driver(driver_name)
-        device = driver(
-            hostname=host,
-            username=test_args.get("username"),
-            password=test_args.get("password"),
-            optional_args=test_args.get("optional_args", {}),
-        )
-
-        device.open()
-        device_info = {"driver": driver_name, "host": host, "connection_type": "napalm"}
-        device.close()
-
-        return True, None, device_info
-
-    except Exception as e:
-        return False, str(e), None
-
-
-def _test_pyeapi_connection(
-    connection_args: DriverConnectionArgs,
-) -> Tuple[bool, Optional[str], Optional[dict]]:
-    try:
-        import pyeapi
-
-        test_args = connection_args.model_dump(exclude_none=True)
-        node = pyeapi.connect(**test_args)
-
-        _ = node.enable("show version")
-
-        device_info = {
-            "host": test_args.get("host"),
-            "connection_type": "pyeapi",
-            "api_version": "eAPI",
-        }
-
-        return True, None, device_info
-
-    except Exception as e:
-        return False, str(e), None
-
-
-def _test_paramiko_connection(
-    connection_args: DriverConnectionArgs,
-) -> Tuple[bool, Optional[str], Optional[dict]]:
-    try:
-        from ..plugins.drivers.paramiko import ParamikoDriver
-        from ..plugins.drivers.paramiko.model import (
-            ParamikoConnectionArgs,
-            ParamikoSendCommandArgs,
-        )
-
-        # Convert to ParamikoConnectionArgs
-        if not isinstance(connection_args, ParamikoConnectionArgs):
-            paramiko_args = ParamikoConnectionArgs.model_validate(
-                connection_args.model_dump(exclude_none=True)
-            )
-        else:
-            paramiko_args = connection_args
-
-        # Use driver for connection test
-        driver = ParamikoDriver(
-            args=ParamikoSendCommandArgs(),
-            conn_args=paramiko_args,
-        )
-
-        session = driver.connect()
-        _stdin, stdout, _stderr = session.exec_command("uname -a", timeout=5)
-        output = stdout.read().decode("utf-8", errors="replace")
-
-        device_info = {
-            "host": paramiko_args.host,
-            "system_info": output.strip(),
-            "connection_type": "paramiko",
-        }
-
-        driver.disconnect(session)
-        return True, None, device_info
-
-    except Exception as e:
-        return False, str(e), None

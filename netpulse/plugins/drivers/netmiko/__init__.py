@@ -10,6 +10,7 @@ from netmiko import BaseConnection, ConnectHandler
 from .. import BaseDriver
 from .model import (
     NetmikoConnectionArgs,
+    NetmikoDeviceTestInfo,
     NetmikoExecutionRequest,
     NetmikoSendCommandArgs,
     NetmikoSendConfigSetArgs,
@@ -286,6 +287,32 @@ class NetmikoDriver(BaseDriver):
                 raise e
             finally:
                 self._set_persisted_session(None, self.conn_args)
+
+    @classmethod
+    def test(cls, connection_args: NetmikoConnectionArgs) -> NetmikoDeviceTestInfo:
+        conn_args = (
+            connection_args
+            if isinstance(connection_args, NetmikoConnectionArgs)
+            else NetmikoConnectionArgs.model_validate(connection_args.model_dump(exclude_none=True))
+        )
+
+        connection = None
+        try:
+            test_args = conn_args.model_dump(exclude_none=True)
+            connection = ConnectHandler(**test_args)
+            prompt = connection.find_prompt()
+
+            return NetmikoDeviceTestInfo(
+                device_type=conn_args.device_type,
+                host=conn_args.host,
+                prompt=prompt,
+            )
+        finally:
+            if connection:
+                try:
+                    connection.disconnect()
+                except Exception:
+                    log.warning("Error in disconnecting test connection", exc_info=True)
 
 
 __all__ = ["NetmikoDriver"]

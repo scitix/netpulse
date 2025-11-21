@@ -134,3 +134,12 @@ class DriverArgs(BaseModel):
     """
 
     model_config = ConfigDict(extra="allow")
+
+
+class DeviceTestInfo(BaseModel):
+    """Base model for device connection test results."""
+
+    driver: DriverName = Field(..., description="Driver name used in the test")
+    host: Optional[str] = Field(None, description="Device IP/hostname")
+
+    model_config = ConfigDict(extra="allow")

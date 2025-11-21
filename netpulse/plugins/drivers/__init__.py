@@ -1,3 +1,4 @@
+from ...models import DeviceTestInfo, DriverConnectionArgs
 from ...models.request import ExecutionRequest
 
 
@@ -29,4 +30,9 @@ class BaseDriver:
         raise NotImplementedError
 
     def disconnect(self, session):
+        raise NotImplementedError
+
+    @classmethod
+    def test(cls, connection_args: DriverConnectionArgs) -> DeviceTestInfo:
+        """Validate connectivity and return device metadata if available."""
         raise NotImplementedError

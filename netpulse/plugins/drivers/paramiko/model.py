@@ -2,8 +2,7 @@ from typing import Dict, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from ....models import DriverArgs, DriverConnectionArgs
-from ....models.common import DriverName
+from ....models import DeviceTestInfo, DriverArgs, DriverConnectionArgs, DriverName
 from ....models.request import ExecutionRequest
 
 
@@ -245,3 +244,8 @@ class ParamikoExecutionRequest(ExecutionRequest):
             }
         }
     )
+
+
+class ParamikoDeviceTestInfo(DeviceTestInfo):
+    driver: DriverName = DriverName.PARAMIKO
+    remote_version: Optional[str] = None
