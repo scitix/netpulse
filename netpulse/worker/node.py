@@ -37,7 +37,7 @@ class NodeWorker(RedisWorker):
         """
         Get the node info from the Redis.
         """
-        node_info = self.rdb.hget(self.node_info_map, self.name)
+        node_info: str | None = self.rdb.hget(self.node_info_map, self.name)  # type: ignore
         if not node_info:
             return None
 
@@ -136,12 +136,12 @@ class NodeWorker(RedisWorker):
             for w in workers:
                 send_shutdown_command(worker_name=w.name, connection=self.rdb)
 
-    def signaled_to_exit(self):
+    def signaled_to_exit(self, signum, frame):
         # NOTE: SIGINT will be sent to all child processes by TTY, as they have the same PGID
         # That means, SIGCHLD may come before we set signaled=True. It's fine.
         self.signaled = True
         if self._worker:
-            self._worker.request_stop()
+            self._worker.request_stop(signum, frame)
 
     def add(self, q_name: str, host: str):
         """
@@ -153,13 +153,13 @@ class NodeWorker(RedisWorker):
                 log.warning(f"Host {host} is already pinned (pid: {pid}), skipping...")
                 return
 
-        node_info = self.rdb.hget(self.node_info_map, self.name)
-        if not node_info:
+        node_info_json: str | None = self.rdb.hget(self.node_info_map, self.name)  # type: ignore
+        if not node_info_json:
             # Should never happen
             log.error(f"Node {self.name} does not exist")
             sys.exit(1)
 
-        node_info = NodeInfo.model_validate_json(node_info)
+        node_info = NodeInfo.model_validate_json(node_info_json)
 
         # Check if the node has enough capacity
         if node_info.count >= node_info.capacity:
@@ -213,10 +213,10 @@ class NodeWorker(RedisWorker):
 
         log.info(f"Cleaning up Pinned Worker ({pid} for {host})")
 
-        node_info = self.rdb.hget(self.node_info_map, self.name)
-        if not node_info:
+        node_info_json: str | None = self.rdb.hget(self.node_info_map, self.name)  # type: ignore
+        if not node_info_json:
             return
-        node_info = NodeInfo.model_validate_json(node_info)
+        node_info = NodeInfo.model_validate_json(node_info_json)
         node_info.count -= 1
 
         with self.rdb.pipeline() as pipe:
@@ -234,6 +234,7 @@ class NodeWorker(RedisWorker):
             log.warning(f"Unknown pid ({pid}) of exiting child process")
             return
 
+        assert self.listened_queue is not None, "NodeWorker's listened_queue is None"
         q = Queue(self.listened_queue, connection=self.rdb)
 
         # We use rq to queue the cleanup task,
@@ -241,7 +242,7 @@ class NodeWorker(RedisWorker):
         q.enqueue(NodeWorker._remove, kwargs={"pid": pid, "host": host})
 
 
-g_node_worker: NodeWorker = None
+g_node_worker: NodeWorker | None = None
 
 
 def start_pinned_worker(q_name: str, host: str):
@@ -289,7 +290,7 @@ def sigterm_sigint_handler(signum, frame):
         log.error("Node worker not initialized")
         sys.exit(1)
 
-    g_node_worker.signaled_to_exit()
+    g_node_worker.signaled_to_exit(signum, frame)
 
 
 def main():

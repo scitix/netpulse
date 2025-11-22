@@ -103,13 +103,14 @@ class WebHook(BaseModel):
 
 
 class DriverConnectionArgs(BaseModel):
-    """
-    NOTE: We loose the field checking to Optional.
-    Strict checks should be done in derived classes.
-    """
+    """ """
 
     device_type: Optional[str] = Field(None, description="Device type")
-    host: Optional[str] = Field(None, description="Device IP address")
+
+    # NOTE: We loose checking here, as DriverConnectionArgs could be
+    # auto-filled in Batch APIs. After that, we need to manually check.
+    host: Optional[str] = Field(None, description="Device IP/hostname")
+
     username: Optional[str] = Field(None, description="Device username")
     password: Optional[str] = Field(None, description="Device password")
 
@@ -125,21 +126,20 @@ class DriverConnectionArgs(BaseModel):
         },
     )
 
-    def enforced_field_check(self):
-        """
-        DriverConnectionArgs could be auto-filled in Batch APIs.
-        After that, we need to manually check.
-        """
-        if self.host is None:
-            raise ValueError("host is None")
-
-        return self
-
 
 class DriverArgs(BaseModel):
     """
     This is a generic model for driver arguments.
     Depends on the driver's method, the arguments can be different.
     """
+
+    model_config = ConfigDict(extra="allow")
+
+
+class DeviceTestInfo(BaseModel):
+    """Base model for device connection test results."""
+
+    driver: DriverName = Field(..., description="Driver name used in the test")
+    host: Optional[str] = Field(None, description="Device IP/hostname")
 
     model_config = ConfigDict(extra="allow")

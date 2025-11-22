@@ -10,7 +10,7 @@ class GreedyScheduler(BaseScheduler):
     def __init__(self):
         pass
 
-    def node_select(self, nodes: List[NodeInfo], host: str) -> NodeInfo:
+    def node_select(self, nodes: List[NodeInfo], host: str) -> NodeInfo | None:
         """
         Find first available node with capacity.
         """
@@ -19,7 +19,7 @@ class GreedyScheduler(BaseScheduler):
                 return n
         raise WorkerUnavailableError("Insufficient capacity in node selection")
 
-    def batch_node_select(self, nodes: List[NodeInfo], hosts: List[str]) -> List[NodeInfo]:
+    def batch_node_select(self, nodes: List[NodeInfo], hosts: List[str]) -> List[NodeInfo | None]:
         """
         Use least nodes for hosts.
         """

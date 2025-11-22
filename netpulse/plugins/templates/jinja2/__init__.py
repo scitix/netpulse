@@ -18,19 +18,19 @@ class Jinja2Renderer(BaseTemplateRenderer):
             req = Jinja2RenderRequest.model_validate(req.model_dump())
         return cls(source=req.template, options=req.args)
 
-    def __init__(self, source: str, options: Jinja2Args = None):
-        options: dict = options.model_dump() if options else {}
+    def __init__(self, source: str, options: Jinja2Args | None = None):
+        options_dict = options.model_dump() if options else {}
 
         try:
-            source: TemplateSource = TemplateSource(source)
-            options["source"] = source.load()
+            s = TemplateSource(source)
+            options_dict["source"] = s.load()
         except Exception as e:
-            log.error(f"Error in loading template from {source}: {e}")
+            log.error(f"Error in loading template from {s}: {e}")
             raise e
 
-        self.template = Template(**options)
+        self.template = Template(**options_dict)
 
-    def render(self, context: dict) -> str:
+    def render(self, context: dict | None) -> str:
         """
         Render a template string with context
         """

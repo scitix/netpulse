@@ -10,8 +10,8 @@ from netmiko import BaseConnection, ConnectHandler
 from .. import BaseDriver
 from .model import (
     NetmikoConnectionArgs,
-    NetmikoPullingRequest,
-    NetmikoPushingRequest,
+    NetmikoDeviceTestInfo,
+    NetmikoExecutionRequest,
     NetmikoSendCommandArgs,
     NetmikoSendConfigSetArgs,
 )
@@ -27,8 +27,8 @@ class NetmikoDriver(BaseDriver):
 
     driver_name = "netmiko"
 
-    persisted_session: BaseConnection = None
-    persisted_conn_args: NetmikoConnectionArgs = None
+    persisted_session: Optional[BaseConnection] = None
+    persisted_conn_args: Optional[NetmikoConnectionArgs] = None
 
     _monitor_stop_event = None
     _monitor_thread = None
@@ -55,7 +55,7 @@ class NetmikoDriver(BaseDriver):
 
     @classmethod
     def _set_persisted_session(
-        cls, session: BaseConnection, conn_args: NetmikoConnectionArgs
+        cls, session: Optional[BaseConnection], conn_args: Optional[NetmikoConnectionArgs]
     ) -> Optional[BaseConnection]:
         """
         Persist session and connection args. Start monitor thread.
@@ -63,6 +63,7 @@ class NetmikoDriver(BaseDriver):
         """
         # Clear
         if session is None:
+            assert cls.persisted_conn_args is not None
             if cls.persisted_conn_args.keepalive:
                 cls._stop_monitor_thread()
             cls.persisted_session = None
@@ -86,6 +87,7 @@ class NetmikoDriver(BaseDriver):
             log.info("Monitoring thread already running")
             return
 
+        assert cls.persisted_conn_args is not None
         cls._monitor_stop_event = threading.Event()
         host = cls.persisted_conn_args.host
         timeout = cls.persisted_conn_args.keepalive
@@ -93,6 +95,7 @@ class NetmikoDriver(BaseDriver):
         def monitor():
             suicide = False
             log.info(f"Monitoring thread started ({host})")
+            assert cls._monitor_stop_event is not None
 
             while not cls._monitor_stop_event.is_set():
                 if cls._monitor_stop_event.wait(timeout=timeout):
@@ -144,26 +147,32 @@ class NetmikoDriver(BaseDriver):
         cls._monitor_stop_event = None
 
     @classmethod
-    def from_pulling_request(cls, req: NetmikoPullingRequest):
-        # Pydantic don't have implicit conversion, we have to do it explicitly
-        if not isinstance(req, NetmikoPullingRequest):
-            req = NetmikoPullingRequest.model_validate(obj=req.model_dump())
-        return cls(args=req.args, conn_args=req.connection_args, enabled=req.enable_mode)
-
-    @classmethod
-    def from_pushing_request(cls, req: NetmikoPushingRequest):
-        if not isinstance(req, NetmikoPushingRequest):
-            req = NetmikoPushingRequest.model_validate(obj=req.model_dump())
+    def from_execution_request(cls, req: NetmikoExecutionRequest):
+        if not isinstance(req, NetmikoExecutionRequest):
+            req = NetmikoExecutionRequest.model_validate(obj=req.model_dump())
         return cls(
-            args=req.args,
+            args=req.driver_args,
             conn_args=req.connection_args,
             enabled=req.enable_mode,
             save=req.save,
         )
 
+    @classmethod
+    def validate(cls, req: NetmikoExecutionRequest) -> None:
+        """
+        Validate the request without creating the driver instance.
+
+        Raises:
+            pydantic.ValidationError: If the request model validation fails
+                (e.g., missing required fields, invalid field types).
+        """
+        # Validate the request model using Pydantic
+        if not isinstance(req, NetmikoExecutionRequest):
+            NetmikoExecutionRequest.model_validate(obj=req.model_dump())
+
     def __init__(
         self,
-        args: NetmikoSendCommandArgs | NetmikoSendConfigSetArgs,
+        args: NetmikoSendCommandArgs | NetmikoSendConfigSetArgs | None,
         conn_args: NetmikoConnectionArgs,
         enabled: bool = False,
         save: bool = True,
@@ -189,7 +198,7 @@ class NetmikoDriver(BaseDriver):
             log.error(f"Error in connecting: {e}")
             raise e
 
-    def send(self, session: BaseConnection = None, command: Optional[list[str]] = None):
+    def send(self, session: BaseConnection, command: list[str]):
         try:
             with self._monitor_lock:
                 if self.enabled:
@@ -213,8 +222,8 @@ class NetmikoDriver(BaseDriver):
 
     def config(
         self,
-        session: BaseConnection = None,
-        config: Optional[list[str]] = None,
+        session: BaseConnection,
+        config: list[str],
     ):
         """
         Send -> (Commit) -> Save
@@ -278,6 +287,32 @@ class NetmikoDriver(BaseDriver):
                 raise e
             finally:
                 self._set_persisted_session(None, self.conn_args)
+
+    @classmethod
+    def test(cls, connection_args: NetmikoConnectionArgs) -> NetmikoDeviceTestInfo:
+        conn_args = (
+            connection_args
+            if isinstance(connection_args, NetmikoConnectionArgs)
+            else NetmikoConnectionArgs.model_validate(connection_args.model_dump(exclude_none=True))
+        )
+
+        connection = None
+        try:
+            test_args = conn_args.model_dump(exclude_none=True)
+            connection = ConnectHandler(**test_args)
+            prompt = connection.find_prompt()
+
+            return NetmikoDeviceTestInfo(
+                device_type=conn_args.device_type,
+                host=conn_args.host,
+                prompt=prompt,
+            )
+        finally:
+            if connection:
+                try:
+                    connection.disconnect()
+                except Exception:
+                    log.warning("Error in disconnecting test connection", exc_info=True)
 
 
 __all__ = ["NetmikoDriver"]

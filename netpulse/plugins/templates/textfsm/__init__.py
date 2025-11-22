@@ -20,18 +20,27 @@ class TextFSMTemplateParser(BaseTemplateParser):
     def from_parsing_request(cls, req: TextFSMParseRequest) -> "TextFSMTemplateParser":
         if not isinstance(req, TextFSMParseRequest):
             req = TextFSMParseRequest.model_validate(req.model_dump())
+
         return cls(
             source=req.template,
             use_ntc=req.use_ntc_template,
             ntc_args=req.ntc_template_args,
         )
 
-    def __init__(self, source: str, use_ntc: bool = False, ntc_args: TextFSMNtcArgs = None):
+    def __init__(
+        self, source: str | None, use_ntc: bool = False, ntc_args: TextFSMNtcArgs | None = None
+    ):
         self.use_ntc = use_ntc
         self.ntc_args = ntc_args
-        self.template: TextFSM = None
+        self.template: TextFSM | None = None
 
-        if not self.use_ntc:
+        if self.use_ntc:
+            if self.ntc_args is None:
+                raise ValueError("NTC template args must be provided when using NTC templates")
+        else:
+            if (source is None) or (source.strip() == ""):
+                raise ValueError("Template source must be provided when not using NTC templates")
+
             try:
                 s = TemplateSource(source)
                 s = s.load()
@@ -47,6 +56,7 @@ class TextFSMTemplateParser(BaseTemplateParser):
                 raise e
 
     def _ntc_parse(self, context: str) -> list[dict]:
+        assert self.ntc_args is not None
         return parse.parse_output(
             platform=self.ntc_args.platform, command=self.ntc_args.command, data=context
         )

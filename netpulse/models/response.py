@@ -4,26 +4,29 @@ from datetime import datetime, timezone
 from typing import Any, List, Optional
 
 import rq
-from pydantic import BaseModel, ValidationError, computed_field, field_serializer
+from pydantic import BaseModel, Field, ValidationError, computed_field, field_serializer
 
-from .common import JobAdditionalData, JobResult
+from .common import DeviceTestInfo, JobAdditionalData, JobResult
 
 
 def _serialize_datetime_with_tz(dt: Optional[datetime], _info=None) -> Optional[str]:
     """Convert datetime to configured timezone and ISO format"""
+    DEFAULT_TZ = "Asia/Shanghai"
+
     if dt is None:
         return None
+
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
 
     # Fallback order: TZ -> Asia/Shanghai -> UTC
-    configured_tz: zoneinfo.ZoneInfo = None
+    configured_tz: zoneinfo.ZoneInfo | timezone | None = None
     try:
-        tz_name = os.getenv("TZ", "Asia/Shanghai")
+        tz_name = os.getenv("TZ", DEFAULT_TZ)
         configured_tz = zoneinfo.ZoneInfo(tz_name)
     except Exception:
         try:
-            configured_tz = zoneinfo.ZoneInfo("Asia/Shanghai")
+            configured_tz = zoneinfo.ZoneInfo(DEFAULT_TZ)
         except Exception:
             configured_tz = timezone.utc
 
@@ -42,7 +45,7 @@ class JobInResponse(BaseModel):
     id: str
     status: str
 
-    created_at: datetime
+    created_at: Optional[datetime] = None
     enqueued_at: Optional[datetime] = None
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
@@ -52,7 +55,7 @@ class JobInResponse(BaseModel):
     result: Optional[JobResult] = None
 
     @field_serializer("created_at", "enqueued_at", "started_at", "ended_at")
-    def serialize_datetime(self, dt: Optional[datetime], _info) -> Optional[str]:
+    def serialize_datetime(self, dt: Optional[datetime], _info):
         return _serialize_datetime_with_tz(dt, _info)
 
     @computed_field
@@ -89,12 +92,12 @@ class JobInResponse(BaseModel):
         else:
             error = meta.error
 
-        result = job.latest_result()
-        if result:
-            # We ignore exc_string as it's too verbose in response
-            result = JobResult(
-                type=result.type.value,
-                retval=result.return_value,
+        # We ignore exc_string as it's too verbose in response
+        result_in_job = job.latest_result()
+        result = (
+            JobResult(
+                type=JobResult.ResultType(result_in_job.type),
+                retval=result_in_job.return_value,
                 error=(
                     {
                         "type": error[0],
@@ -104,10 +107,13 @@ class JobInResponse(BaseModel):
                     else None
                 ),
             )
+            if result_in_job
+            else None
+        )
 
         return cls(
             id=job.id,
-            status=job.get_status(),
+            status=str(job.get_status()),
             queue=job.origin,
             created_at=job.created_at,
             enqueued_at=job.enqueued_at,
@@ -136,7 +142,7 @@ class WorkerInResponse(BaseModel):
         return _serialize_datetime_with_tz(dt, _info)
 
     @classmethod
-    def from_worker(cls, worker: "rq.Worker") -> "WorkerInResponse":
+    def from_worker(cls, worker: "rq.worker.BaseWorker") -> "WorkerInResponse":
         return cls(
             name=worker.name,
             status=worker.get_state(),
@@ -169,7 +175,7 @@ class GetJobResponse(BaseResponse):
 
 
 class DeleteJobResponse(BaseResponse):
-    data: List[str] = None
+    data: Optional[List[str]] = None
 
 
 class GetWorkerResponse(BaseResponse):
@@ -177,7 +183,7 @@ class GetWorkerResponse(BaseResponse):
 
 
 class DeleteWorkerResponse(BaseResponse):
-    data: List[str] = None
+    data: Optional[List[str]] = None
 
 
 class ConnectionTestResponse(BaseResponse):
@@ -185,13 +191,19 @@ class ConnectionTestResponse(BaseResponse):
 
     class ConnectionTestData(BaseModel):
         success: bool
-        connection_time: Optional[float] = None  # Connection time in seconds
-        error_message: Optional[str] = None  # Error message if connection failed
-        device_info: Optional[dict] = None  # Device information if connection succeeded
-        timestamp: datetime
+        latency: Optional[float] = Field(
+            None, description="Time taken to establish the connection in seconds"
+        )
+        error: Optional[str] = Field(None, description="Error message if the connection failed")
+        result: Optional[DeviceTestInfo] = Field(
+            None, description="Device information if the connection succeeded"
+        )
+        timestamp: Optional[datetime] = Field(
+            None, description="Timestamp of the test result is generated"
+        )
 
         @field_serializer("timestamp")
-        def serialize_datetime(self, dt: datetime, _info) -> str:
+        def serialize_datetime(self, dt: Optional[datetime], _info):
             return _serialize_datetime_with_tz(dt, _info)
 
     data: Optional[ConnectionTestData] = None

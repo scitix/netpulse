@@ -22,11 +22,18 @@ class TTPTemplateParser(BaseTemplateParser):
             ttp_args=req.ttp_template_args,
         )
 
-    def __init__(self, source: str, use_ttp: bool = False, ttp_args: TTPTemplateArgs = None):
+    def __init__(
+        self, source: str | None, use_ttp: bool = False, ttp_args: TTPTemplateArgs | None = None
+    ):
         self.use_ttp = use_ttp
         self.ttp_args = ttp_args
 
-        if not use_ttp:
+        if use_ttp:
+            if self.ttp_args is None:
+                raise ValueError("TTP template args must be provided when using TTP templates")
+        else:
+            if (source is None) or (source.strip() == ""):
+                raise ValueError("Template source must be provided when not using TTP templates")
             try:
                 s = TemplateSource(source)
                 s = s.load()
@@ -41,12 +48,13 @@ class TTPTemplateParser(BaseTemplateParser):
             self.template = s
 
     def _ttp_template_parse(self, context: str) -> dict:
+        assert self.ttp_args is not None
         return parse_output(
             data=context,
             platform=self.ttp_args.platform,
             command=self.ttp_args.command,
             structure="dictionary",
-        )
+        )  # type: ignore
 
     def _parse(self, context: str) -> dict:
         try:
@@ -56,7 +64,7 @@ class TTPTemplateParser(BaseTemplateParser):
             log.error(f"Error in parsing template: {e}")
             raise e
 
-        return parser.result(structure="dictionary")
+        return parser.result(structure="dictionary")  # type: ignore
 
     def parse(self, context: str) -> dict:
         try:

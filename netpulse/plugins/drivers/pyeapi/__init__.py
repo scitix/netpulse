@@ -7,8 +7,8 @@ from .. import BaseDriver
 from .model import (
     PyeapiArg,
     PyeapiConnectionArg,
-    PyeapiPullingRequest,
-    PyeapiPushingRequest,
+    PyeapiDeviceTestInfo,
+    PyeapiExecutionRequest,
 )
 
 log = logging.getLogger(__name__)
@@ -18,28 +18,35 @@ class PyeapiDriver(BaseDriver):
     driver_name: str = "pyeapi"
 
     @classmethod
-    def from_pulling_request(cls, req: PyeapiPullingRequest) -> "PyeapiDriver":
-        if not isinstance(req, PyeapiPullingRequest):
-            req = PyeapiPullingRequest.model_validate(req.model_dump())
-        return cls(conn_args=req.connection_args, enabled=req.enable_mode, args=req.args)
-
-    @classmethod
-    def from_pushing_request(cls, req: PyeapiPushingRequest) -> "PyeapiDriver":
-        if not isinstance(req, PyeapiPushingRequest):
-            req = PyeapiPushingRequest.model_validate(req.model_dump())
+    def from_execution_request(cls, req: PyeapiExecutionRequest) -> "PyeapiDriver":
+        if not isinstance(req, PyeapiExecutionRequest):
+            req = PyeapiExecutionRequest.model_validate(req.model_dump())
         return cls(
             conn_args=req.connection_args,
             enabled=req.enable_mode,
             save=req.save,
-            args=req.args,
+            args=req.driver_args,
         )
+
+    @classmethod
+    def validate(cls, req: PyeapiExecutionRequest) -> None:
+        """
+        Validate the request without creating the driver instance.
+
+        Raises:
+            pydantic.ValidationError: If the request model validation fails
+                (e.g., missing required fields, invalid field types).
+        """
+        # Validate the request model using Pydantic
+        if not isinstance(req, PyeapiExecutionRequest):
+            PyeapiExecutionRequest.model_validate(req.model_dump())
 
     def __init__(
         self,
         conn_args: PyeapiConnectionArg,
         enabled: bool,
         save: bool = True,
-        args: PyeapiArg = None,
+        args: Optional[PyeapiArg] = None,
         **kwargs,
     ):
         """
@@ -112,6 +119,20 @@ class PyeapiDriver(BaseDriver):
         pyeapi uses HTTP/HTTPS connection, so no need to disconnect.
         """
         pass
+
+    @classmethod
+    def test(cls, connection_args: PyeapiConnectionArg) -> PyeapiDeviceTestInfo:
+        conn_args = (
+            connection_args
+            if isinstance(connection_args, PyeapiConnectionArg)
+            else PyeapiConnectionArg.model_validate(connection_args.model_dump(exclude_none=True))
+        )
+
+        pyeapi.connect(return_node=True, **conn_args.model_dump(exclude_none=True))
+        return PyeapiDeviceTestInfo(
+            host=conn_args.host,
+            transport=conn_args.transport or "http",
+        )
 
 
 __all__ = ["PyeapiDriver"]

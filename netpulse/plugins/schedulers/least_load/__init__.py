@@ -11,7 +11,7 @@ class LeastLoadScheduler(BaseScheduler):
     def __init__(self):
         pass
 
-    def node_select(self, nodes: List[NodeInfo], host: str) -> NodeInfo:
+    def node_select(self, nodes: List[NodeInfo], host: str) -> NodeInfo | None:
         """
         Select nodes using evenly distributed load balancing strategy.
 
@@ -50,7 +50,7 @@ class LeastLoadScheduler(BaseScheduler):
 
         return selected_node
 
-    def batch_node_select(self, nodes: List[NodeInfo], hosts: List[str]) -> List[NodeInfo]:
+    def batch_node_select(self, nodes: List[NodeInfo], hosts: List[str]) -> List[NodeInfo | None]:
         """
         Batch schedule multiple hosts using minimum node amount.
 
@@ -87,7 +87,7 @@ class LeastLoadScheduler(BaseScheduler):
             )
 
         # Initialize result array
-        result = [None] * host_count
+        result: list[NodeInfo | None] = [None] * host_count
         host_index = 0
 
         # Process each load level from least to most loaded

@@ -34,20 +34,22 @@ def verify_api_key(
     )
 
 
-def http_exception_handler(request: Request, exc: HTTPException):
+def http_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """
     HTTP exception handler
     """
+    assert isinstance(exc, HTTPException)
     return JSONResponse(
         status_code=exc.status_code,
         content={"code": -1, "message": exc.detail},
     )
 
 
-def validation_exception_handler(request: Request, exc: ValidationError):
+def validation_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """
     Validation error handler
     """
+    assert isinstance(exc, ValidationError)
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content={
@@ -58,10 +60,11 @@ def validation_exception_handler(request: Request, exc: ValidationError):
     )
 
 
-def value_error_handler(request: Request, exc: ValueError):
+def value_error_handler(request: Request, exc: Exception) -> JSONResponse:
     """
     Value error handler
     """
+    assert isinstance(exc, ValueError)
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content={
@@ -72,7 +75,7 @@ def value_error_handler(request: Request, exc: ValueError):
     )
 
 
-def general_exception_handler(request: Request, exc: Exception):
+def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """
     Generic exception handler
     """

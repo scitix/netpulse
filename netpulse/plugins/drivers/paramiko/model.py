@@ -2,9 +2,8 @@ from typing import Dict, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from ....models import DriverArgs, DriverConnectionArgs
-from ....models.common import DriverName
-from ....models.request import PullingRequest, PushingRequest
+from ....models import DeviceTestInfo, DriverArgs, DriverConnectionArgs, DriverName
+from ....models.request import ExecutionRequest
 
 
 class ParamikoConnectionArgs(DriverConnectionArgs):
@@ -149,7 +148,8 @@ class ParamikoSendConfigArgs(DriverArgs):
         return self
 
 
-class ParamikoPullingRequest(PullingRequest):
+# DEPRECATED: Use ParamikoExecutionRequest instead
+class ParamikoPullingRequest(ExecutionRequest):
     driver: DriverName = DriverName.PARAMIKO
     connection_args: ParamikoConnectionArgs
     args: Optional[ParamikoSendCommandArgs] = None
@@ -185,7 +185,8 @@ class ParamikoPullingRequest(PullingRequest):
     )
 
 
-class ParamikoPushingRequest(PushingRequest):
+# DEPRECATED: Use ParamikoExecutionRequest instead
+class ParamikoPushingRequest(ExecutionRequest):
     driver: DriverName = DriverName.PARAMIKO
     connection_args: ParamikoConnectionArgs
     args: Optional[ParamikoSendConfigArgs] = None
@@ -213,3 +214,38 @@ class ParamikoPushingRequest(PushingRequest):
             }
         }
     )
+
+
+class ParamikoExecutionRequest(ExecutionRequest):
+    driver: DriverName = DriverName.PARAMIKO
+    connection_args: ParamikoConnectionArgs
+    driver_args: Optional[ParamikoSendCommandArgs | ParamikoSendConfigArgs] = None
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "driver": "paramiko",
+                "queue_strategy": "fifo",
+                "connection_args": {
+                    "host": "192.168.1.100",
+                    "username": "admin",
+                    "key_filename": "/path/to/private_key",
+                    "passphrase": "key_password",
+                },
+                "config": [
+                    "echo 'Hello World' > /tmp/test.txt",
+                    "chmod 644 /tmp/test.txt",
+                ],
+                "args": {
+                    "sudo": True,
+                    "sudo_password": "sudo_pass",
+                    "timeout": 30.0,
+                },
+            }
+        }
+    )
+
+
+class ParamikoDeviceTestInfo(DeviceTestInfo):
+    driver: DriverName = DriverName.PARAMIKO
+    remote_version: Optional[str] = None

@@ -24,9 +24,9 @@ class RedisWorker:
 
         self.name: str = "Unknown"
         self.hostname: str = socket.gethostname()
-        self.listened_queue: str = None
+        self.listened_queue: str | None = None
 
-        self._worker: BaseWorker = None
+        self._worker: BaseWorker | None = None
 
     def listen(self, q_name: str):
         """
