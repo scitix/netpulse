@@ -76,10 +76,9 @@ def execute_on_bulk_devices(req: BulkExecutionRequest):
 
 @router.post("/test", response_model=ConnectionTestResponse, status_code=200)
 def test_device_connection(req: ConnectionTestRequest):
-    driver_name = str(req.driver)
-    dobj = drivers.get(driver_name, None)
+    dobj = drivers.get(req.driver, None)
     if dobj is None:
-        raise ValueError(f"Unsupported driver: {driver_name}")
+        raise ValueError(f"Unsupported driver: {req.driver}")
 
     start_time = time.time()
     try:
