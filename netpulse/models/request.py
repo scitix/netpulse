@@ -23,7 +23,7 @@ class TemplateParseRequest(BaseModel):
     )
 
     context: Optional[str] = Field(
-        None,
+        default=None,
         title="Context",
         description="Context content to be parsed",
     )
@@ -43,7 +43,7 @@ class TemplateRenderRequest(BaseModel):
     )
 
     context: Optional[dict] = Field(
-        None,
+        default=None,
         title="Context",
         description="Context data for rendering",
     )
