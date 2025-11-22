@@ -46,7 +46,7 @@ def main():
     """
     import uvicorn
 
-    setup_logging(str(g_config.log.config), g_config.log.level)
+    setup_logging(g_config.log.config, g_config.log.level)
     log.warning("Uvicorn is for testing purpose only.")
     log.warning("Use gunicorn.conf.py for production.")
 

@@ -57,7 +57,7 @@ class FifoWorker(RedisWorker):
         pass
 
 
-g_fifo_worker: FifoWorker = None
+g_fifo_worker: FifoWorker | None = None
 
 
 def main():

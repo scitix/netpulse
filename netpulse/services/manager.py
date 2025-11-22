@@ -25,7 +25,6 @@ from ..utils.exceptions import JobOperationError, WorkerUnavailableError
 from .rediz import g_rdb
 from .rpc import (
     execute,
-    push,
     rpc_callback_factory,
     rpc_exception_callback,
     rpc_webhook_callback,
@@ -404,56 +403,61 @@ class Manager:
         assert len(hosts) == len(nodes), "Host and node number mismatch"
 
         # NOTE: unassigned_hosts MUST be subscriptable
-        assigned_hosts: list[int] = []
-        unassigned_hosts: list[int] = []
-        failed_hosts: set[int] = set()
-        for idx, n in enumerate(nodes):
+        assigned_host_idx: list[int] = []
+        unassigned_host_idx: list[int] = []
+        failed_host_idx: set[int] = set()
+        for idx, n in enumerate(iterable=nodes):
             if not n:
-                unassigned_hosts.append(idx)
+                unassigned_host_idx.append(idx)
             else:
-                assigned_hosts.append(idx)
+                assigned_host_idx.append(idx)
 
         # Schedule unassigned hosts
-        while len(unassigned_hosts) > 0:
+        if len(unassigned_host_idx) > 0:
             # FIXME: Handle the case when duplicated hosts are scheduled
             # For now, duplicated hosts should be filtered by the caller
             try:
                 selected_nodes = self.scheduler.batch_node_select(
-                    self.get_all_nodes(), unassigned_hosts
+                    self.get_all_nodes(), [hosts[i] for i in unassigned_host_idx]
                 )
                 if not selected_nodes:
                     raise WorkerUnavailableError("No available nodes to run the job")
+                assert len(selected_nodes) == len(unassigned_host_idx), (
+                    "Host and node num mismatch after scheduling"
+                )
+
+                # Appending indexes of original list
+                node_group: dict[int, list[int]] = defaultdict(list)
+                for idx, n in enumerate(selected_nodes):
+                    if not n:
+                        failed_host_idx.add(unassigned_host_idx[idx])
+                    else:
+                        node_group[idx].append(unassigned_host_idx[idx])
+
+                for idx, ids in node_group.items():
+                    try:
+                        # Retrieve the original NodeInfo by index
+                        n = selected_nodes[idx]
+                        assert n is not None
+
+                        # If node is not available, all assigned hosts are failed.
+                        if not self._check_worker_alive(n.queue):
+                            log.warning(
+                                msg=f"Node {n.hostname} is not available, force deleting..."
+                            )
+                            self._force_delete_node(n)
+                            failed_host_idx.update(ids)
+                            continue
+
+                        _ = self._try_launch_pinned_worker(hosts=[hosts[i] for i in ids], node=n)
+                    except Exception as e:
+                        # Mark hosts for the whole node as failed but continue for other nodes
+                        log.error(f"Error in launching pinned worker for {ids}: {e}")
+                        failed_host_idx.update(ids)
+
             except Exception as e:
                 log.error(f"Error in selecting nodes for hosts: {e}")
-                failed_hosts.update(unassigned_hosts)
-                break
-
-            assert len(selected_nodes) == len(unassigned_hosts), "Host and node scheduling mismatch"
-
-            # Appending indexes of original list
-            node_group: dict[int, list[int]] = defaultdict(list)
-            for idx, n in enumerate(selected_nodes):
-                if not n:
-                    failed_hosts.add(unassigned_hosts[idx])
-                else:
-                    node_group[idx].append(unassigned_hosts[idx])
-
-            for idx, ids in node_group.items():
-                n = selected_nodes[idx]
-
-                # If node is not available, all assigned hosts are failed.
-                if not self._check_worker_alive(n.queue):
-                    log.warning(f"Node {n.hostname} is not available, force deleting...")
-                    self._force_delete_node(n)
-                    failed_hosts.update(ids)
-                    continue
-
-                try:
-                    _ = self._try_launch_pinned_worker(hosts=[hosts[i] for i in ids], node=n)
-                except Exception as e:
-                    log.error(f"Error in launching pinned worker for {ids}: {e}")
-                    failed_hosts.update(ids)
-            break
+                failed_host_idx.update(unassigned_host_idx)
 
         # Send out all jobs except failed ones
         def send(host_ids: list[int]) -> tuple[list[Job], list[int]]:
@@ -481,8 +485,10 @@ class Manager:
             finally:
                 return succeeded, failed
 
-        succeeded, failed = send(list(set(unassigned_hosts) - failed_hosts) + assigned_hosts)
-        failed.extend(list(failed_hosts))
+        succeeded, failed = send(
+            list(set(unassigned_host_idx) - failed_host_idx) + assigned_host_idx
+        )
+        failed.extend(list(failed_host_idx))
 
         return [JobInResponse.from_job(job) for job in succeeded], [hosts[i] for i in failed]
 
@@ -522,7 +528,7 @@ class Manager:
             conn_args=[req.connection_args for req in reqs],
             q_strategy=reqs[0].queue_strategy,
             ttl=reqs[0].ttl,
-            func=push,
+            func=execute,
             kwargses=[{"req": req} for req in reqs],
             on_success=success_handler,
             on_failure=failure_handler,
