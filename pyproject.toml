@@ -40,7 +40,7 @@ dependencies = [
     "rq~=2.3.1",
 
     # Drivers
-    "napalm~=5.0.0",
+    "napalm~=5.1.0",
     "ncclient~=0.6.15",
     "netmiko~=4.6.0",
     "paramiko~=4.0.0",
