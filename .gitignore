@@ -28,7 +28,6 @@ k8s/02-netpulse-deploy.yaml
 drafts/
 site/
 docs-local/
-tests/
 site*
 
 # Paramiko driver examples config

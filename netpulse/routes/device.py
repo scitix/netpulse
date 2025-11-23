@@ -33,7 +33,7 @@ def execute_on_device(req: ExecutionRequest):
     return SubmitJobResponse(code=201, message="success", data=resp)
 
 
-@router.post("/bulk", response_model=BulkExecutionRequest, status_code=201)
+@router.post("/bulk", response_model=BatchSubmitJobResponse, status_code=201)
 def execute_on_bulk_devices(req: BulkExecutionRequest):
     # Create base request template excluding devices
     base_req = ExecutionRequest.model_validate(req.model_dump(exclude={"devices"}))

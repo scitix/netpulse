@@ -54,38 +54,42 @@ class TemplateRenderRequest(BaseModel):
 class ExecutionRequest(BaseModel):
     # Driver related fields
     driver: DriverName = Field(..., description="Device driver (netmiko, napalm, pyeapi)")
-    driver_args: Optional[DriverArgs] = Field(None, description="Driver-specific parameters")
+    driver_args: Optional[DriverArgs] = Field(
+        default=None, description="Driver-specific parameters"
+    )
 
     # Device connection parameters
     connection_args: DriverConnectionArgs = Field(..., description="Device connection parameters")
 
     # Operation to execute
     config: Union[dict, List[str], str, None] = Field(
-        None,
+        default=None,
         description="configuration to apply (exclusive with command field)",
     )
     command: Union[dict, List[str], str, None] = Field(
-        None,
+        default=None,
         description="Command to execute (exclusive with config field)",
     )
 
     # Template handling
     rendering: Optional[TemplateRenderRequest] = Field(
-        None, description="Configuration template rendering settings"
+        default=None, description="Configuration template rendering settings"
     )
     parsing: Optional[TemplateParseRequest] = Field(
-        None, description="Output template parsing settings"
+        default=None, description="Output template parsing settings"
     )
 
     # Queue settings
     queue_strategy: Optional[QueueStrategy] = Field(
-        None,
+        default=None,
         description="Queue strategy (fifo/pinned). Auto-selected by driver if not specified",
     )
-    ttl: Optional[int] = Field(300, description="Job timeout in seconds", ge=1, le=3600)
+    ttl: Optional[int] = Field(default=300, description="Job timeout in seconds", ge=1, le=3600)
 
     # Webhook callback
-    webhook: Optional[WebHook] = Field(None, description="Webhook callback after Job completion")
+    webhook: Optional[WebHook] = Field(
+        default=None, description="Webhook callback after Job completion"
+    )
 
     @model_validator(mode="after")
     def check_exclusive_fields(self):
