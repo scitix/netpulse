@@ -17,6 +17,9 @@ device_module = import_module("netpulse.routes.device")
 template_module = import_module("netpulse.routes.template")
 
 
+pytestmark = [pytest.mark.api]
+
+
 class _StubDriver:
     driver_name: str = "netmiko"
 
@@ -63,6 +66,7 @@ def _client_with_stubs(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
 
 def test_device_exec_missing_host(monkeypatch, app_config):
+    """POST /device/exec should 400 when required host missing."""
     client = _client_with_stubs(monkeypatch)
     payload = {"driver": "netmiko", "connection_args": {}, "command": "show version"}
     resp = client.post(
@@ -73,6 +77,7 @@ def test_device_exec_missing_host(monkeypatch, app_config):
 
 
 def test_device_exec_success(monkeypatch, app_config):
+    """POST /device/exec should enqueue job and return 201."""
     client = _client_with_stubs(monkeypatch)
     payload = {
         "driver": "netmiko",
@@ -87,6 +92,7 @@ def test_device_exec_success(monkeypatch, app_config):
 
 
 def test_device_bulk_returns_success_when_no_devices(monkeypatch, app_config):
+    """POST /device/bulk returns success with empty devices list."""
     client = _client_with_stubs(monkeypatch)
     payload = {
         "driver": "netmiko",
@@ -108,6 +114,7 @@ def test_device_bulk_returns_success_when_no_devices(monkeypatch, app_config):
 
 
 def test_template_render_missing_name(monkeypatch, app_config):
+    """POST /template/render should 400 when name missing."""
     client = _client_with_stubs(monkeypatch)
     resp = client.post(
         "/template/render",
@@ -118,6 +125,7 @@ def test_template_render_missing_name(monkeypatch, app_config):
 
 
 def test_template_render_not_found(monkeypatch, app_config):
+    """POST /template/render should 404 for unknown renderer."""
     client = _client_with_stubs(monkeypatch)
     resp = client.post(
         "/template/render",
@@ -128,6 +136,7 @@ def test_template_render_not_found(monkeypatch, app_config):
 
 
 def test_template_render_success(monkeypatch, app_config):
+    """POST /template/render should return rendered output."""
     client = _client_with_stubs(monkeypatch)
     resp = client.post(
         "/template/render",
@@ -139,6 +148,7 @@ def test_template_render_success(monkeypatch, app_config):
 
 
 def test_template_parse_success(monkeypatch, app_config):
+    """POST /template/parse should return parsed data."""
     client = _client_with_stubs(monkeypatch)
     resp = client.post(
         "/template/parse",

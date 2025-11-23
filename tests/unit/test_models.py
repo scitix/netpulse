@@ -18,6 +18,7 @@ def _base_request(**kwargs) -> dict:
 
 
 def test_execution_request_requires_one_payload(app_config):
+    """ExecutionRequest must include exactly one of command/config."""
     with pytest.raises(ValidationError):
         ExecutionRequest(**_base_request())
 
@@ -26,6 +27,7 @@ def test_execution_request_requires_one_payload(app_config):
 
 
 def test_execution_request_queue_strategy_defaults(app_config):
+    """Queue strategy defaults differ by driver (netmiko=pinned, paramiko=fifo)."""
     req_netmiko = ExecutionRequest(
         driver=DriverName.NETMIKO,
         connection_args=DriverConnectionArgs(host="10.0.0.1"),
@@ -44,6 +46,7 @@ def test_execution_request_queue_strategy_defaults(app_config):
 
 
 def test_execution_request_dict_payload_requires_rendering(app_config):
+    """Dict payload requires rendering section to be valid."""
     with pytest.raises(ValidationError):
         ExecutionRequest(**_base_request(config={"cmd": "show version"}))
 
@@ -57,6 +60,7 @@ def test_execution_request_dict_payload_requires_rendering(app_config):
 
 
 def test_execution_request_ttl_bounds(app_config):
+    """TTL must fall inside configured bounds."""
     with pytest.raises(ValidationError):
         ExecutionRequest(**_base_request(command="show version", ttl=0))
 
@@ -65,6 +69,7 @@ def test_execution_request_ttl_bounds(app_config):
 
 
 def test_job_in_response_serialization(monkeypatch):
+    """JobInResponse.from_job should populate timing, result, and error data."""
     class DummyResult:
         def __init__(self):
             self.type = 1

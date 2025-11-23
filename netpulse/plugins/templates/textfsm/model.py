@@ -23,20 +23,20 @@ class TextFSMParseRequest(TemplateParseRequest):
     name: str = "textfsm"
 
     template: str | None = Field(
-        None,
+        default=None,
         title="Template source",
         description="URI of the template source. Default: plain text. \
             Ignored if `use_ntc_template` is set.",
     )
 
     use_ntc_template: bool = Field(
-        False,
+        default=False,
         title="Use NTC templates",
         description="Use NTC templates for parsing",
     )
 
     ntc_template_args: TextFSMNtcArgs | None = Field(
-        None,
+        default=None,
         title="NTC templates arguments",
         description="NTC templates arguments (see ntc_template)",
     )

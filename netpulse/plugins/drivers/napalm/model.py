@@ -7,8 +7,8 @@ from ....models.request import ExecutionRequest
 
 
 class NapalmConnectionArgs(DriverConnectionArgs):
-    device_type: str = Field(..., description="Device type in NAPALM format")
-    host: str = Field(..., description="Device hostname or IP address", alias="hostname")
+    device_type: str = Field(default=..., description="Device type in NAPALM format")
+    host: str = Field(default=..., description="Device hostname or IP address", alias="hostname")
     timeout: Optional[int] = Field(
         None, description="Time in seconds to wait for the device to respond"
     )

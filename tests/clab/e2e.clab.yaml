@@ -1,0 +1,36 @@
+name: netpulse-e2e
+
+mgmt:
+  network: netpulse-e2e
+  ipv4-subnet: 172.20.20.0/24
+
+topology:
+  nodes:
+    srl1:
+      kind: srl
+      image: ghcr.io/nokia/srlinux
+      mgmt-ipv4: 172.20.20.11
+      env:
+        SRL_EULA_ACCEPT: "true"
+    srl2:
+      kind: srl
+      image: ghcr.io/nokia/srlinux
+      mgmt-ipv4: 172.20.20.12
+      env:
+        SRL_EULA_ACCEPT: "true"
+    ssh1:
+      kind: linux
+      image: lscr.io/linuxserver/openssh-server:latest
+      mgmt-ipv4: 172.20.20.21
+      env:
+        PUID: "1000"
+        PGID: "1000"
+        TZ: UTC
+        PASSWORD_ACCESS: "true"
+        USER_NAME: netpulse
+        USER_PASSWORD: netpulse
+    redis1:
+      kind: linux
+      image: redis:7-bookworm
+      mgmt-ipv4: 172.20.20.30
+      cmd: "redis-server --protected-mode no --bind 0.0.0.0"

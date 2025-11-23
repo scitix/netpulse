@@ -13,10 +13,10 @@ class NetmikoConnectionArgs(DriverConnectionArgs):
     """
 
     # Required fields
-    device_type: str
-    host: str
-    username: str
-    password: str
+    device_type: str = Field(default=...)
+    host: str = Field(default=...)
+    username: str = Field(default=...)
+    password: str = Field(default=...)
 
     # Optional fields
     ip: Optional[str] = None
@@ -111,8 +111,8 @@ class NetmikoExecutionRequest(ExecutionRequest):
     connection_args: NetmikoConnectionArgs
     driver_args: Optional[NetmikoSendConfigSetArgs | NetmikoSendCommandArgs] = None
 
-    save: bool = Field(False, description="Save configuration after execution")
-    enable_mode: bool = Field(False, description="Enter privileged mode for execution")
+    save: bool = Field(default=False, description="Save configuration after execution")
+    enable_mode: bool = Field(default=False, description="Enter privileged mode for execution")
 
     model_config = ConfigDict(
         json_schema_extra={

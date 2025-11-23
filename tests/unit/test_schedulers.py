@@ -18,6 +18,7 @@ def _nodes() -> list[NodeInfo]:
 
 
 def test_greedy_scheduler_selects_first_available():
+    """Greedy scheduler picks first non-full node and errors when none available."""
     sched = GreedyScheduler()
     nodes = _nodes()
     selected = sched.node_select(nodes, host="h")
@@ -30,6 +31,10 @@ def test_greedy_scheduler_selects_first_available():
 
 
 def test_least_load_scheduler_prefers_less_loaded_then_capacity_then_name():
+    """
+    LeastLoad prefers lower count, then capacity, then lexical order;
+    batch errors when saturated.
+    """
     sched = LeastLoadScheduler()
     nodes = [
         NodeInfo(hostname="z", count=1, capacity=4, queue="q_z"),
@@ -50,6 +55,7 @@ def test_least_load_scheduler_prefers_less_loaded_then_capacity_then_name():
 
 
 def test_least_load_random_scheduler_randomizes_best_candidates(monkeypatch):
+    """LeastLoadRandom selects among best candidates deterministically when seed fixed."""
     sched = LeastLoadRandomScheduler()
     nodes = [
         NodeInfo(hostname="a", count=1, capacity=3, queue="q_a"),
@@ -57,8 +63,10 @@ def test_least_load_random_scheduler_randomizes_best_candidates(monkeypatch):
     ]
     random.seed(0)
     choice1 = sched.node_select(nodes, host="h")
+    assert choice1 is not None
     random.seed(0)
     choice2 = sched.node_select(nodes, host="h")
+    assert choice2 is not None
     assert choice1.hostname == choice2.hostname
 
     batch = sched.batch_node_select(nodes, hosts=["h1", "h2"])
@@ -67,6 +75,7 @@ def test_least_load_random_scheduler_randomizes_best_candidates(monkeypatch):
 
 
 def test_load_weighted_random_scheduler_prefers_more_capacity(monkeypatch):
+    """LoadWeightedRandom biases selection toward higher capacity nodes and errors when none fit."""
     sched = LoadWeightedRandomScheduler()
     nodes = [
         NodeInfo(hostname="low", count=1, capacity=2, queue="q_low"),
@@ -74,6 +83,7 @@ def test_load_weighted_random_scheduler_prefers_more_capacity(monkeypatch):
     ]
     random.seed(1)
     chosen = sched.node_select(nodes, host="h")
+    assert chosen is not None
     assert chosen.hostname in {"low", "high"}
 
     random.seed(1)

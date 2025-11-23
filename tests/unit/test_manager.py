@@ -66,6 +66,7 @@ class StubWorker:
 
 
 def test_check_worker_alive_respects_timeout(monkeypatch, app_config):
+    """Worker liveness should depend on heartbeat age and death_date."""
     mgr = Manager()
 
     # Alive worker: heartbeat within ttl
@@ -90,6 +91,7 @@ def test_check_worker_alive_respects_timeout(monkeypatch, app_config):
 
 
 def test_dispatch_rpc_job_fifo_requires_worker(monkeypatch, app_config):
+    """FIFO dispatch raises without worker and returns JobInResponse when alive."""
     mgr = Manager()
     mgr.scheduler = StubScheduler(NodeInfo(hostname="n", count=0, capacity=1, queue="NodeQ_n"))  # type: ignore
 
@@ -119,6 +121,7 @@ def test_dispatch_rpc_job_fifo_requires_worker(monkeypatch, app_config):
 
 
 def test_dispatch_bulk_pinned(monkeypatch, app_config):
+    """Pinned bulk dispatch sends jobs per-host when workers are available."""
     node = NodeInfo(hostname="node1", count=0, capacity=2, queue="NodeQ_node1")
     mgr = Manager()
     mgr.scheduler = StubScheduler(node)  # type: ignore

@@ -25,20 +25,20 @@ class TTPParseRequest(TemplateParseRequest):
     name: str = "ttp"
 
     template: str | None = Field(
-        None,
+        default=None,
         title="Template source",
         description="URI of the template source. Default: plain text. \
             Ignored if `use_ttp_template` is set.",
     )
 
     use_ttp_template: bool = Field(
-        False,
+        default=False,
         title="Use templates from ttp_templates",
         description="Use templates from ttp_templates",
     )
 
     ttp_template_args: TTPTemplateArgs | None = Field(
-        None,
+        default=None,
         title="TTP templates `parse_output` arguments",
         description="TTP templates `parse_output` arguments (see ttp_template)",
     )

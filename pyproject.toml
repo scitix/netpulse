@@ -107,3 +107,9 @@ exclude = ["netpulse-client/*"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "RUF", "I"]
+
+[tool.pytest.ini_options]
+markers = [
+    "e2e: end-to-end tests that require ContainerLab devices",
+    "api: API-level tests without external deps",
+]

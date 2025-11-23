@@ -141,7 +141,7 @@ class BulkExecutionRequest(ExecutionRequest):
     )
 
     # Allow more time for bulk operations
-    ttl: Optional[int] = Field(600, description="Job timeout in seconds", ge=1, le=3600)
+    ttl: Optional[int] = Field(default=600, description="Job timeout in seconds", ge=1, le=3600)
 
 
 class ConnectionTestRequest(BaseModel):

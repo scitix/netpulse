@@ -1,7 +1,8 @@
 .vscode/
 .vscode/settings.json
 .ruff_cache/
-.idea
+.pytest_cache/
+.idea/
 .env
 
 venv/
@@ -30,7 +31,6 @@ site/
 docs-local/
 site*
 
-# Paramiko driver examples config
-examples/paramiko-driver/common.py
-
+# Containerlab labs
+tests/clab/clab-netpulse-e2e/
 

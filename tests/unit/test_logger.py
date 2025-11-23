@@ -4,6 +4,7 @@ from netpulse.utils.logger import ScrubFilter
 
 
 def test_scrub_filter_redacts_sensitive_fields():
+    """ScrubFilter should mask sensitive keys in log message strings."""
     filt = ScrubFilter()
 
     record = logging.LogRecord(
@@ -24,6 +25,7 @@ def test_scrub_filter_redacts_sensitive_fields():
 
 
 def test_scrub_filter_redacts_kwargs_dict():
+    """ScrubFilter should redact sensitive values inside kwargs serialization."""
     filt = ScrubFilter()
 
     record = logging.LogRecord(

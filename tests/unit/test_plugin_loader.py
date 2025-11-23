@@ -35,6 +35,7 @@ class DummyDriver(BaseDriver):
 
 
 def test_plugin_loader_loads_valid_package(tmp_path, monkeypatch):
+    """Valid plugin packages should be discovered and loaded."""
     base_pkg = tmp_path / "tmp_plugins"
     base_pkg.mkdir()
     (base_pkg / "__init__.py").write_text("")
@@ -83,6 +84,7 @@ def test_plugin_loader_loads_valid_package(tmp_path, monkeypatch):
 
 
 def test_plugin_loader_ignores_invalid_package(tmp_path, monkeypatch):
+    """Loader should skip packages that raise on import."""
     plugin_root = tmp_path / "invalid_plugins"
     bad_pkg = plugin_root / "bad"
     bad_pkg.mkdir(parents=True)

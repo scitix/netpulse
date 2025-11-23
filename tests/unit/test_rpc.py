@@ -69,6 +69,7 @@ class StubParser(BaseTemplateParser):
 
 
 def test_rpc_execute_with_render_and_parse(monkeypatch, app_config):
+    """RPC execute should render, send via driver, parse output, and return parsed map."""
     req = ExecutionRequest(
         driver=DriverName.NETMIKO,
         connection_args=DriverConnectionArgs(host="10.0.0.1"),
@@ -91,6 +92,7 @@ def test_rpc_execute_with_render_and_parse(monkeypatch, app_config):
 
 
 def test_rpc_execute_missing_driver_raises(monkeypatch, app_config):
+    """RPC execute should raise when requested driver is unavailable."""
     req = ExecutionRequest(
         driver=DriverName.NETMIKO,
         connection_args=DriverConnectionArgs(host="10.0.0.1"),
@@ -101,3 +103,94 @@ def test_rpc_execute_missing_driver_raises(monkeypatch, app_config):
 
     with pytest.raises(NotImplementedError):
         rpc.execute(req)
+
+
+def test_rpc_execute_config_path(monkeypatch, app_config):
+    """RPC execute should call driver.config when config is provided."""
+    captured: dict[str, str] = {}
+
+    class ConfigDriver(StubDriver):
+        @classmethod
+        def from_execution_request(cls, req: ExecutionRequest) -> "ConfigDriver":
+            return cls(req=req)
+
+        def config(self, session, config: list[str]) -> dict[str, str]:
+            captured["config"] = ",".join(config)
+            return {cfg: f"cfg-{cfg}" for cfg in config}
+
+    req = ExecutionRequest(
+        driver=DriverName.NETMIKO,
+        connection_args=DriverConnectionArgs(host="10.0.0.1"),
+        config=["line1", "line2"],
+    )
+
+    monkeypatch.setattr(rpc, "drivers", {DriverName.NETMIKO: ConfigDriver})
+    result = rpc.execute(req)
+
+    assert captured["config"] == "line1,line2"
+    assert result == {"line1": "cfg-line1", "line2": "cfg-line2"}
+
+
+def test_rpc_execute_parsing_requires_dict(monkeypatch, app_config):
+    """Parsing step should fail when driver returns non-dict result."""
+
+    class BadDriver(StubDriver):
+        def send(self, session, command: list[str]) -> str:  # type: ignore[override]
+            return "not-a-dict"
+
+    req = ExecutionRequest(
+        driver=DriverName.NETMIKO,
+        connection_args=DriverConnectionArgs(host="10.0.0.1"),
+        command="show version",
+        parsing=TemplateParseRequest(name="stub-parser", template="t"),
+    )
+
+    monkeypatch.setattr(rpc, "drivers", {DriverName.NETMIKO: BadDriver})
+    monkeypatch.setattr(rpc, "parsers", {"stub-parser": StubParser})
+
+    with pytest.raises(ValueError):
+        rpc.execute(req)
+
+
+def test_rpc_execute_rendering_requires_dict(monkeypatch, app_config):
+    """Rendering step should fail when payload is not a dict."""
+
+    req = ExecutionRequest(
+        driver=DriverName.NETMIKO,
+        connection_args=DriverConnectionArgs(host="10.0.0.1"),
+        command={"cmd": "show version"},
+        rendering=TemplateRenderRequest(name="stub-renderer", template="t"),
+    )
+
+    monkeypatch.setattr(rpc, "drivers", {DriverName.NETMIKO: StubDriver})
+    monkeypatch.setattr(rpc, "renderers", {"stub-renderer": StubRenderer})
+
+    monkeypatch.setattr(StubRenderer, "render", classmethod(lambda cls, ctx: "rendered"))
+
+    result = rpc.execute(req)
+    assert result == {"rendered": "sent-rendered"}
+
+
+def test_rpc_disconnect_called_on_exception(monkeypatch, app_config):
+    """Driver.disconnect should be called even when send/config raises."""
+    disconnect_calls: list[int] = []
+
+    class FailingDriver(StubDriver):
+        def send(self, session, command: list[str]):
+            raise RuntimeError("boom")
+
+        def disconnect(self, session) -> None:
+            disconnect_calls.append(1)
+
+    req = ExecutionRequest(
+        driver=DriverName.NETMIKO,
+        connection_args=DriverConnectionArgs(host="10.0.0.1"),
+        command="show version",
+    )
+
+    monkeypatch.setattr(rpc, "drivers", {DriverName.NETMIKO: FailingDriver})
+
+    with pytest.raises(RuntimeError):
+        rpc.execute(req)
+
+    assert disconnect_calls, "disconnect should be invoked on exception"

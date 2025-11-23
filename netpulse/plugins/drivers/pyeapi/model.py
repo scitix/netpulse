@@ -13,14 +13,14 @@ class PyeapiConnectionArg(DriverConnectionArgs):
     """
 
     transport: Optional[str] = None
-    host: str = Field("localhost", description="The hostname or IP address of the device.")
-    username: str = Field("admin", description="The username to authenticate with.")
-    password: str = Field("", description="The password to authenticate with.")
-    port: Optional[int] = Field(None, description="Determined by the transport by default.")
+    host: str = Field(default="localhost", description="The hostname or IP address of the device.")
+    username: str = Field(default="admin", description="The username to authenticate with.")
+    password: str = Field(default="", description="The password to authenticate with.")
+    port: Optional[int] = Field(default=None, description="Determined by the transport by default.")
     key_file: Optional[str] = None
     cert_file: Optional[str] = None
     ca_file: Optional[str] = None
-    timeout: int = Field(60, description="The timeout value for the connection.")
+    timeout: int = Field(default=60, description="The timeout value for the connection.")
 
 
 class PyeapiArg(DriverArgs):
