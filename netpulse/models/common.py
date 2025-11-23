@@ -78,15 +78,21 @@ class WebHook(BaseModel):
         DELETE = "DELETE"
         PATCH = "PATCH"
 
-    name: str = Field("basic", description="Name of the WebHookCaller")
-    url: HttpUrl = Field(..., description="Webhook URL")
-    method: WebHookMethod = Field(WebHookMethod.POST, description="HTTP method for webhook")
+    name: str = Field(default="basic", description="Name of the WebHookCaller")
+    url: HttpUrl = Field(default=..., description="Webhook URL")
+    method: WebHookMethod = Field(default=WebHookMethod.POST, description="HTTP method for webhook")
 
-    headers: Optional[Dict[str, str]] = Field(None, description="Custom headers for the request")
-    cookies: Optional[Dict[str, str]] = Field(None, description="Cookies to send with the request")
-    auth: Optional[Tuple[str, str]] = Field(None, description="(Username, Password) for Basic Auth")
+    headers: Optional[Dict[str, str]] = Field(
+        default=None, description="Custom headers for the request"
+    )
+    cookies: Optional[Dict[str, str]] = Field(
+        default=None, description="Cookies to send with the request"
+    )
+    auth: Optional[Tuple[str, str]] = Field(
+        default=None, description="(Username, Password) for Basic Auth"
+    )
     timeout: float = Field(
-        5.0, ge=0.5, le=120.0, description="Request timeout in seconds (default 5s)"
+        default=5.0, ge=0.5, le=120.0, description="Request timeout in seconds (default 5s)"
     )
 
     model_config = ConfigDict(

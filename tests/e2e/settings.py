@@ -26,7 +26,7 @@ def get_srl_target() -> SSHTarget:
     return SSHTarget(
         host=os.getenv("E2E_SRL_HOST", "172.20.20.11"),
         username=os.getenv("E2E_SRL_USER", "admin"),
-        password=os.getenv("E2E_SRL_PASS", "admin"),
+        password=os.getenv("E2E_SRL_PASS", "NokiaSrl1!"),
         port=int(os.getenv("E2E_SRL_PORT", "22")),
         command=os.getenv("E2E_SRL_CMD", "show system information"),
     )

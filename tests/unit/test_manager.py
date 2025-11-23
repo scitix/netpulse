@@ -3,10 +3,22 @@ from types import MethodType
 
 import pytest
 
-from netpulse.models import DriverConnectionArgs, NodeInfo, QueueStrategy
+from netpulse.models import DriverConnectionArgs, JobAdditionalData, NodeInfo, QueueStrategy
 from netpulse.services import manager as manager_module
 from netpulse.services.manager import Manager
 from netpulse.utils.exceptions import WorkerUnavailableError
+
+
+def _dummy_job_func(*_args, **_kwargs):
+    return "ok"
+
+
+def _dummy_success(*_args, **_kwargs):
+    return "success"
+
+
+def _dummy_failure(*_args, **_kwargs):
+    return "failure"
 
 
 class FakeJob:
@@ -162,3 +174,179 @@ def test_dispatch_bulk_pinned(monkeypatch, app_config):
     assert failed == []
     assert {j.id for j in jobs} == {"job-h1", "job-h2"}
     assert set(sent_jobs) == {"h1", "h2"}
+
+
+def test_dispatch_rpc_job_fifo_sets_callbacks_and_meta(monkeypatch, fake_redis_conn, app_config):
+    """dispatch_rpc_job should enqueue to fifo queue with TTL, callbacks, and meta."""
+    from rq import Queue
+
+    mgr = Manager()
+    monkeypatch.setattr(mgr, "_check_worker_alive", lambda q: True)
+
+    resp = mgr.dispatch_rpc_job(
+        conn_arg=DriverConnectionArgs(host="10.0.0.1"),
+        q_strategy=QueueStrategy.FIFO,
+        func=_dummy_job_func,
+        ttl=123,
+        kwargs={"req": "x"},
+        on_success=_dummy_success,
+        on_failure=_dummy_failure,
+    )
+
+    q = Queue(manager_module.g_config.get_fifo_queue_name(), connection=mgr.rdb)
+    job = q.fetch_job(resp.id)
+    assert job is not None
+    assert job.origin == manager_module.g_config.get_fifo_queue_name()
+    assert job.ttl == 123
+    assert job.meta == JobAdditionalData().model_dump()
+    assert job._success_callback_name and job._failure_callback_name
+    assert job._success_callback_name.endswith("_dummy_success")
+    assert job._failure_callback_name.endswith("_dummy_failure")
+    assert job._success_callback_timeout == mgr.job_timeout
+    assert job._failure_callback_timeout == mgr.job_timeout
+
+
+def test_dispatch_rpc_job_pinned_uses_host_queue(monkeypatch, fake_redis_conn):
+    """Pinned dispatch should target host queue when worker alive."""
+    from rq import Queue
+
+    mgr = Manager()
+    node = NodeInfo(hostname="n1", count=0, capacity=1, queue="NodeQ_n1")
+    monkeypatch.setattr(mgr, "_get_assigned_node_for_host", lambda host: node)
+    monkeypatch.setattr(mgr, "_check_worker_alive", lambda q: True)
+
+    resp = mgr.dispatch_rpc_job(
+        conn_arg=DriverConnectionArgs(host="h1"),
+        q_strategy=QueueStrategy.PINNED,
+        func=_dummy_job_func,
+        ttl=77,
+        kwargs={"req": "y"},
+        on_success=_dummy_success,
+        on_failure=_dummy_failure,
+    )
+
+    host_q = manager_module.g_config.get_host_queue_name("h1")
+    job = Queue(host_q, connection=mgr.rdb).fetch_job(resp.id)
+    assert job is not None
+    assert job.origin == host_q
+    assert job.ttl == 77
+    assert job._success_callback_name and job._failure_callback_name
+    assert job._success_callback_name.endswith("_dummy_success")
+    assert job._failure_callback_name.endswith("_dummy_failure")
+
+
+def test_dispatch_bulk_fifo_applies_ttl_and_callbacks(monkeypatch, fake_redis_conn):
+    """FIFO bulk dispatch should enqueue all jobs with provided TTL and callbacks."""
+    from rq import Queue
+
+    mgr = Manager()
+    monkeypatch.setattr(mgr, "_check_worker_alive", lambda q: True)
+
+    conn_args = [DriverConnectionArgs(host="h1"), DriverConnectionArgs(host="h2")]
+    kwargses = [{"req": "a"}, {"req": "b"}]
+
+    jobs, failed = mgr.dispatch_bulk_rpc_jobs(
+        conn_args=conn_args,
+        q_strategy=QueueStrategy.FIFO,
+        func=_dummy_job_func,
+        kwargses=kwargses,
+        ttl=200,
+        on_success=_dummy_success,
+        on_failure=_dummy_failure,
+    )
+
+    assert failed == []
+    q = Queue(manager_module.g_config.get_fifo_queue_name(), connection=mgr.rdb)
+    assert len(jobs) == 2
+    for job_resp in jobs:
+        job = q.fetch_job(job_resp.id)
+        assert job is not None
+        assert job.ttl == 200
+        assert job.meta == JobAdditionalData().model_dump()
+        assert job._success_callback_name and job._failure_callback_name
+        assert job._success_callback_name.endswith("_dummy_success")
+        assert job._failure_callback_name.endswith("_dummy_failure")
+
+
+def test_dispatch_bulk_pinned_assigns_nodes_and_enqueues(monkeypatch, fake_redis_conn):
+    """Pinned bulk dispatch should select nodes when mapping missing and enqueue per host."""
+    from rq import Queue
+
+    mgr = Manager()
+    node = NodeInfo(
+        hostname="node1",
+        count=0,
+        capacity=2,
+        queue=manager_module.g_config.get_node_queue_name("node1"),
+    )
+    mgr.scheduler = StubScheduler(node)  # type: ignore
+
+    mgr.rdb.hset(mgr.node_info_map, node.hostname, node.model_dump_json())
+
+    monkeypatch.setattr(mgr, "_check_worker_alive", lambda q: True)
+    launch_calls: list[tuple[list[str], NodeInfo]] = []
+
+    def fake_launch(hosts, node):
+        launch_calls.append((hosts, node))
+        return [manager_module.g_config.get_host_queue_name(h) for h in hosts]
+
+    monkeypatch.setattr(mgr, "_try_launch_pinned_worker", fake_launch)
+
+    conn_args = [DriverConnectionArgs(host="h1"), DriverConnectionArgs(host="h2")]
+    kwargses = [{"req": "r1"}, {"req": "r2"}]
+
+    jobs, failed = mgr.dispatch_bulk_rpc_jobs(
+        conn_args=conn_args,
+        q_strategy=QueueStrategy.PINNED,
+        func=_dummy_job_func,
+        kwargses=kwargses,
+        ttl=150,
+        on_success=_dummy_success,
+        on_failure=_dummy_failure,
+    )
+
+    assert failed == []
+    launched_hosts = [h for hosts, _ in launch_calls for h in hosts]
+    assert set(launched_hosts) == {"h1", "h2"}
+    for host, job_resp in zip(["h1", "h2"], jobs):
+        q = Queue(manager_module.g_config.get_host_queue_name(host), connection=mgr.rdb)
+        job = q.fetch_job(job_resp.id)
+        assert job is not None
+        assert job.origin == manager_module.g_config.get_host_queue_name(host)
+        assert job.ttl == 150
+        assert job.meta == JobAdditionalData().model_dump()
+        assert job._success_callback_name and job._failure_callback_name
+        assert job._success_callback_name.endswith("_dummy_success")
+        assert job._failure_callback_name.endswith("_dummy_failure")
+
+
+def test_force_delete_node_cleans_mappings(monkeypatch, fake_redis_conn):
+    """_force_delete_node should drop host/node mappings and signal shutdown."""
+    from types import SimpleNamespace
+
+    mgr = Manager()
+    node = NodeInfo(hostname="nodeA", count=1, capacity=1, queue="NodeQ_nodeA")
+    other_node = NodeInfo(hostname="nodeB", count=1, capacity=1, queue="NodeQ_nodeB")
+
+    mgr.rdb.hset(mgr.host_to_node_map, mapping={"h1": node.hostname, "h2": other_node.hostname})
+    mgr.rdb.hset(mgr.node_info_map, node.hostname, node.model_dump_json())
+    mgr.rdb.hset(mgr.node_info_map, other_node.hostname, other_node.model_dump_json())
+
+    shutdown_calls: list[str] = []
+
+    def fake_shutdown(worker_name, connection=None):
+        shutdown_calls.append(worker_name)
+
+    def fake_worker_all(cls, queue=None, connection=None):
+        return [SimpleNamespace(name=f"worker-{queue.name}")]  # type: ignore
+
+    monkeypatch.setattr(manager_module, "send_shutdown_command", fake_shutdown)
+    monkeypatch.setattr(manager_module.Worker, "all", classmethod(fake_worker_all))
+
+    mgr._force_delete_node(node)
+
+    assert mgr.rdb.hget(mgr.host_to_node_map, "h1") is None
+    assert mgr.rdb.hget(mgr.host_to_node_map, "h2") == other_node.hostname.encode()
+    assert mgr.rdb.hget(mgr.node_info_map, node.hostname) is None
+    assert mgr.rdb.hget(mgr.node_info_map, other_node.hostname) is not None
+    assert shutdown_calls == ["worker-HostQ_h1"]

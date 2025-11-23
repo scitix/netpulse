@@ -18,7 +18,18 @@ def pytest_configure(config):
 
 
 def pytest_collection_modifyitems(config, items):
-    if getattr(config, "_e2e_enabled", False):
+    e2e_enabled = getattr(config, "_e2e_enabled", False)
+
+    # When --e2e is passed, only run e2e-marked tests.
+    if config.getoption("--e2e"):
+        non_e2e = [item for item in items if "e2e" not in item.keywords]
+        for item in non_e2e:
+            items.remove(item)
+        if non_e2e:
+            config.hook.pytest_deselected(items=non_e2e)
+        return
+
+    if e2e_enabled:
         return
 
     skip_marker = pytest.mark.skip(reason="e2e disabled; use --e2e or start lab services")

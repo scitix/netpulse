@@ -9,7 +9,7 @@
 ### Pytest 开关与标记
 
 - 运行单元+API 测试：`pytest` 或 `pytest -q`
-- 端到端：默认在探测到 lab（ssh1/redis1/srl1 可达）时自动开启；可用 `pytest --e2e` 强制开启，`pytest --no-e2e` 禁用。
+- 端到端：默认在探测到 lab（ssh1/redis1/srl1 可达）时自动开启；可用 `pytest --e2e` 仅运行 e2e；`pytest --no-e2e` 禁用。
 - 过滤标记：`pytest -m api`（仅路由层），`pytest -m e2e`（仅端到端），`pytest -m "not e2e"`（跳过端到端）。
 - e2e 运行会加载 `tests/data/config.e2e.yaml`，关闭 fakeredis；用例使用 `@pytest.mark.e2e`。
 

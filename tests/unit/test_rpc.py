@@ -1,6 +1,8 @@
 import pytest
+from pydantic import HttpUrl
 
 from netpulse.models import DriverConnectionArgs, DriverName
+from netpulse.models.common import WebHook
 from netpulse.models.request import ExecutionRequest, TemplateParseRequest, TemplateRenderRequest
 from netpulse.plugins.drivers import BaseDriver
 from netpulse.plugins.templates import BaseTemplateParser, BaseTemplateRenderer
@@ -194,3 +196,116 @@ def test_rpc_disconnect_called_on_exception(monkeypatch, app_config):
         rpc.execute(req)
 
     assert disconnect_calls, "disconnect should be invoked on exception"
+
+
+def _req_with_webhook() -> ExecutionRequest:
+    return ExecutionRequest(
+        driver=DriverName.NETMIKO,
+        connection_args=DriverConnectionArgs(host="10.0.0.1"),
+        command="show version",
+        webhook=WebHook(name="basic", url=HttpUrl("http://example.com/hook")),
+    )
+
+
+def test_rpc_exception_callback_skips_invalid_meta():
+    """rpc_exception_callback should return None when job.meta fails validation."""
+
+    class DummyJob:
+        def __init__(self):
+            self.meta = "not-a-dict"
+            self.save_calls = 0
+
+        def save_meta(self):
+            self.save_calls += 1
+
+    job = DummyJob()
+    result = rpc.rpc_exception_callback(job, None, ValueError, ValueError("boom"), None)  # type: ignore
+
+    assert result is None
+    assert job.save_calls == 0
+    assert job.meta == "not-a-dict"
+
+
+def test_rpc_webhook_callback_success_invokes_webhook(monkeypatch):
+    """rpc_webhook_callback should dispatch result to webhook on success."""
+    req = _req_with_webhook()
+    calls: list[tuple[ExecutionRequest, str, object]] = []
+
+    class DummyJob:
+        def __init__(self):
+            self.kwargs = {"req": req}
+            self.id = "job-123"
+            self.meta = {}
+
+    class DummyWebhook:
+        webhook_name = "basic"
+
+        def __init__(self, hook):
+            self.hook = hook
+
+        def call(self, req, job, result, **kwargs):
+            calls.append((req, job.id, result))
+
+    monkeypatch.setattr(rpc, "webhooks", {"basic": DummyWebhook})
+
+    job = DummyJob()
+    rpc.rpc_webhook_callback(job, None, {"ok": True})
+
+    assert calls == [(req, "job-123", {"ok": True})]
+
+
+def test_rpc_webhook_callback_failure_uses_unknown_error(monkeypatch):
+    """Failure path should fall back to 'Unknown Error' when meta validation fails."""
+    req = _req_with_webhook()
+    results: list[object] = []
+
+    class DummyJob:
+        def __init__(self):
+            self.kwargs = {"req": req}
+            self.id = "job-err"
+            self.meta = "bad-meta"
+
+        def save_meta(self):
+            return None
+
+    class DummyWebhook:
+        webhook_name = "basic"
+
+        def __init__(self, hook):
+            pass
+
+        def call(self, req, job, result, **kwargs):
+            results.append(result)
+
+    monkeypatch.setattr(rpc, "webhooks", {"basic": DummyWebhook})
+
+    job = DummyJob()
+    rpc.rpc_webhook_callback(job, None, ValueError, ValueError("boom"), None)
+
+    assert results == ["Unknown Error"]
+
+
+def test_rpc_webhook_callback_raises_when_webhook_fails(monkeypatch):
+    """Webhook errors should bubble up instead of being swallowed."""
+    req = _req_with_webhook()
+
+    class DummyJob:
+        def __init__(self):
+            self.kwargs = {"req": req}
+            self.id = "job-raise"
+            self.meta = {}
+
+    class FailingWebhook:
+        webhook_name = "basic"
+
+        def __init__(self, hook):
+            pass
+
+        def call(self, req, job, result, **kwargs):
+            raise RuntimeError("webhook failed")
+
+    monkeypatch.setattr(rpc, "webhooks", {"basic": FailingWebhook})
+
+    job = DummyJob()
+    with pytest.raises(RuntimeError, match="webhook failed"):
+        rpc.rpc_webhook_callback(job, None, {"ok": True})
