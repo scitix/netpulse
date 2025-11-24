@@ -7,8 +7,8 @@ services:
     env_file:
       - .env
     volumes:
-      - ./config:/app/config
-      - ./redis/tls:/app/redis/tls:ro
+      - ./config:/app/config:z
+      - ./redis/tls:/app/redis/tls:ro,z
     ports:
       - "9000:9000"
     networks:
@@ -26,8 +26,8 @@ services:
     env_file:
       - .env
     volumes:
-      - ./config:/app/config
-      - ./redis/tls:/app/redis/tls:ro
+      - ./config:/app/config:z
+      - ./redis/tls:/app/redis/tls:ro,z
     depends_on:
       redis:
         condition: service_healthy
@@ -45,8 +45,8 @@ services:
     env_file:
       - .env
     volumes:
-      - ./config:/app/config
-      - ./redis/tls:/app/redis/tls:ro
+      - ./config:/app/config:z
+      - ./redis/tls:/app/redis/tls:ro,z
     depends_on:
       redis:
         condition: service_healthy
@@ -59,9 +59,9 @@ services:
     env_file:
       - .env
     volumes:
-      - ./redis/redis.conf:/etc/redis/redis.conf:ro
-      - ./redis/tls:/etc/redis/tls:ro
-      - redis_data:/data
+      - ./redis/redis.conf:/etc/redis/redis.conf:ro,z
+      - ./redis/tls:/etc/redis/tls:ro,z
+      - redis_data:/data:z
     command: redis-server /etc/redis/redis.conf --requirepass "${NETPULSE_REDIS__PASSWORD}"
     networks:
       - "netpulse-network"

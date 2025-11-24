@@ -19,7 +19,7 @@ class ServerConfig(BaseModel):
     port: int = 9000
     api_key: str = Field(..., description="API key")
     api_key_name: str = "X-API-KEY"
-    gunicorn_worker: int = Field(default_factory=lambda: 2 * os.cpu_count() + 1)
+    gunicorn_worker: int = Field(default_factory=lambda: 2 * os.cpu_count() + 1)  # type: ignore
 
 
 class JobConfig(BaseModel):
@@ -131,7 +131,7 @@ class AppConfig(BaseSettings):
 
 def initialize_config() -> AppConfig:
     try:
-        return AppConfig()
+        return AppConfig()  # type: ignore
     except ValidationError as e:
         log.error(f"Error in reading config: {e}")
         raise e

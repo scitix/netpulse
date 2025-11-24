@@ -1,9 +1,9 @@
 from typing import Any, Dict, Optional
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 
-from ....models import DriverArgs, DriverConnectionArgs, DriverName
-from ....models.request import PullingRequest, PushingRequest
+from ....models import DeviceTestInfo, DriverArgs, DriverConnectionArgs, DriverName
+from ....models.request import ExecutionRequest
 
 
 class NetmikoConnectionArgs(DriverConnectionArgs):
@@ -13,10 +13,10 @@ class NetmikoConnectionArgs(DriverConnectionArgs):
     """
 
     # Required fields
-    device_type: str
-    host: str
-    username: str
-    password: str
+    device_type: str = Field(default=...)
+    host: str = Field(default=...)
+    username: str = Field(default=...)
+    password: str = Field(default=...)
 
     # Optional fields
     ip: Optional[str] = None
@@ -106,37 +106,13 @@ class NetmikoSendConfigSetArgs(DriverArgs):
     bypass_commands: Optional[str] = None
 
 
-class NetmikoPullingRequest(PullingRequest):
-    driver: DriverName = "netmiko"
+class NetmikoExecutionRequest(ExecutionRequest):
+    driver: DriverName = DriverName.NETMIKO
     connection_args: NetmikoConnectionArgs
-    args: Optional[NetmikoSendCommandArgs] = None
-    enable_mode: Optional[bool] = False
+    driver_args: Optional[NetmikoSendConfigSetArgs | NetmikoSendCommandArgs] = None
 
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "driver": "netmiko",
-                "queue_strategy": "pinned",
-                "connection_args": {
-                    "device_type": "cisco_ios",
-                    "host": "172.17.0.1",
-                    "port": "10005",
-                    "username": "admin",
-                    "password": "admin",
-                    "timeout": 10,
-                    "keepalive": 60,
-                },
-                "command": ["show vlan", "show ip interface brief"],
-            }
-        }
-    )
-
-
-class NetmikoPushingRequest(PushingRequest):
-    driver: DriverName = "netmiko"
-    connection_args: NetmikoConnectionArgs
-    args: Optional[NetmikoSendConfigSetArgs] = None
-    save: bool = False
+    save: bool = Field(default=False, description="Save configuration after execution")
+    enable_mode: bool = Field(default=False, description="Enter privileged mode for execution")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -152,6 +128,13 @@ class NetmikoPushingRequest(PushingRequest):
                 },
                 "config": ["hostname cat"],
                 "save": True,
+                "enable_mode": True,
             }
         }
     )
+
+
+class NetmikoDeviceTestInfo(DeviceTestInfo):
+    driver: DriverName = DriverName.NETMIKO
+    device_type: str
+    prompt: str

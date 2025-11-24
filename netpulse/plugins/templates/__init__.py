@@ -20,7 +20,7 @@ class BaseTemplateRenderer:
     def __init__(self):
         raise NotImplementedError
 
-    def render(self, context: dict) -> str:
+    def render(self, context: dict | None) -> str:
         raise NotImplementedError
 
 

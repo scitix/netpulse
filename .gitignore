@@ -1,7 +1,8 @@
 .vscode/
 .vscode/settings.json
 .ruff_cache/
-.idea
+.pytest_cache/
+.idea/
 .env
 
 venv/
@@ -28,10 +29,8 @@ k8s/02-netpulse-deploy.yaml
 drafts/
 site/
 docs-local/
-tests/
 site*
 
-# Paramiko driver examples config
-examples/paramiko-driver/common.py
-
+# Containerlab labs
+tests/clab/clab-netpulse-e2e/
 

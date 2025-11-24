@@ -12,7 +12,7 @@ class LeastLoadRandomScheduler(BaseScheduler):
     def __init__(self):
         pass
 
-    def node_select(self, nodes: List[NodeInfo], host: str) -> NodeInfo:
+    def node_select(self, nodes: List[NodeInfo], host: str) -> NodeInfo | None:
         """
         Select nodes using evenly distributed load balancing strategy.
 
@@ -43,7 +43,7 @@ class LeastLoadRandomScheduler(BaseScheduler):
 
         return selected_node
 
-    def batch_node_select(self, nodes: List[NodeInfo], hosts: List[str]) -> List[NodeInfo]:
+    def batch_node_select(self, nodes: List[NodeInfo], hosts: List[str]) -> List[NodeInfo | None]:
         """
         Batch schedule multiple hosts using least load random strategy.
 
@@ -71,7 +71,7 @@ class LeastLoadRandomScheduler(BaseScheduler):
             if node.count < node.capacity:
                 count_groups[node.count].append((node, node.capacity - node.count))
 
-        result = [None] * host_count
+        result: list[NodeInfo | None] = [None] * host_count
         host_index = 0
 
         # Process each load level

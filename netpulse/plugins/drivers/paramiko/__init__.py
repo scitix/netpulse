@@ -7,6 +7,8 @@ import paramiko
 from .. import BaseDriver
 from .model import (
     ParamikoConnectionArgs,
+    ParamikoDeviceTestInfo,
+    ParamikoExecutionRequest,
     ParamikoPullingRequest,
     ParamikoPushingRequest,
     ParamikoSendCommandArgs,
@@ -54,6 +56,28 @@ class ParamikoDriver(BaseDriver):
         if not isinstance(req, ParamikoPushingRequest):
             req = ParamikoPushingRequest.model_validate(req.model_dump())
         return cls(args=req.args, conn_args=req.connection_args)
+
+    @classmethod
+    def from_execution_request(cls, req: ParamikoExecutionRequest) -> "ParamikoDriver":
+        if not isinstance(req, ParamikoExecutionRequest):
+            req = ParamikoExecutionRequest.model_validate(req.model_dump())
+        return cls(args=req.driver_args, conn_args=req.connection_args)
+
+    @classmethod
+    def validate(cls, req) -> None:
+        """
+        Validate the request without creating the driver instance.
+
+        Raises:
+            pydantic.ValidationError: If the request model validation fails
+                (e.g., missing required fields, invalid field types).
+            ValueError: If authentication validation fails in the model_validator
+                (e.g., neither password nor key authentication provided).
+        """
+        # Validate the request model using Pydantic
+        # This will automatically trigger the @model_validator for authentication
+        if not isinstance(req, ParamikoExecutionRequest):
+            ParamikoExecutionRequest.model_validate(req.model_dump())
 
     def __init__(
         self,
@@ -473,6 +497,31 @@ class ParamikoDriver(BaseDriver):
         except Exception as e:
             log.error(f"Error downloading file: {e}")
             raise
+
+    @classmethod
+    def test(cls, connection_args: ParamikoConnectionArgs) -> ParamikoDeviceTestInfo:
+        conn_args = (
+            connection_args
+            if isinstance(connection_args, ParamikoConnectionArgs)
+            else ParamikoConnectionArgs.model_validate(
+                connection_args.model_dump(exclude_none=True)
+            )
+        )
+
+        driver = cls(args=None, conn_args=conn_args)
+        session = None
+        try:
+            session = driver.connect()
+            result = ParamikoDeviceTestInfo(host=conn_args.host)
+
+            transport = session.get_transport()
+            if transport and transport.remote_version:
+                result.remote_version = transport.remote_version
+
+            return result
+        finally:
+            if session:
+                driver.disconnect(session)
 
 
 __all__ = ["ParamikoDriver"]
