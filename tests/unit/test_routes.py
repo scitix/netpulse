@@ -59,6 +59,9 @@ class _StubParser:
 
 
 def _client_with_stubs(monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    import importlib
+
+    importlib.reload(controller)
     monkeypatch.setattr(device_module, "drivers", {"netmiko": _StubDriver})
     monkeypatch.setattr(device_module, "g_mgr", _StubManager())
     monkeypatch.setattr(template_module, "renderers", {"stub": _StubRenderer})

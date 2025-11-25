@@ -18,7 +18,7 @@ worker:
 redis:
   host: localhost
   port: 6379
-  password: test
+  password:
   timeout: 5
   keepalive: 5
   tls:
