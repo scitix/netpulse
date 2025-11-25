@@ -41,6 +41,13 @@ def execute(req: ExecutionRequest):
             render = renderers[req.rendering.name].from_rendering_request(req.rendering)
             payload = render.render(payload)
 
+            # Persist rendered payload back to request so downstream validation sees a concrete
+            # command/config instead of the original dict + rendering metadata.
+            if has_command:
+                req.command = payload
+            else:
+                req.config = payload
+
             # After payload is rendered, payload should be a str or list[str]
             # Besides, we need to delete the rendering field
             req.rendering = None
@@ -51,6 +58,12 @@ def execute(req: ExecutionRequest):
     if isinstance(payload, str):
         payload = [payload]
     assert isinstance(payload, list), "Config/command must be str/list[str] after rendering."
+
+    # Keep the request payload in sync after normalization
+    if has_command:
+        req.command = payload
+    else:
+        req.config = payload
 
     # Init the driver
     try:
