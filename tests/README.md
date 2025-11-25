@@ -17,7 +17,9 @@
 
 - 拓扑文件：`tests/clab/e2e.clab.yaml`（参见 `clab/README.md`）。
 - 前置服务：Redis、NetPulse API、RQ worker 与拓扑处于同一管理网可达。
-- 默认节点：`ssh1` 172.20.20.21:2222（netpulse/netpulse，可用 `E2E_SSH_*` 覆盖）；`redis1` 172.20.20.30:6379（无密码，已在 `config.e2e.yaml`）；`srl1/srl2` 172.20.20.11/12（按镜像默认凭据或 `E2E_SRL_*` 覆盖）。
+- 默认节点：`ssh1` 172.20.20.21:2222（netpulse/netpulse），`redis1` 172.20.20.30:6379（无密码），`srl1/srl2` 172.20.20.11/12（admin/NokiaSrl1!）。
+- e2e 配置读取集中于 `tests/e2e/settings.py` 的 `LabConfig`，支持少量 `E2E_*` 覆盖（SSH/SRL/Redis/API），避免零散的环境变量拼接。
+- 主要 e2e 覆盖：API 健康/worker/job 列表；Netmiko/Paramiko 单设备执行；Netmiko SRL 渲染+解析；Netmiko SRL bulk 执行。
 - 启停示例：
 ```bash
 SRL_EULA_ACCEPT=true containerlab deploy -t tests/clab/e2e.clab.yaml
