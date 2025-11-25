@@ -1,4 +1,5 @@
 import sys
+import textwrap
 
 import pytest
 import requests
@@ -15,7 +16,7 @@ from tests.e2e.settings import (
     get_api_base,
     get_api_key,
     get_linux_ssh_target,
-    get_srl_target,
+    get_srl_targets,
     is_reachable,
 )
 
@@ -59,7 +60,7 @@ def test_netmiko_exec_on_linux_ssh():
 
 def test_netmiko_exec_on_srlinux(monkeypatch):
     """Run a show command on SR Linux via Netmiko (skip if auth/conn fails)."""
-    target = get_srl_target()
+    target = get_srl_targets()[0]
 
     if not is_reachable(target.host, target.port):
         pytest.skip(f"SR Linux at {target.host}:{target.port} unreachable; ensure lab is up")
@@ -93,7 +94,7 @@ def test_netmiko_exec_on_srlinux(monkeypatch):
 
 def test_netmiko_config_on_srlinux(monkeypatch):
     """Push a simple config on SR Linux via Netmiko (skip if auth/conn fails)."""
-    target = get_srl_target()
+    target = get_srl_targets()[0]
 
     if not is_reachable(target.host, target.port):
         pytest.skip(f"SR Linux at {target.host}:{target.port} unreachable; ensure lab is up")
@@ -226,3 +227,118 @@ def test_api_exec_netmiko_pinned(node_worker, api_server, wait_for_job):
     result = finished["result"]["retval"]
     assert cmd in result
     assert "api-netmiko-e2e" in result[cmd]
+
+
+def test_api_netmiko_srl_render_and_parse(node_worker, api_server, wait_for_job):
+    """End-to-end: SR Linux exec should render commands via Jinja2 and parse output via TextFSM."""
+    target = get_srl_targets()[0]
+    if not is_reachable(target.host, target.port):
+        pytest.skip(f"SR Linux at {target.host}:{target.port} unreachable; ensure lab is up")
+
+    # Render a command using Jinja2 and parse the response with a permissive TextFSM template.
+    textfsm_template = textwrap.dedent(
+        r"""
+        Value SYSNAME (.+)
+
+        Start
+          ^System name: +${SYSNAME} -> Record
+        """
+    ).strip()
+
+    payload = {
+        "driver": "netmiko",
+        "connection_args": {
+            "device_type": "nokia_srl",
+            "host": target.host,
+            "username": target.username,
+            "password": target.password or "",
+            "port": target.port,
+            "keepalive": 10,
+        },
+        "command": {"base_cmd": target.command},
+        "rendering": {"name": "jinja2", "template": "{{ base_cmd }}"},
+        "parsing": {"name": "textfsm", "template": textfsm_template},
+    }
+
+    try:
+        resp = requests.post(
+            f"{API_BASE}/device/exec",
+            json=payload,
+            headers=_api_headers(),
+            timeout=10,
+        )
+    except requests.exceptions.RequestException as exc:
+        pytest.skip(f"API unreachable at {API_BASE}: {exc}")
+
+    assert resp.status_code == 201, resp.text
+    job = resp.json()["data"]
+    assert job["queue"] == f"HostQ_{target.host}"
+
+    finished = wait_for_job(job_id=job["id"], timeout=120)
+    assert finished["status"] == "finished"
+    retval = finished["result"]["retval"]
+    assert isinstance(retval, dict) and retval, "expected parsed output keyed by command"
+    rendered_cmd = next(iter(retval.keys()))
+    parsed = retval[rendered_cmd]
+    assert isinstance(parsed, list), "TextFSM parser should return a list of records"
+
+
+def test_api_netmiko_srl_bulk_exec(node_worker, api_server, wait_for_job):
+    """End-to-end: bulk Netmiko exec against multiple SR Linux devices via /device/bulk."""
+    reachable_targets = [
+        t
+        for t in get_srl_targets()
+        if is_reachable(t.host, t.port)  # type: ignore[arg-type]
+    ]
+    if len(reachable_targets) < 2:
+        pytest.skip("Need at least two reachable SR Linux devices for bulk execution")
+
+    targets = reachable_targets[:2]
+    base_conn = {
+        "device_type": "nokia_srl",
+        "host": targets[0].host,
+        "username": targets[0].username,
+        "password": targets[0].password or "",
+        "port": targets[0].port,
+        "keepalive": 10,
+    }
+
+    devices = [
+        {
+            "host": t.host,
+            "username": t.username,
+            "password": t.password or "",
+            "port": t.port,
+        }
+        for t in targets
+    ]
+
+    cmd = targets[0].command or "show system information"
+    payload = {
+        "driver": "netmiko",
+        "connection_args": base_conn,
+        "command": cmd,
+        "devices": devices,
+    }
+
+    resp = requests.post(
+        f"{API_BASE}/device/bulk",
+        json=payload,
+        headers=_api_headers(),
+        timeout=15,
+    )
+    assert resp.status_code == 201, resp.text
+    body = resp.json()["data"]
+    succeeded = body["succeeded"]
+    failed = body["failed"]
+
+    assert len(succeeded) == len(devices)
+    assert failed == []
+
+    for job in succeeded:
+        finished = wait_for_job(job_id=job["id"], timeout=120)
+        assert finished["status"] == "finished"
+        retval = finished["result"]["retval"]
+        assert isinstance(retval, dict) and retval, "expected command output per host"
+        # Since bulk returns list in order, ensure each job got output for the issued command.
+        assert cmd in retval

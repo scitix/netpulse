@@ -21,9 +21,8 @@ from .settings import (
     get_api_base,
     get_api_key,
     get_linux_ssh_target,
-    get_redis_password,
-    get_redis_target,
-    get_srl_target,
+    get_redis_config,
+    get_srl_targets,
 )
 
 log = logging.getLogger(__name__)
@@ -33,15 +32,15 @@ TESTS_DIR = Path(__file__).resolve().parents[1]
 E2E_CONFIG = TESTS_DIR / "data" / "config.e2e.yaml"
 API_BASE = get_api_base()
 API_KEY = get_api_key()
-REDIS_HOST, REDIS_PORT = get_redis_target()
+REDIS_CFG = get_redis_config()
 
 E2E_BASE_ENV: dict[str, str] = {
     "NETPULSE_CONFIG_FILE": str(E2E_CONFIG),
     "NETPULSE_SERVER__API_KEY": API_KEY,
     "NETPULSE_FAKE_REDIS": "0",
-    "NETPULSE_REDIS__HOST": REDIS_HOST,
-    "NETPULSE_REDIS__PORT": str(REDIS_PORT),
-    "NETPULSE_REDIS__PASSWORD": get_redis_password(),
+    "NETPULSE_REDIS__HOST": REDIS_CFG.host,
+    "NETPULSE_REDIS__PORT": str(REDIS_CFG.port),
+    "NETPULSE_REDIS__PASSWORD": REDIS_CFG.password,
     "PYTHONPATH": str(REPO_ROOT),
     "PYTHONUNBUFFERED": "1",
 }
@@ -112,8 +111,8 @@ def _should_enable_e2e(config) -> tuple[bool, str]:
 def _are_lab_services_reachable() -> tuple[bool, str]:
     checks = [
         ("ssh1", get_linux_ssh_target().host, get_linux_ssh_target().port),
-        ("redis1", *get_redis_target()),
-        ("srl1", get_srl_target().host, get_srl_target().port),
+        ("redis1", REDIS_CFG.host, REDIS_CFG.port),
+        ("srl1", get_srl_targets()[0].host, get_srl_targets()[0].port),
     ]
     failures: list[str] = []
     for name, host, port in checks:
