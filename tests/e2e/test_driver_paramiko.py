@@ -1,4 +1,5 @@
 import pytest
+import requests
 
 from netpulse.models import DriverName
 from netpulse.plugins.drivers.paramiko.model import (
@@ -8,9 +9,20 @@ from netpulse.plugins.drivers.paramiko.model import (
     ParamikoSendCommandArgs,
 )
 from netpulse.services import rpc
-from tests.e2e.settings import get_linux_ssh_target, is_reachable
+from tests.e2e.settings import (
+    get_api_base,
+    get_api_key,
+    get_linux_ssh_target,
+    is_reachable,
+)
 
 pytestmark = pytest.mark.e2e
+
+API_BASE = get_api_base()
+
+
+def _api_headers() -> dict[str, str]:
+    return {"X-API-KEY": get_api_key()}
 
 
 def test_paramiko_exec_on_linux_ssh():
@@ -143,3 +155,46 @@ def test_paramiko_file_transfer_upload_and_download(tmp_path):
     assert "file_transfer_download" in transfer_key
     assert download_result[transfer_key]["exit_status"] == 0
     assert download_path.read_text() == upload_payload
+
+
+def test_api_exec_paramiko_fifo(fifo_worker, api_server, wait_for_job):
+    """End-to-end: POST /device/exec with Paramiko should use FIFO queue and return output."""
+    target = get_linux_ssh_target()
+    if not is_reachable(target.host, target.port):
+        pytest.skip(f"Linux SSH at {target.host}:{target.port} unreachable; ensure lab is up")
+
+    cmd = "echo api-paramiko-e2e"
+    payload = {
+        "driver": "paramiko",
+        "connection_args": {
+            "host": target.host,
+            "username": target.username,
+            "password": target.password,
+            "port": target.port,
+            "host_key_policy": "auto_add",
+            "look_for_keys": False,
+            "allow_agent": False,
+        },
+        "command": cmd,
+    }
+
+    try:
+        resp = requests.post(
+            f"{API_BASE}/device/exec",
+            json=payload,
+            headers=_api_headers(),
+            timeout=10,
+        )
+    except requests.exceptions.RequestException as exc:
+        pytest.skip(f"API unreachable at {API_BASE}: {exc}")
+
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    job = body["data"]
+    assert job["queue"] == "FifoQ"
+
+    finished = wait_for_job(job_id=job["id"])
+    assert finished["status"] == "finished"
+    result = finished["result"]["retval"]
+    assert cmd in result
+    assert "api-paramiko-e2e" in result[cmd]["output"]

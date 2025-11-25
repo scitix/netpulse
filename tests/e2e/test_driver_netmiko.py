@@ -1,6 +1,7 @@
 import sys
 
 import pytest
+import requests
 
 from netpulse.models import DriverName
 from netpulse.plugins.drivers.netmiko import NetmikoDriver
@@ -10,9 +11,21 @@ from netpulse.plugins.drivers.netmiko.model import (
     NetmikoSendConfigSetArgs,
 )
 from netpulse.services import rpc
-from tests.e2e.settings import get_linux_ssh_target, get_srl_target, is_reachable
+from tests.e2e.settings import (
+    get_api_base,
+    get_api_key,
+    get_linux_ssh_target,
+    get_srl_target,
+    is_reachable,
+)
 
 pytestmark = pytest.mark.e2e
+
+API_BASE = get_api_base()
+
+
+def _api_headers() -> dict[str, str]:
+    return {"X-API-KEY": get_api_key()}
 
 
 def test_netmiko_exec_on_linux_ssh():
@@ -171,3 +184,45 @@ def test_netmiko_reuses_persisted_session(monkeypatch):
         if NetmikoDriver.persisted_session:
             driver = NetmikoDriver(args=None, conn_args=conn_args)
             driver.disconnect(NetmikoDriver.persisted_session, reset=True)
+
+
+def test_api_exec_netmiko_pinned(node_worker, api_server, wait_for_job):
+    """End-to-end: POST /device/exec with Netmiko should use pinned host queue."""
+    target = get_linux_ssh_target()
+    if not is_reachable(target.host, target.port):
+        pytest.skip(f"Linux SSH at {target.host}:{target.port} unreachable; ensure lab is up")
+
+    cmd = "echo api-netmiko-e2e"
+    payload = {
+        "driver": "netmiko",
+        "connection_args": {
+            "device_type": "linux",
+            "host": target.host,
+            "username": target.username,
+            "password": target.password,
+            "port": target.port,
+            "keepalive": 5,
+        },
+        "command": cmd,
+    }
+
+    try:
+        resp = requests.post(
+            f"{API_BASE}/device/exec",
+            json=payload,
+            headers=_api_headers(),
+            timeout=10,
+        )
+    except requests.exceptions.RequestException as exc:
+        pytest.skip(f"API unreachable at {API_BASE}: {exc}")
+
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    job = body["data"]
+    assert job["queue"] == f"HostQ_{target.host}"
+
+    finished = wait_for_job(job_id=job["id"])
+    assert finished["status"] == "finished"
+    result = finished["result"]["retval"]
+    assert cmd in result
+    assert "api-netmiko-e2e" in result[cmd]

@@ -39,6 +39,19 @@ def get_redis_target() -> tuple[str, int]:
     )
 
 
+def get_redis_password() -> str:
+    return os.getenv("E2E_REDIS_PASSWORD", "")
+
+
+def get_api_base() -> str:
+    port = os.getenv("E2E_API_PORT", "8000")
+    return os.getenv("E2E_API_BASE", f"http://localhost:{port}")
+
+
+def get_api_key() -> str:
+    return os.getenv("E2E_API_KEY", "E2E_API_KEY")
+
+
 def is_reachable(host: str, port: int, timeout: float = 3.0) -> bool:
     try:
         with socket.create_connection((host, port), timeout=timeout):

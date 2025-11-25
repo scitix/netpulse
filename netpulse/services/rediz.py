@@ -11,12 +11,21 @@ from ..utils.config import RedisConfig
 log = logging.getLogger(__name__)
 
 
+def _fake_redis_enabled() -> bool:
+    """
+    Treat NETPULSE_FAKE_REDIS as a boolean flag; values like "1/true/yes/on"
+    enable fakeredis, anything else is considered disabled.
+    """
+    value = os.getenv("NETPULSE_FAKE_REDIS", "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
 class Rediz:
     def __init__(self, config: RedisConfig):
         self.config = config
 
         # Use fakeredis for tests when requested
-        if os.getenv("NETPULSE_FAKE_REDIS"):
+        if _fake_redis_enabled():
             try:
                 import fakeredis
             except ImportError as e:

@@ -96,7 +96,7 @@ class JobInResponse(BaseModel):
         result_in_job = job.latest_result()
         result = (
             JobResult(
-                type=JobResult.ResultType(result_in_job.type),
+                type=JobResult.ResultType(result_in_job.type.value),
                 retval=result_in_job.return_value,
                 error=(
                     {
@@ -111,9 +111,12 @@ class JobInResponse(BaseModel):
             else None
         )
 
+        status = job.get_status()
+        status = "unknown" if status is None else status.value
+
         return cls(
             id=job.id,
-            status=str(job.get_status()),
+            status=status,
             queue=job.origin,
             created_at=job.created_at,
             enqueued_at=job.enqueued_at,

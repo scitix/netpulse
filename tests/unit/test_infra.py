@@ -70,3 +70,22 @@ def test_config_loads_from_yaml_and_env_override(tmp_path, runtime_loader):
     assert config.redis.tls.ca == ca_path
     assert config.redis.tls.cert == cert_path
     assert config.redis.tls.key == key_path
+
+
+def test_fake_redis_env_respects_false(monkeypatch, runtime_loader):
+    """NETPULSE_FAKE_REDIS=0 should not enable fakeredis."""
+
+    class DummyRedis:
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+
+        def ping(self):
+            return True
+
+        def flushall(self):
+            return None
+
+    monkeypatch.setattr("redis.Redis", DummyRedis)
+    runtime = runtime_loader({"NETPULSE_FAKE_REDIS": "0"})
+    assert isinstance(runtime.redis, DummyRedis)
