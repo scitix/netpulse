@@ -62,9 +62,20 @@ MODULES_TO_RELOAD: tuple[str, ...] = (
 )
 
 
+# Ensure collection loads the e2e config instead of falling back to production defaults.
+os.environ.update(
+    {
+        "NETPULSE_CONFIG_FILE": str(E2E_CONFIG),
+        "NETPULSE_FAKE_REDIS": "0",
+    }
+)
+
+from netpulse.utils.config import AppConfig  # noqa: E402
+
+
 @dataclass
 class E2ERuntime:
-    config: "AppConfig"  # type: ignore # noqa: F821
+    config: AppConfig
     redis: Redis
     env: dict[str, str]
 
@@ -73,7 +84,7 @@ def pytest_configure(config):
     enabled, reason = _should_enable_e2e(config)
     config._e2e_enabled = enabled  # type: ignore[attr-defined]
     reporter = config.pluginmanager.get_plugin("terminalreporter")
-    line = "e2e tests enabled, " if enabled else "e2e tests disabled, " + reason
+    line = "e2e tests enabled" if enabled else ("e2e tests disabled " + reason)
     if reporter:
         reporter.write_line(line)
     else:

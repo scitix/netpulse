@@ -38,7 +38,6 @@ MODULES_TO_RELOAD: tuple[str, ...] = (
 # Ensure collection already uses the unit-test configuration
 os.environ.update(BASE_ENV)
 
-# AppConfig must be imported after setting NETPULSE_CONFIG_FILE
 from netpulse.utils.config import AppConfig  # noqa: E402
 
 
@@ -88,7 +87,7 @@ def unit_runtime(monkeypatch: pytest.MonkeyPatch) -> Iterator[UnitRuntime]:
 
 
 @pytest.fixture()
-def app_config(unit_runtime: UnitRuntime) -> AppConfig:
+def app_config(unit_runtime: UnitRuntime):
     """
     Load NetPulse modules with the test configuration and fakeredis.
     """
