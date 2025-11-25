@@ -8,7 +8,6 @@ from typing import Callable, Iterator, Mapping
 
 import pytest
 
-from netpulse.utils.config import AppConfig
 from redis import Redis
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -38,6 +37,9 @@ MODULES_TO_RELOAD: tuple[str, ...] = (
 
 # Ensure collection already uses the unit-test configuration
 os.environ.update(BASE_ENV)
+
+# AppConfig must be imported after setting NETPULSE_CONFIG_FILE
+from netpulse.utils.config import AppConfig  # noqa: E402
 
 
 @dataclass

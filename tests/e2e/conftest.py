@@ -14,7 +14,6 @@ from typing import Callable, Mapping
 import pytest
 import requests
 
-from netpulse.utils.config import AppConfig
 from redis import Redis
 
 from .settings import (
@@ -65,7 +64,7 @@ MODULES_TO_RELOAD: tuple[str, ...] = (
 
 @dataclass
 class E2ERuntime:
-    config: AppConfig
+    config: "AppConfig"  # type: ignore # noqa: F821
     redis: Redis
     env: dict[str, str]
 
@@ -73,7 +72,12 @@ class E2ERuntime:
 def pytest_configure(config):
     enabled, reason = _should_enable_e2e(config)
     config._e2e_enabled = enabled  # type: ignore[attr-defined]
-    _info(config, "e2e tests enabled" if enabled else "e2e tests disabled", reason)
+    reporter = config.pluginmanager.get_plugin("terminalreporter")
+    line = "e2e tests enabled, " if enabled else "e2e tests disabled, " + reason
+    if reporter:
+        reporter.write_line(line)
+    else:
+        log.info(line)
 
 
 def pytest_collection_modifyitems(config, items):
@@ -387,12 +391,3 @@ def _tcp_ping(host: str, port: int, timeout: float = 1.0) -> bool:
             return True
     except OSError:
         return False
-
-
-def _info(config, msg: str, detail: str):
-    reporter = config.pluginmanager.get_plugin("terminalreporter")
-    line = f"{msg}: {detail}"
-    if reporter:
-        reporter.write_line(line)
-    else:
-        log.info(line)
