@@ -70,9 +70,12 @@ def test_execution_request_ttl_bounds(app_config):
 
 def test_job_in_response_serialization(monkeypatch):
     """JobInResponse.from_job should populate timing, result, and error data."""
+
     class DummyResult:
         def __init__(self):
-            self.type = 1
+            from rq.results import Result
+
+            self.type = Result.Type.SUCCESSFUL
             self.return_value = {"ok": True}
 
     class DummyJob:
@@ -87,7 +90,9 @@ def test_job_in_response_serialization(monkeypatch):
         ended_at = started_at + timedelta(seconds=2)
 
         def get_status(self):
-            return "finished"
+            from rq.job import JobStatus
+
+            return JobStatus.FINISHED
 
         def latest_result(self):
             return DummyResult()

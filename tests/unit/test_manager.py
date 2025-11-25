@@ -41,8 +41,10 @@ class FakeJob:
         self.started_at = None
         self.ended_at = None
 
-    def get_status(self) -> str:
-        return "queued"
+    def get_status(self):
+        from rq.job import JobStatus
+
+        return JobStatus.QUEUED
 
     def latest_result(self):
         return None

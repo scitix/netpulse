@@ -185,15 +185,20 @@ def wait_for_job(api_headers: dict[str, str]) -> Callable[[str, float], dict]:
             resp = requests.get(
                 f"{API_BASE}/job", params={"id": job_id}, headers=api_headers, timeout=5
             )
-            print(
-                f"Waiting for job {job_id}, status code: {resp.status_code}, resp data: {resp.text}"
-            )
-            resp.raise_for_status()
+
+            try:
+                resp.raise_for_status()
+            except requests.HTTPError:
+                pytest.fail(f"Job status check failed with {resp.status_code}, resp:\n{resp.text}")
+
             data = resp.json().get("data") or []
             if data:
                 job = data[0]
                 if job["status"] in {"finished", "failed", "stopped"}:
                     return job
+                if job["status"] == "unknown":
+                    pytest.fail(f"Job {job_id} has unknown status")
+
             time.sleep(2)
         pytest.fail(f"Job {job_id} did not complete within {timeout}s")
 
@@ -254,8 +259,6 @@ def _wait_for_node_queue(runtime: E2ERuntime, timeout: float, proc: subprocess.P
     deadline = time.time() + timeout
     key = runtime.config.redis.key.node_info_map
 
-    print(f"key: {key}" + "*" * 10)
-    print(f"redis: {runtime.redis}" + "*" * 10)
     while time.time() < deadline:
         try:
             entries = runtime.redis.hgetall(key)
