@@ -49,12 +49,12 @@ All API responses use a unified JSON format:
 
 NetPulse provides the following API endpoints, all of which require API Key authentication.
 
-> **⭐Recommended**: Prioritize using the `/device/execute` unified interface, which automatically identifies operation types and is simpler to use.
+> **⭐Recommended**: Prioritize using the `/device/exec` unified interface, which automatically identifies operation types and is simpler to use.
 
 | HTTP Method | Endpoint Path | Description | Detailed Documentation |
 |------------|--------------|-------------|----------------------|
 | **Device Operations** | | | |
-| `POST` | `/device/execute` | Device operations (query/configuration) ⭐Recommended | [Device Operation API](./device-api.md) |
+| `POST` | `/device/exec` | Device operations (query/configuration) ⭐Recommended | [Device Operation API](./device-api.md) |
 | `POST` | `/device/bulk` | Batch device operations | [Device Operation API](./device-api.md) |
 | `POST` | `/device/test-connection` | Device connection test | [Device Operation API](./device-api.md) |
 | **Template Operations** | | | |
@@ -75,7 +75,7 @@ NetPulse provides the following API endpoints, all of which require API Key auth
 Device Operation API provides device query, configuration, and connection testing functions, supporting all driver types.
 
 **Main Endpoints**:
-- `POST /device/execute` - Unified device operations (auto-detect query/configuration)
+- `POST /device/exec` - Unified device operations (auto-detect query/configuration)
 - `POST /device/bulk` - Batch device operations
 - `POST /device/test-connection` - Device connection test
 
@@ -271,7 +271,7 @@ curl -X POST -H "Content-Type: application/json" \
     },
     "command": "show version"
   }' \
-  http://localhost:9000/device/execute
+  http://localhost:9000/device/exec
 ```
 
 ## Next Steps

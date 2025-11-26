@@ -187,7 +187,7 @@ response=$(curl -s -X POST \
     },
     "command": "show version"
   }' \
-  http://localhost:9000/device/execute)
+  http://localhost:9000/device/exec)
 
 # View response
 echo "$response" | jq '.'
@@ -208,7 +208,7 @@ echo "$response" | jq '.'
 ```
 
 !!! warning "Important: Device Operations are Asynchronous"
-    All device operations (`/device/execute`, `/device/bulk`) are asynchronous:
+    All device operations (`/device/exec`, `/device/bulk`) are asynchronous:
     1. API immediately returns task ID and status (usually `queued`)
     2. Need to query execution results through `/job?id=xxx` interface
     3. Only `/device/test-connection` is synchronous and returns results immediately
@@ -266,7 +266,7 @@ curl -X POST \
       "no shutdown"
     ]
   }' \
-  http://localhost:9000/device/execute
+  http://localhost:9000/device/exec
 ```
 
 ## Batch Operation Experience
@@ -382,7 +382,7 @@ response=$(curl -s -X POST \
     },
     "command": "show version"
   }' \
-  http://localhost:9000/device/execute)
+  http://localhost:9000/device/exec)
 
 # Parse response
 if echo "$response" | jq -e '.code == 200' > /dev/null; then

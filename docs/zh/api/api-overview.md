@@ -49,12 +49,12 @@ NetPulse 提供统一的API接口来管理各种网络设备。本文档介绍Ne
 
 NetPulse 提供以下API端点，所有端点都需要API Key认证。
 
-> **⭐推荐**：优先使用 `/device/execute` 统一接口，它自动识别操作类型，使用更简单。
+> **⭐推荐**：优先使用 `/device/exec` 统一接口，它自动识别操作类型，使用更简单。
 
 | HTTP方法 | 端点路径 | 功能说明 | 详细文档 |
 |---------|---------|---------|---------|
 | **设备操作** | | | |
-| `POST` | `/device/execute` | 设备操作（查询/配置）⭐推荐 | [设备操作 API](./device-api.md) |
+| `POST` | `/device/exec` | 设备操作（查询/配置）⭐推荐 | [设备操作 API](./device-api.md) |
 | `POST` | `/device/bulk` | 批量设备操作 | [设备操作 API](./device-api.md) |
 | `POST` | `/device/test-connection` | 设备连接测试 | [设备操作 API](./device-api.md) |
 | **模板操作** | | | |
@@ -75,7 +75,7 @@ NetPulse 提供以下API端点，所有端点都需要API Key认证。
 设备操作 API 提供设备查询、配置和连接测试功能，支持所有驱动类型。
 
 **主要端点**：
-- `POST /device/execute` - 统一设备操作（自动识别查询/配置）
+- `POST /device/exec` - 统一设备操作（自动识别查询/配置）
 - `POST /device/bulk` - 批量设备操作
 - `POST /device/test-connection` - 设备连接测试
 
@@ -181,7 +181,7 @@ NetPulse 支持两种队列策略，系统会根据驱动类型自动选择合�
 }
 ```
 
-**options（全局选项）** - 控制任务行为：
+**options（全局选项）** - 控制任务行为（直接写在请求体根级别）：
 ```json
 {
   "queue_strategy": "pinned",  // 队列策略（自动选择，通常无需指定）
@@ -271,7 +271,7 @@ curl -X POST -H "Content-Type: application/json" \
     },
     "command": "show version"
   }' \
-  http://localhost:9000/device/execute
+  http://localhost:9000/device/exec
 ```
 
 ## 下一步

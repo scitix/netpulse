@@ -102,14 +102,12 @@ class NetworkDiscovery:
                     "password": device["password"]
                 },
                 "command": command,
-                "options": {
-                    "queue_strategy": "pinned",
-                    "ttl": 300
-                }
+                "queue_strategy": "pinned",
+                "ttl": 300
             }
             
             response = requests.post(
-                f"{self.base_url}/device/execute",
+                f"{self.base_url}/device/exec",
                 json=payload,
                 headers=self.headers
             )
@@ -245,14 +243,12 @@ class ConfigBackup:
                         "password": device["password"]
                     },
                     "command": command,
-                    "options": {
-                        "queue_strategy": "pinned",
-                        "ttl": 300
-                    }
+                    "queue_strategy": "pinned",
+                    "ttl": 300
                 }
-                
+
                 response = requests.post(
-                    f"{self.base_url}/device/execute",
+                    f"{self.base_url}/device/exec",
                     json=payload,
                     headers=self.headers
                 )
@@ -415,14 +411,12 @@ class ConfigChangeManager:
                 "password": device["password"]
             },
             "command": "show running-config",
-            "options": {
-                "queue_strategy": "pinned",
-                "ttl": 300
-            }
+            "queue_strategy": "pinned",
+            "ttl": 300
         }
-        
+
         response = requests.post(
-            f"{self.base_url}/device/execute",
+            f"{self.base_url}/device/exec",
             json=payload,
             headers=self.headers
         )
@@ -454,14 +448,12 @@ class ConfigChangeManager:
                 "save": True,
                 "exit_config_mode": True
             },
-            "options": {
-                "queue_strategy": "pinned",
-                "ttl": 300
-            }
+            "queue_strategy": "pinned",
+            "ttl": 300
         }
-        
+
         response = requests.post(
-            f"{self.base_url}/device/execute",
+            f"{self.base_url}/device/exec",
             json=payload,
             headers=self.headers
         )
@@ -681,14 +673,12 @@ class DeviceMonitor:
                 "password": device["password"]
             },
             "command": command,
-            "options": {
-                "queue_strategy": "pinned",
-                "ttl": 60
-            }
+            "queue_strategy": "pinned",
+            "ttl": 60
         }
-        
+
         response = requests.post(
-            f"{self.base_url}/device/execute",
+            f"{self.base_url}/device/exec",
             json=payload,
             headers=self.headers
         )

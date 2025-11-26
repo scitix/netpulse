@@ -680,7 +680,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"display version\"\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -708,7 +708,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show ip interface brief\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 180\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -736,7 +736,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show interfaces status\",\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -764,7 +764,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 120,\n    \"global_delay_factor\": 3\n  },\n  \"command\": \"show running-config\",\n  \"driver_args\": {\n    \"read_timeout\": 120,\n    \"delay_factor\": 4,\n    \"max_loops\": 1000,\n    \"auto_find_prompt\": true,\n    \"strip_prompt\": true,\n    \"cmd_verify\": false\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -792,7 +792,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 60,\n    \"keepalive\": 30\n  },\n  \"command\": \"dis cu\",\n  \"driver_args\": {\n    \"read_timeout\": 60,\n    \"delay_factor\": 2,\n    \"max_loops\": 1000,\n    \"auto_find_prompt\": true,\n    \"strip_prompt\": true,\n    \"strip_command\": true,\n    \"normalize\": true,\n    \"cmd_verify\": false\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -820,7 +820,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show ip interface brief\",\n  \"driver_args\": {\n    \"read_timeout\": 30,\n    \"strip_prompt\": true,\n    \"strip_command\": true,\n    \"normalize\": true\n  },\n  \"options\": {\n    \"parsing\": {\n      \"name\": \"textfsm\",\n      \"template\": \"cisco_ios_show_ip_interface_brief.textfsm\"\n    },\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -848,7 +848,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"display version\",\n  \"driver_args\": {\n    \"read_timeout\": 45,\n    \"strip_prompt\": true,\n    \"normalize\": true\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300,\n    \"webhook\": {\n      \"name\": \"basic\",\n      \"url\": \"http://127.0.0.1:8888/webhook\", //根据实际情况修改\n      \"method\": \"POST\",\n      \"headers\": {\n        \"Content-Type\": \"application/json\"\n      },\n      \"timeout\": 30\n    }\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -882,7 +882,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [\n    \"show version\",\n    \"show ip interface brief\",\n    \"show interfaces status\"\n  ],\n  \"options\": {\n    \"queue_strategy\": \"pinned\", // 可选，netmiko驱动默认为pinned\n    \"ttl\": 300\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -910,7 +910,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 90,\n    \"keepalive\": 60\n  },\n  \"command\": [\n    \"show version\",\n    \"show ip interface brief\",\n    \"show vlan brief\",\n    \"show spanning-tree summary\",\n    \"show mac address-table count\",\n    \"show processes cpu\",\n    \"show memory statistics\"\n  ],\n  \"driver_args\": {\n    \"read_timeout\": 45,\n    \"delay_factor\": 1.5,\n    \"auto_find_prompt\": true,\n    \"strip_prompt\": true,\n    \"strip_command\": true,\n    \"normalize\": true,\n    \"cmd_verify\": true\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -938,7 +938,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [\n    \"show ip route summary\",\n    \"show ip arp\",\n    \"show cdp neighbors detail\",\n    \"show lldp neighbors detail\",\n    \"show interface counters errors\",\n    \"show logging | include ERROR|WARN\"\n  ],\n  \"driver_args\": {\n    \"read_timeout\": 60,\n    \"delay_factor\": 2,\n    \"strip_prompt\": true,\n    \"normalize\": true\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 450\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -966,7 +966,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [\n    \"show running-config | include aaa|login|enable|service\",\n    \"show users\",\n    \"show privilege\",\n    \"show access-lists\",\n    \"show ip ssh\",\n    \"show snmp community\",\n    \"show logging\"\n  ],\n  \"driver_args\": {\n    \"read_timeout\": 60,\n    \"delay_factor\": 2,\n    \"strip_prompt\": true,\n    \"strip_command\": true,\n    \"normalize\": true\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600,\n    \"webhook\": {\n      \"url\": \"https://security-audit.company.com/device-scan\",\n      \"method\": \"POST\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {{security_token}}\"\n      }\n    }\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1006,7 +1006,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": \"hostname NetPulse-SW01\",\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1034,7 +1034,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": \"ip domain-name company.local\",\n  \"driver_args\": {\n    \"exit_config_mode\": true,\n    \"enter_config_mode\": true,\n    \"cmd_verify\": true,\n    \"delay_factor\": 1,\n    \"error_pattern\": \"% Invalid|% Error\"\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1068,7 +1068,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": [\n    \"interface GigabitEthernet0/1\",\n    \"description Server Connection\",\n    \"switchport mode access\",\n    \"switchport access vlan 100\",\n    \"no shutdown\"\n  ],\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1096,7 +1096,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": [\n    \"interface range GigabitEthernet0/1-10\",\n    \"description User Ports\",\n    \"switchport mode access\",\n    \"switchport access vlan 200\",\n    \"spanning-tree portfast\",\n    \"spanning-tree bpduguard enable\",\n    \"no shutdown\"\n  ],\n  \"driver_args\": {\n    \"exit_config_mode\": true,\n    \"enter_config_mode\": true,\n    \"cmd_verify\": true,\n    \"delay_factor\": 2,\n    \"read_timeout\": 60,\n    \"error_pattern\": \"% Invalid|% Error|% Bad\"\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1124,7 +1124,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": [\n    \"interface range GigabitEthernet0/1-10\",\n    \"description Batch Configuration by NetPulse\",\n    \"switchport mode access\",\n    \"switchport access vlan 200\",\n    \"spanning-tree portfast\",\n    \"no shutdown\"\n  ],\n  \"driver_args\": {\n    \"exit_config_mode\": true,\n    \"config_mode_command\": \"configure terminal\",\n    \"enter_config_mode\": true,\n    \"cmd_verify\": true,\n    \"delay_factor\": 2,\n    \"read_timeout\": 60,\n    \"error_pattern\": \"% Invalid|% Error|% Bad\",\n    \"terminator\": \"#\",\n    \"strip_prompt\": false,\n    \"strip_command\": false\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600,\n    \"webhook\": {\n      \"url\": \"https://config-mgmt.company.com/callback\",\n      \"method\": \"POST\"\n    }\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1152,7 +1152,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": [\n    \"ntp server 8.8.8.8\",\n    \"ntp server 8.8.4.4\",\n    \"logging host 192.168.1.100\",\n    \"logging trap informational\",\n    \"snmp-server community public RO\",\n    \"snmp-server location Datacenter-Rack01\",\n    \"snmp-server contact admin@company.com\",\n    \"ip domain-name company.local\",\n    \"clock timezone EST -5\",\n    \"service timestamps log datetime msec\"\n  ],\n  \"driver_args\": {\n    \"exit_config_mode\": true,\n    \"enter_config_mode\": true,\n    \"cmd_verify\": true,\n    \"delay_factor\": 1,\n    \"read_timeout\": 45,\n    \"error_pattern\": \"% Invalid|% Error\",\n    \"strip_prompt\": false,\n    \"strip_command\": false\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600,\n    \"webhook\": {\n      \"url\": \"https://config-mgmt.company.com/device-config\",\n      \"method\": \"POST\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {{config_token}}\"\n      }\n    }\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1180,7 +1180,7 @@
 									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": [\n    \"ip access-list extended MANAGEMENT_ACCESS\",\n    \"permit tcp 192.168.1.0 0.0.0.255 any eq 22\",\n    \"permit tcp 192.168.1.0 0.0.0.255 any eq 443\",\n    \"permit icmp 192.168.1.0 0.0.0.255 any\",\n    \"deny ip any any log\",\n    \"exit\",\n    \"line vty 0 4\",\n    \"access-class MANAGEMENT_ACCESS in\",\n    \"transport input ssh\",\n    \"exit\",\n    \"ip ssh version 2\",\n    \"ip ssh time-out 60\",\n    \"ip ssh authentication-retries 3\"\n  ],\n  \"driver_args\": {\n    \"exit_config_mode\": true,\n    \"enter_config_mode\": true,\n    \"cmd_verify\": true,\n    \"delay_factor\": 2,\n    \"read_timeout\": 60,\n    \"error_pattern\": \"% Invalid|% Error|% Incomplete\"\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1220,7 +1220,7 @@
 									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"eos\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"get_facts\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1248,7 +1248,7 @@
 									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"ios\",\n    \"hostname\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 60,\n    \"optional_args\": {\n      \"port\": 22,\n      \"secret\": \"{{enable_password}}\"\n    }\n  },\n  \"command\": [\n    \"get_facts\",\n    \"get_interfaces\",\n    \"get_interfaces_ip\",\n    \"get_arp_table\",\n    \"get_mac_address_table\"\n  ],\n  \"driver_args\": {\n    \"retrieve\": \"all\",\n    \"full\": true,\n    \"sanitized\": false\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 600\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1276,7 +1276,7 @@
 									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"iosxr\",\n    \"hostname\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"optional_args\": {\n      \"port\": 22,\n      \"secret\": \"{{enable_password}}\"\n    }\n  },\n  \"command\": [\n    \"get_route_to\",\n    \"get_bgp_neighbors\",\n    \"get_bgp_neighbors_detail\"\n  ],\n  \"driver_args\": {\n    \"destination\": \"8.8.8.8\",\n    \"protocol\": \"ipv4\"\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 450\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1310,7 +1310,7 @@
 									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"ios\",\n    \"hostname\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"optional_args\": {\n      \"secret\": \"{{enable_password}}\"\n    }\n  },\n  \"config\": \"hostname NAPALM-Test-Device\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1338,7 +1338,7 @@
 									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"ios\",\n    \"hostname\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"optional_args\": {\n      \"secret\": \"{{enable_password}}\"\n    }\n  },\n  \"config\": [\n    \"interface GigabitEthernet0/1\",\n    \"description NAPALM Configured Interface\",\n    \"ip address 192.168.100.1 255.255.255.0\",\n    \"no shutdown\"\n  ],\n  \"driver_args\": {\n    \"commit_message\": \"NAPALM interface configuration\",\n    \"confirm\": 60,\n    \"comment\": \"NetPulse automated config\"\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 600\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1366,7 +1366,7 @@
 									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"junos\",\n    \"hostname\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"config\": {\n    \"snmp\": {\n      \"community\": \"napalm_ro\",\n      \"location\": \"Datacenter-01\",\n      \"contact\": \"netops@company.com\"\n    },\n    \"ntp\": {\n      \"servers\": [\"8.8.8.8\", \"8.8.4.4\"]\n    }\n  },\n  \"driver_args\": {\n    \"replace\": true,\n    \"commit_message\": \"NAPALM configuration replacement\",\n    \"confirm\": 120\n  },\n  \"options\": {\n    \"rendering\": {\n      \"name\": \"jinja2\",\n      \"template\": \"snmp community {{ snmp.community }} authorization read-only\\nsnmp location {{ snmp.location }}\\nsnmp contact {{ snmp.contact }}\\n{% for server in ntp.servers %}ntp server {{ server }}\\n{% endfor %}\"\n    },\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 600\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1406,7 +1406,7 @@
 									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host_2}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"command\": \"show version\",\n  \"driver_args\": {\n    \"encoding\": \"json\",\n    \"format\": \"json\"\n  },\n  // options 可选 pyeapi会默认用fifo worker\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1434,7 +1434,7 @@
 									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443,\n    \"timeout\": 60\n  },\n  \"command\": [\n    \"show version\",\n    \"show interfaces status\",\n    \"show ip interface brief\",\n    \"show vlan brief\",\n    \"show mac address-table\"\n  ],\n  \"driver_args\": {\n    \"encoding\": \"json\",\n    \"format\": \"json\",\n    \"timestamps\": true\n  },\n  // options 可选 pyeapi会默认用fifo worker\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 600\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1462,7 +1462,7 @@
 									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"command\": \"show interfaces ethernet status\",\n  \"driver_args\": {\n    \"encoding\": \"json\",\n    \"format\": \"json\",\n    \"expand\": true,\n    \"detail\": true\n  },\n  \"options\": {\n    \"parsing\": {\n      \"name\": \"json\",\n      \"path\": \"interfaceStatuses\"\n    },\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300,\n    \"webhook\": {\n      \"url\": \"https://monitoring.company.com/arista-interfaces\",\n      \"method\": \"POST\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {{api_token}}\"\n      }\n    }\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1496,7 +1496,7 @@
 									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"config\": \"hostname PyEAPI-Test-Switch\",\n  \"driver_args\": {\n    \"format\": \"text\",\n    \"autoComplete\": true\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1524,7 +1524,7 @@
 									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"config\": [\n    \"vlan 100\",\n    \"name DATA_VLAN\",\n    \"vlan 200\",\n    \"name VOICE_VLAN\",\n    \"vlan 300\",\n    \"name GUEST_VLAN\",\n    \"interface range Ethernet1-10\",\n    \"switchport mode access\",\n    \"switchport access vlan 100\"\n  ],\n  \"driver_args\": {\n    \"format\": \"text\",\n    \"autoComplete\": true,\n    \"expandAliases\": true\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 600\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1552,7 +1552,7 @@
 									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"config\": {\n    \"local_asn\": 65001,\n    \"router_id\": \"1.1.1.1\",\n    \"neighbors\": [\n      {\"ip\": \"10.1.1.2\", \"asn\": 65002, \"description\": \"Peer-1\"},\n      {\"ip\": \"10.1.1.3\", \"asn\": 65003, \"description\": \"Peer-2\"}\n    ]\n  },\n  \"driver_args\": {\n    \"format\": \"text\",\n    \"autoComplete\": true\n  },\n  \"options\": {\n    \"rendering\": {\n      \"name\": \"jinja2\",\n      \"template\": \"router bgp {{ local_asn }}\\n router-id {{ router_id }}\\n{% for neighbor in neighbors %}\\n neighbor {{ neighbor.ip }} remote-as {{ neighbor.asn }}\\n neighbor {{ neighbor.ip }} description {{ neighbor.description }}\\n{% endfor %}\"\n    },\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 600\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1592,7 +1592,7 @@
 									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22,\n    \"timeout\": 30.0\n  },\n  \"command\": \"uname -a\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1620,7 +1620,7 @@
 									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22\n  },\n  \"command\": [\n    \"uname -a\",\n    \"df -h\",\n    \"free -m\",\n    \"uptime\",\n    \"whoami\"\n  ],\n  \"driver_args\": {\n    \"timeout\": 30.0\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1648,7 +1648,7 @@
 									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"key_filename\": \"/path/to/private_key\",\n    \"passphrase\": \"{{key_passphrase}}\",\n    \"port\": 22\n  },\n  \"command\": \"df -h\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1676,7 +1676,7 @@
 									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [\n    \"ip addr show\",\n    \"ip route show\",\n    \"ss -tuln\",\n    \"netstat -rn\"\n  ],\n  \"driver_args\": {\n    \"timeout\": 60.0\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1710,7 +1710,7 @@
 									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"config\": \"echo 'Hello World' > /tmp/test.txt\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1738,7 +1738,7 @@
 									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"config\": [\n    \"echo 'server.example.com' > /etc/hostname\",\n    \"systemctl restart hostname\"\n  ],\n  \"driver_args\": {\n    \"sudo\": true,\n    \"sudo_password\": \"{{sudo_password}}\",\n    \"timeout\": 60.0\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1766,7 +1766,7 @@
 									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"key_filename\": \"/path/to/private_key\"\n  },\n  \"config\": [\n    \"cat > /tmp/config.sh << 'EOF'\",\n    \"#!/bin/bash\",\n    \"echo 'Configuration script'\",\n    \"EOF\",\n    \"chmod +x /tmp/config.sh\"\n  ],\n  \"driver_args\": {\n    \"timeout\": 30.0,\n    \"get_pty\": true\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1800,7 +1800,7 @@
 									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22\n  },\n  \"command\": [\"__FILE_TRANSFER__\"],\n  \"driver_args\": {\n    \"file_transfer\": {\n      \"operation\": \"upload\",\n      \"local_path\": \"/local/file.txt\",\n      \"remote_path\": \"/remote/file.txt\",\n      \"resume\": false,\n      \"chunk_size\": 32768\n    }\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1828,7 +1828,7 @@
 									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22\n  },\n  \"command\": [\"__FILE_TRANSFER__\"],\n  \"driver_args\": {\n    \"file_transfer\": {\n      \"operation\": \"download\",\n      \"local_path\": \"/local/file.txt\",\n      \"remote_path\": \"/remote/file.txt\",\n      \"resume\": true,\n      \"chunk_size\": 32768\n    }\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1862,7 +1862,7 @@
 									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"proxy_host\": \"{{proxy_host}}\",\n    \"proxy_username\": \"{{proxy_username}}\",\n    \"proxy_password\": \"{{proxy_password}}\",\n    \"proxy_port\": 22\n  },\n  \"command\": \"uname -a\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -1890,7 +1890,7 @@
 									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"key_filename\": \"/path/to/key\",\n    \"proxy_host\": \"{{proxy_host}}\",\n    \"proxy_username\": \"{{proxy_username}}\",\n    \"proxy_key_filename\": \"/path/to/proxy_key\"\n  },\n  \"command\": \"df -h\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
 								},
 								"url": {
-									"raw": "{{base_url}}/device/execute",
+									"raw": "{{base_url}}/device/exec",
 									"host": [
 										"{{base_url}}"
 									],
@@ -2544,7 +2544,7 @@
 							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 120\n  },\n  \"command\": [\n    \"show version\",\n    \"show inventory\",\n    \"show interfaces\",\n    \"show ip interface brief\",\n    \"show vlan brief\",\n    \"show running-config | include hostname|ntp|logging|snmp\",\n    \"show users\",\n    \"show processes cpu\",\n    \"show memory statistics\"\n  ],\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600\n  },\n  \"webhook\": {\n    \"url\": \"http://audit-system.company.com/webhook\",\n    \"method\": \"POST\",\n    \"headers\": {\n      \"Authorization\": \"Bearer audit-token\",\n      \"Content-Type\": \"application/json\"\n    }\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/device/execute",
+							"raw": "{{base_url}}/device/exec",
 							"host": [
 								"{{base_url}}"
 							],
@@ -2572,7 +2572,7 @@
 							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show running-config | include aaa|login|enable|service|no service|logging|ntp|snmp\",\n  \"parsing\": {\n    \"name\": \"textfsm\",\n    \"template\": \"Value List AAA_COMMANDS (.+aaa.*)\\nValue List LOGIN_COMMANDS (.+login.*)\\nValue List SERVICE_COMMANDS (.+service.*)\\nValue List LOGGING_COMMANDS (.+logging.*)\\n\\nStart\\n  ^(aaa.*)$$ -> Record.AAA_COMMANDS\\n  ^(.*login.*)$$ -> Record.LOGIN_COMMANDS\\n  ^(.*service.*)$$ -> Record.SERVICE_COMMANDS\\n  ^(logging.*)$$ -> Record.LOGGING_COMMANDS\"\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/device/execute",
+							"raw": "{{base_url}}/device/exec",
 							"host": [
 								"{{base_url}}"
 							],

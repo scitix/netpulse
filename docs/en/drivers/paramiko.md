@@ -4,7 +4,7 @@
 
 The Paramiko driver is used to manage Linux servers (Ubuntu, CentOS, Debian, etc.) through SSH protocol, supporting command execution, file transfer, configuration management, and other operations.
 
-> **Important**: This document focuses on Paramiko driver parameters and usage. For general API endpoints (`POST /device/execute`), request format, response format, etc., please refer to [Device Operation API](../api/device-api.md).
+> **Important**: This document focuses on Paramiko driver parameters and usage. For general API endpoints (`POST /device/exec`), request format, response format, etc., please refer to [Device Operation API](../api/device-api.md).
 
 ## Driver Features
 
@@ -449,10 +449,8 @@ Complete example including all common configurations.
       "LANG": "en_US.UTF-8"
     }
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 600
-  }
+  "queue_strategy": "fifo",
+  "ttl": 600
 }
 ```
 
@@ -583,9 +581,9 @@ Only used in `command` operations, set via `driver_args.file_transfer`.
 
 ---
 
-### options (Global Options)
+### Global Options
 
-Global options common to all drivers.
+Global options common to all drivers, placed directly at the top level of the request.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|

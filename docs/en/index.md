@@ -122,7 +122,7 @@ If you are using NetPulse for the first time, we recommend reading the documenta
 ## Quick FAQ
 
 **Q: Are device operations synchronous or asynchronous?**  
-A: Device operations (`/device/execute`, `/device/bulk`) are asynchronous and require querying task status to get results. Only `/device/test-connection` is synchronous.
+A: Device operations (`/device/exec`, `/device/bulk`) are asynchronous and require querying task status to get results. Only `/device/test-connection` is synchronous.
 
 **Q: How to choose the right driver?**  
 A: Use Paramiko for Linux servers, PyEAPI for Arista devices, NAPALM if you need configuration rollback, and Netmiko for other scenarios (recommended).

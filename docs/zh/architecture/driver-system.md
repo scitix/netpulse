@@ -13,7 +13,7 @@ NetPulse 通过其插件系统提供可扩展的驱动支持。用户可以使�
 
 ## 指定设备驱动
 
-在 /device/execute 和 /device/bulk API 中，使用 `driver` 字段指定本次任务需要使用的驱动：
+在 /device/exec 和 /device/bulk API 中，使用 `driver` 字段指定本次任务需要使用的驱动：
 
 ```json
 {

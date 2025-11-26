@@ -4,7 +4,7 @@
 
 Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH的网络设备操作功能，支持Cisco、Juniper、Arista、华为等主流厂商设备。
 
-> **重要提示**：本文档专注于Netmiko驱动的特定参数和用法。通用API端点（`POST /device/execute`）、请求格式、响应格式等请参考[设备操作 API](../api/device-api.md)。
+> **重要提示**：本文档专注于Netmiko驱动的特定参数和用法。通用API端点（`POST /device/exec`）、请求格式、响应格式等请参考[设备操作 API](../api/device-api.md)。
 
 ## 驱动特点
 
@@ -52,10 +52,8 @@ Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH�
     "password": "password"
   },
   "command": "show ip interface brief",
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 180
-  }
+  "queue_strategy": "fifo",
+  "ttl": 180
 }
 ```
 
@@ -72,10 +70,8 @@ Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH�
     "password": "password"
   },
   "command": "show interfaces status",
-  "options": {
-    "queue_strategy": "pinned",
-    "ttl": 300
-  }
+  "queue_strategy": "pinned",
+  "ttl": 300
 }
 ```
 
@@ -102,10 +98,8 @@ Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH�
     "strip_prompt": true,
     "cmd_verify": false
   },
-  "options": {
-    "queue_strategy": "pinned",
-    "ttl": 600
-  }
+  "queue_strategy": "pinned",
+  "ttl": 600
 }
 ```
 
@@ -134,10 +128,8 @@ Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH�
     "normalize": true,
     "cmd_verify": false
   },
-  "options": {
-    "queue_strategy": "pinned",
-    "ttl": 600
-  }
+  "queue_strategy": "pinned",
+  "ttl": 600
 }
 ```
 
@@ -160,14 +152,12 @@ Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH�
     "strip_command": true,
     "normalize": true
   },
-  "options": {
-    "parsing": {
-      "name": "textfsm",
-      "template": "cisco_ios_show_ip_interface_brief.textfsm"
-    },
-    "queue_strategy": "pinned",
-    "ttl": 300
-  }
+  "parsing": {
+    "name": "textfsm",
+    "template": "cisco_ios_show_ip_interface_brief.textfsm"
+  },
+  "queue_strategy": "pinned",
+  "ttl": 300
 }
 ```
 
@@ -189,17 +179,15 @@ Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH�
     "strip_prompt": true,
     "normalize": true
   },
-  "options": {
-    "queue_strategy": "pinned",
-    "ttl": 300,
-    "webhook": {
-      "url": "http://127.0.0.1:8888/webhook",
-      "method": "POST",
-      "headers": {
-        "Content-Type": "application/json"
-      },
-      "timeout": 30
-    }
+  "queue_strategy": "pinned",
+  "ttl": 300,
+  "webhook": {
+    "url": "http://127.0.0.1:8888/webhook",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "timeout": 30
   }
 }
 ```
@@ -223,10 +211,8 @@ Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH�
     "show ip interface brief",
     "show interfaces status"
   ],
-  "options": {
-    "queue_strategy": "pinned",
-    "ttl": 300
-  }
+  "queue_strategy": "pinned",
+  "ttl": 300
 }
 ```
 
@@ -262,10 +248,8 @@ Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH�
     "normalize": true,
     "cmd_verify": true
   },
-  "options": {
-    "queue_strategy": "pinned",
-    "ttl": 600
-  }
+  "queue_strategy": "pinned",
+  "ttl": 600
 }
 ```
 
@@ -295,10 +279,8 @@ Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH�
     "strip_prompt": true,
     "normalize": true
   },
-  "options": {
-    "queue_strategy": "pinned",
-    "ttl": 450
-  }
+  "queue_strategy": "pinned",
+  "ttl": 450
 }
 ```
 
@@ -330,15 +312,13 @@ Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH�
     "strip_command": true,
     "normalize": true
   },
-  "options": {
-    "queue_strategy": "pinned",
-    "ttl": 600,
-    "webhook": {
-      "url": "https://security-audit.company.com/device-scan",
-      "method": "POST",
-      "headers": {
-        "Authorization": "Bearer {{security_token}}"
-      }
+  "queue_strategy": "pinned",
+  "ttl": 600,
+  "webhook": {
+    "url": "https://security-audit.company.com/device-scan",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer {{security_token}}"
     }
   }
 }
@@ -362,10 +342,8 @@ Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH�
     "secret": "enable_password"
   },
   "config": "hostname NetPulse-SW01",
-  "options": {
-    "queue_strategy": "pinned",
-    "ttl": 300
-  }
+  "queue_strategy": "pinned",
+  "ttl": 300
 }
 ```
 
@@ -390,10 +368,8 @@ Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH�
     "delay_factor": 1,
     "error_pattern": "% Invalid|% Error"
   },
-  "options": {
-    "queue_strategy": "pinned",
-    "ttl": 300
-  }
+  "queue_strategy": "pinned",
+  "ttl": 300
 }
 ```
 
@@ -425,10 +401,8 @@ Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH�
     "cmd_verify": true,
     "delay_factor": 1
   },
-  "options": {
-    "queue_strategy": "pinned",
-    "ttl": 300
-  }
+  "queue_strategy": "pinned",
+  "ttl": 300
 }
 ```
 
@@ -462,10 +436,8 @@ Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH�
     "read_timeout": 60,
     "error_pattern": "% Invalid|% Error|% Bad"
   },
-  "options": {
-    "queue_strategy": "pinned",
-    "ttl": 600
-  }
+  "queue_strategy": "pinned",
+  "ttl": 600
 }
 ```
 
@@ -502,13 +474,11 @@ Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH�
     "strip_prompt": false,
     "strip_command": false
   },
-  "options": {
-    "queue_strategy": "pinned",
-    "ttl": 600,
-    "webhook": {
-      "url": "https://config-mgmt.company.com/callback",
-      "method": "POST"
-    }
+  "queue_strategy": "pinned",
+  "ttl": 600,
+  "webhook": {
+    "url": "https://config-mgmt.company.com/callback",
+    "method": "POST"
   }
 }
 ```
@@ -548,15 +518,13 @@ Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH�
     "strip_prompt": false,
     "strip_command": false
   },
-  "options": {
-    "queue_strategy": "pinned",
-    "ttl": 600,
-    "webhook": {
-      "url": "https://config-mgmt.company.com/device-config",
-      "method": "POST",
-      "headers": {
-        "Authorization": "Bearer {{config_token}}"
-      }
+  "queue_strategy": "pinned",
+  "ttl": 600,
+  "webhook": {
+    "url": "https://config-mgmt.company.com/device-config",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer {{config_token}}"
     }
   }
 }
@@ -598,16 +566,14 @@ Netmiko 驱动基于[设备操作 API](../api/device-api.md)，提供基于SSH�
     "read_timeout": 60,
     "error_pattern": "% Invalid|% Error|% Incomplete"
   },
-  "options": {
-    "queue_strategy": "pinned",
-    "ttl": 600
-  }
+  "queue_strategy": "pinned",
+  "ttl": 600
 }
 ```
 
 ## 使用示例
 
-### cURL 示例
+以 cURL 为实例，发送 `/device/exec` 请求执行 Napalm 驱动操作，操作结果需要通过返回的 Job ID 进行后续查询。
 
 ```bash
 # 基础查询
@@ -623,7 +589,7 @@ curl -X POST -H "Content-Type: application/json" \
     },
     "command": "show version"
   }' \
-  http://localhost:9000/device/execute
+  http://localhost:9000/device/exec
 
 # 多命令查询
 curl -X POST -H "Content-Type: application/json" \
@@ -642,7 +608,7 @@ curl -X POST -H "Content-Type: application/json" \
       "show interfaces status"
     ]
   }' \
-  http://localhost:9000/device/execute
+  http://localhost:9000/device/exec
 
 # 配置推送
 curl -X POST -H "Content-Type: application/json" \
@@ -664,134 +630,7 @@ curl -X POST -H "Content-Type: application/json" \
       "no shutdown"
     ]
   }' \
-  http://localhost:9000/device/execute
-```
-
-### Python 示例
-
-```python
-import requests
-import json
-
-class NetmikoClient:
-    def __init__(self, base_url, api_key):
-        self.base_url = base_url
-        self.headers = {
-            "X-API-Key": api_key,
-            "Content-Type": "application/json"
-        }
-    
-    def execute_command(self, host, username, password, command, device_type="cisco_ios", **kwargs):
-        """执行单命令查询"""
-        payload = {
-            "driver": "netmiko",
-            "connection_args": {
-                "device_type": device_type,
-                "host": host,
-                "username": username,
-                "password": password
-            },
-            "command": command
-        }
-        
-        # 添加可选参数
-        if "driver_args" in kwargs:
-            payload["driver_args"] = kwargs["driver_args"]
-        if "options" in kwargs:
-            payload["options"] = kwargs["options"]
-        
-        response = requests.post(
-            f"{self.base_url}/device/execute",
-            headers=self.headers,
-            json=payload
-        )
-        return response.json()
-    
-    def execute_commands(self, host, username, password, commands, device_type="cisco_ios", **kwargs):
-        """执行多命令查询"""
-        payload = {
-            "driver": "netmiko",
-            "connection_args": {
-                "device_type": device_type,
-                "host": host,
-                "username": username,
-                "password": password
-            },
-            "command": commands
-        }
-        
-        # 添加可选参数
-        if "driver_args" in kwargs:
-            payload["driver_args"] = kwargs["driver_args"]
-        if "options" in kwargs:
-            payload["options"] = kwargs["options"]
-        
-        response = requests.post(
-            f"{self.base_url}/device/execute",
-            headers=self.headers,
-            json=payload
-        )
-        return response.json()
-    
-    def push_config(self, host, username, password, config, device_type="cisco_ios", **kwargs):
-        """推送配置"""
-        payload = {
-            "driver": "netmiko",
-            "connection_args": {
-                "device_type": device_type,
-                "host": host,
-                "username": username,
-                "password": password
-            },
-            "config": config
-        }
-        
-        # 添加可选参数
-        if "driver_args" in kwargs:
-            payload["driver_args"] = kwargs["driver_args"]
-        if "options" in kwargs:
-            payload["options"] = kwargs["options"]
-        
-        response = requests.post(
-            f"{self.base_url}/device/execute",
-            headers=self.headers,
-            json=payload
-        )
-        return response.json()
-
-# 使用示例
-client = NetmikoClient("http://localhost:9000", "your-api-key-here")
-
-# 基础查询
-result = client.execute_command(
-    "192.168.1.1", "admin", "password", "show version"
-)
-print(f"查询结果: {result}")
-
-# 多命令查询
-commands = ["show version", "show ip interface brief", "show interfaces status"]
-result = client.execute_commands(
-    "192.168.1.1", "admin", "password", commands
-)
-print(f"多命令查询结果: {result}")
-
-# 配置推送
-config = [
-    "interface GigabitEthernet0/1",
-    "description Server Connection",
-    "switchport mode access",
-    "switchport access vlan 100",
-    "no shutdown"
-]
-result = client.push_config(
-    "192.168.1.1", "admin", "password", config,
-    driver_args={
-        "exit_config_mode": True,
-        "enter_config_mode": True,
-        "cmd_verify": True
-    }
-)
-print(f"配置推送结果: {result}")
+  http://localhost:9000/device/exec
 ```
 
 ## Netmiko驱动特定参数
@@ -826,8 +665,6 @@ print(f"配置推送结果: {result}")
 | error_pattern | string | - | 错误模式正则表达式，用于检测命令执行错误 |
 | config_mode_command | string | - | 配置模式命令（如：configure terminal） |
 | terminator | string | "#" | 配置模式终止符 |
-
-> **注意**：`options` 参数是全局选项，所有驱动通用。详细说明请参考[设备操作 API](../api/device-api.md)。
 
 **Netmiko推荐配置**：
 - `queue_strategy`: 推荐使用 `"pinned"`，支持连接复用，提高性能

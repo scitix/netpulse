@@ -24,6 +24,9 @@ docker compose logs --tail=100 controller
 
 ### 日志格式
 
+!!! tips
+    日志格式可以通过 `log-config.yaml` 文件进行自定义配置。
+
 ```
 [2025-07-20 01:10:38 +0800] [9] [INFO] [netpulse.api|routes.py:45] - API request received
 ```

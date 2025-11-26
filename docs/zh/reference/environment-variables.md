@@ -10,6 +10,14 @@
 - `NETPULSE_SERVER__PORT` 对应配置中的 `server.port`
 - `NETPULSE_REDIS__TLS__ENABLED` 对应配置中的 `redis.tls.enabled`
 
+## 配置优先级
+
+配置加载优先级（从高到低）：
+1. 环境变量
+2. `.env` 文件
+3. YAML 配置文件
+4. 默认值
+
 ## Server 配置
 
 | 环境变量 | 说明 | 默认值 |
@@ -121,11 +129,3 @@ NETPULSE_REDIS__TLS__KEY=/etc/redis/tls/client.key
 NETPULSE_WORKER__PINNED_PER_NODE=64
 NETPULSE_LOG__LEVEL=INFO
 ```
-
-## 配置优先级
-
-配置加载优先级（从高到低）：
-1. 环境变量
-2. `.env` 文件
-3. YAML 配置文件
-4. 默认值

@@ -50,9 +50,7 @@ curl -X POST \
     "password": "password",
     "device_type": "cisco_ios"
   },
-  "options": {
-    "queue_strategy": "fifo"
-  }
+  "queue_strategy": "fifo"
 }
 ```
 
@@ -66,10 +64,8 @@ curl -X POST \
     "password": "password",
     "device_type": "cisco_ios"
   },
-  "options": {
-    "queue_strategy": "pinned",
-    "ttl": 300
-  }
+  "queue_strategy": "pinned",
+  "ttl": 300
 }
 ```
 
@@ -93,10 +89,8 @@ curl -X POST \
 #### 连接复用
 ```json
 {
-  "options": {
-    "queue_strategy": "pinned",
-    "ttl": 300
-  }
+  "queue_strategy": "pinned",
+  "ttl": 300
 }
 ```
 
@@ -337,7 +331,7 @@ async def execute_commands_async(devices, command):
 
 async def execute_single_command_async(session, device, command):
     """异步执行单个命令"""
-    url = "http://localhost:9000/device/execute"
+    url = "http://localhost:9000/device/exec"
     headers = {"X-API-KEY": f"{API_KEY}"}
     data = {
         "driver": "netmiko",
@@ -435,16 +429,14 @@ def calculate_performance_metrics(results):
 
 ```json
 {
-  "options": {
-    "webhook": {
-      "url": "https://your-webhook-url.com/callback",
-      "method": "POST",
-      "headers": {
-        "Content-Type": "application/json",
-        "X-Custom-Header": "custom-value"
-      },
-      "timeout": 30
-    }
+  "webhook": {
+    "url": "https://your-webhook-url.com/callback",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-Custom-Header": "custom-value"
+    },
+    "timeout": 30
   }
 }
 ```

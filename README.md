@@ -91,7 +91,7 @@ After deployment, test the API with a simple health check:
 curl -H "X-API-KEY: your_secure_api_key" http://localhost:9000/health
 
 # Test device command (replace with your device details)
-curl -X POST http://localhost:9000/device/execute \
+curl -X POST http://localhost:9000/device/exec \
   -H "X-API-KEY: your_secure_api_key" \
   -H "Content-Type: application/json" \
   -d '{

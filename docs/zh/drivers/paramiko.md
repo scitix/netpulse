@@ -4,7 +4,7 @@
 
 Paramiko 驱动用于管理Linux服务器（Ubuntu、CentOS、Debian等），通过SSH协议执行命令、传输文件、管理配置等操作。
 
-> **重要提示**：本文档专注于Paramiko驱动的参数和用法。通用API端点（`POST /device/execute`）、请求格式、响应格式等请参考[设备操作 API](../api/device-api.md)。
+> **重要提示**：本文档专注于Paramiko驱动的参数和用法。通用API端点（`POST /device/exec`）、请求格式、响应格式等请参考[设备操作 API](../api/device-api.md)。
 
 ## 驱动特点
 
@@ -449,10 +449,8 @@ Paramiko 驱动用于管理Linux服务器（Ubuntu、CentOS、Debian等），通
       "LANG": "en_US.UTF-8"
     }
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 600
-  }
+  "queue_strategy": "fifo",
+  "ttl": 600
 }
 ```
 
@@ -583,9 +581,9 @@ Paramiko 驱动用于管理Linux服务器（Ubuntu、CentOS、Debian等），通
 
 ---
 
-### options（全局选项）
+### 全局选项
 
-所有驱动通用的全局选项。
+所有驱动通用的全局选项，直接放在请求的顶级字段中。
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|

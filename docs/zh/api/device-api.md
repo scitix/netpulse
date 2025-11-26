@@ -11,7 +11,7 @@
 
 ## API 端点
 
-### POST /device/execute
+### POST /device/exec
 
 统一的设备操作端点，根据请求参数识别操作类型。
 
@@ -23,7 +23,7 @@
 **请求示例**:
 
 ```bash
-curl -X POST "http://localhost:9000/device/execute" \
+curl -X POST "http://localhost:9000/device/exec" \
   -H "X-API-KEY: your_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -41,7 +41,7 @@ curl -X POST "http://localhost:9000/device/execute" \
 **配置操作示例**:
 
 ```bash
-curl -X POST "http://localhost:9000/device/execute" \
+curl -X POST "http://localhost:9000/device/exec" \
   -H "X-API-KEY: your_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -139,7 +139,7 @@ curl -X POST "http://localhost:9000/device/test-connection" \
 import requests
 
 response = requests.post(
-    "http://localhost:9000/device/execute",
+    "http://localhost:9000/device/exec",
     headers={
         "X-API-KEY": "your_key",
         "Content-Type": "application/json"
@@ -168,7 +168,7 @@ print(f"任务ID: {job_id}")
 
 ```python
 response = requests.post(
-    "http://localhost:9000/device/execute",
+    "http://localhost:9000/device/exec",
     headers={
         "X-API-KEY": "your_key",
         "Content-Type": "application/json"
@@ -202,7 +202,7 @@ response = requests.post(
 
 ```python
 response = requests.post(
-    "http://localhost:9000/device/execute",
+    "http://localhost:9000/device/exec",
     headers={
         "X-API-KEY": "your_key",
         "Content-Type": "application/json"
@@ -221,9 +221,7 @@ response = requests.post(
             "read_timeout": 120,       # 读取超时120秒
             "delay_factor": 3          # 延迟因子3（慢速设备）
         },
-        "options": {
-            "ttl": 600                 # 任务超时600秒
-        }
+        "ttl": 600                     # 任务超时600秒
     }
 )
 ```
@@ -297,7 +295,7 @@ response = requests.post(
 
 ### options
 
-全局选项，控制任务执行行为。
+全局选项，控制任务执行行为。全局选项直接写在请求体根级别。
 
 | 参数 | 类型 | 默认值 | 描述 |
 |------|------|--------|------|
@@ -481,10 +479,8 @@ response = requests.post(
             "enter_config_mode": True,
             "cmd_verify": True
         },
-        "options": {
-            "queue_strategy": "pinned",
-            "ttl": 600
-        }
+        "queue_strategy": "pinned",
+        "ttl": 600
     }
 )
 ```

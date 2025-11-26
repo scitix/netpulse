@@ -1,15 +1,6 @@
 # 部署指南
 
-Netpulse 采用与传统网络自动化工具（如 Netmiko、Nornir）不同的架构模式。传统工具通常以Python包的形式提供，通过 `pip` 安装即可在项目中直接使用；而 Netpulse 是一个完整的服务端解决方案，集成了Redis等组件，部署后可作为统一的 API服务器管理全网设备。
-
-!!! tip "快速体验"
-    如果您想快速体验 NetPulse，推荐使用 **Docker 一键部署**，只需一条命令即可启动完整环境：
-    ```bash
-    git clone https://github.com/scitix/netpulse.git
-    cd netpulse
-    bash ./scripts/docker_auto_deploy.sh
-    ```
-    5分钟内即可完成部署并开始使用！
+Netpulse 采用与传统网络自动化工具（如 Netmiko、Nornir）不同的架构模式。传统工具通常以 Python 包的形式提供，通过 `pip` 安装即可在项目中直接使用；而 Netpulse 是一个完整的服务端解决方案，集成了 Redis 等组件，因此推荐使用 Docker/Kubernetes 进行部署。
 
 | 部署方式 | 适用场景 | 复杂度 | 推荐指数 |
 |----------|----------|--------|----------|
@@ -24,12 +15,6 @@ Netpulse 采用与传统网络自动化工具（如 Netmiko、Nornir）不同的
 
 !!! warning
     此方法不推荐用于生产环境。仅建议在本地开发调试及CLI工具使用。
-
-!!! tip "uv vs pip 主要区别"
-    - **uv 方式**：自动管理虚拟环境，使用 `uv run` 命令即可运行，推荐使用
-    - **pip 方式**：需要手动激活虚拟环境，适合熟悉传统 Python 工具链的用户
-    - **生产环境**：推荐使用 `gunicorn` 启动，性能更好，支持多进程
-    - **开发环境**：可以使用 `python -m` 启动，便于调试
 
 ### 方式 1：使用 uv 包管理器（推荐）
 
@@ -237,7 +222,7 @@ uv 是现代化的 Python 包管理器，安装速度更快，依赖解析更准
 !!! warning "系统要求"
     需要满足 Docker 20.10+ 和 Docker Compose 2.0+ 版本要求。
 
-### 方式 A：全自动一键部署（推荐）
+### 方式 1：全自动一键部署（推荐）
 
 最快的方式，最小化用户交互。 
 
@@ -296,7 +281,7 @@ Stop services: docker compose down
 
 ---
 
-### 方式 B：半自动设置
+### 方式 2：半自动设置
 
 更多控制权，同时自动化繁琐部分。
 
