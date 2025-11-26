@@ -237,7 +237,7 @@ curl -X POST \
       "device_type": "cisco_ios"
     }
   }' \
-  http://localhost:9000/device/test-connection
+  http://localhost:9000/device/test
 ```
 
 ### 性能相关问题

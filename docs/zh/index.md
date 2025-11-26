@@ -122,7 +122,7 @@ bash ./scripts/docker_auto_deploy.sh
 ## 常见问题快速解答
 
 **Q: 设备操作是同步还是异步？**  
-A: 设备操作（`/device/exec`、`/device/bulk`）是异步的，需要查询任务状态获取结果。只有 `/device/test-connection` 是同步的。
+A: 设备操作（`/device/exec`、`/device/bulk`）是异步的，需要查询任务状态获取结果。只有 `/device/test` 是同步的。
 
 **Q: 如何选择合适的驱动？**  
 A: Linux服务器用Paramiko，Arista设备用PyEAPI，需要配置回滚用NAPALM，其他场景用Netmiko（推荐）。

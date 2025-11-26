@@ -139,7 +139,7 @@ NetPulse 采用异步任务处理机制，支持大规模并发操作和任务�
     所有设备操作（`/device/exec`、`/device/bulk`）都是异步的：
     - API 立即返回任务ID和状态（通常是 `queued`）
     - 需要通过 `/job?id=xxx` 接口查询执行结果
-    - 只有 `/device/test-connection` 是同步的，立即返回结果
+    - 只有 `/device/test` 是同步的，立即返回结果
 
 #### 任务生命周期
 

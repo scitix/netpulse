@@ -146,7 +146,7 @@ NetPulse adopts an asynchronous task processing mechanism, supporting large-scal
     All device operations (`/device/exec`, `/device/bulk`) are asynchronous:
     - API immediately returns job ID and status (usually `queued`)
     - Need to query execution results through `/job?id=xxx` interface
-    - Only `/device/test-connection` is synchronous, returns results immediately
+    - Only `/device/test` is synchronous, returns results immediately
 
 #### Job Lifecycle
 

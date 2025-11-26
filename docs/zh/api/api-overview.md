@@ -56,7 +56,7 @@ NetPulse 提供以下API端点，所有端点都需要API Key认证。
 | **设备操作** | | | |
 | `POST` | `/device/exec` | 设备操作（查询/配置）⭐推荐 | [设备操作 API](./device-api.md) |
 | `POST` | `/device/bulk` | 批量设备操作 | [设备操作 API](./device-api.md) |
-| `POST` | `/device/test-connection` | 设备连接测试 | [设备操作 API](./device-api.md) |
+| `POST` | `/device/test` | 设备连接测试 | [设备操作 API](./device-api.md) |
 | **模板操作** | | | |
 | `POST` | `/template/render` | 模板渲染（自动识别引擎） | [模板操作 API](./template-api.md) |
 | `POST` | `/template/render/{name}` | 使用指定引擎渲染 | [模板操作 API](./template-api.md) |
@@ -77,7 +77,7 @@ NetPulse 提供以下API端点，所有端点都需要API Key认证。
 **主要端点**：
 - `POST /device/exec` - 统一设备操作（自动识别查询/配置）
 - `POST /device/bulk` - 批量设备操作
-- `POST /device/test-connection` - 设备连接测试
+- `POST /device/test` - 设备连接测试
 
 **支持的驱动**：
 - Netmiko (SSH) - 通用SSH连接
@@ -254,7 +254,7 @@ curl -X POST -H "Content-Type: application/json" \
       "password": "password"
     }
   }' \
-  http://localhost:9000/device/test-connection
+  http://localhost:9000/device/test
 ```
 
 ### 3. 执行简单查询

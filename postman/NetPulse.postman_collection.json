@@ -503,13 +503,13 @@
 							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 30\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/device/test-connection",
+							"raw": "{{base_url}}/device/test",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"device",
-								"test-connection"
+								"test"
 							]
 						},
 						"description": "Netmiko基础连接测试 - 验证SSH连接和认证"
@@ -531,13 +531,13 @@
 							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\",\n    \"port\": 22,\n    \"timeout\": 60,\n    \"keepalive\": 30,\n    \"global_delay_factor\": 2,\n    \"fast_cli\": false,\n    \"verbose\": true\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/device/test-connection",
+							"raw": "{{base_url}}/device/test",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"device",
-								"test-connection"
+								"test"
 							]
 						},
 						"description": "Netmiko完整参数连接测试 - 包含所有常用连接参数"
@@ -559,13 +559,13 @@
 							"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"arista_eos\",\n    \"hostname\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 60,\n    \"optional_args\": {\n      \"port\": 22,\n      \"secret\": \"{{enable_password}}\",\n      \"transport\": \"ssh\"\n    }\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/device/test-connection",
+							"raw": "{{base_url}}/device/test",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"device",
-								"test-connection"
+								"test"
 							]
 						},
 						"description": "NAPALM iOS设备连接测试"
@@ -587,13 +587,13 @@
 							"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443,\n    \"timeout\": 30\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/device/test-connection",
+							"raw": "{{base_url}}/device/test",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"device",
-								"test-connection"
+								"test"
 							]
 						},
 						"description": "PyEAPI Arista设备连接测试 - HTTP/HTTPS API"
@@ -615,13 +615,13 @@
 							"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22,\n    \"timeout\": 30.0,\n    \"host_key_policy\": \"auto_add\"\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/device/test-connection",
+							"raw": "{{base_url}}/device/test",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"device",
-								"test-connection"
+								"test"
 							]
 						},
 						"description": "Paramiko Linux服务器连接测试 - 密码认证"
@@ -643,13 +643,13 @@
 							"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"key_filename\": \"/path/to/private_key\",\n    \"passphrase\": \"{{key_passphrase}}\",\n    \"port\": 22,\n    \"timeout\": 30.0\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/device/test-connection",
+							"raw": "{{base_url}}/device/test",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"device",
-								"test-connection"
+								"test"
 							]
 						},
 						"description": "Paramiko Linux服务器连接测试 - 密钥文件认证"

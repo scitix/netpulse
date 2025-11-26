@@ -74,7 +74,7 @@ class NetworkDiscovery:
         }
         
         response = requests.post(
-            f"{self.base_url}/device/test-connection",
+            f"{self.base_url}/device/test",
             json=payload,
             headers=self.headers
         )
@@ -633,7 +633,7 @@ class DeviceMonitor:
         }
         
         response = requests.post(
-            f"{self.base_url}/device/test-connection",
+            f"{self.base_url}/device/test",
             json=payload,
             headers=self.headers
         )

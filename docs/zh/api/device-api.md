@@ -88,14 +88,14 @@ curl -X POST "http://localhost:9000/device/bulk" \
   }'
 ```
 
-### POST /device/test-connection
+### POST /device/test
 
 测试设备连接状态，用于验证设备连接和认证的可用性。支持Netmiko、NAPALM、PyEAPI和Paramiko等不同驱动类型。
 
 **请求示例**:
 
 ```bash
-curl -X POST "http://localhost:9000/device/test-connection" \
+curl -X POST "http://localhost:9000/device/test" \
   -H "X-API-KEY: your_key" \
   -H "Content-Type: application/json" \
   -d '{

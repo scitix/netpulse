@@ -134,7 +134,7 @@ curl -X POST \
       "device_type": "cisco_ios"
     }
   }' \
-  http://localhost:9000/device/test-connection
+  http://localhost:9000/device/test
 ```
 
 **Connection Parameter Description:**
@@ -211,7 +211,7 @@ echo "$response" | jq '.'
     All device operations (`/device/exec`, `/device/bulk`) are asynchronous:
     1. API immediately returns task ID and status (usually `queued`)
     2. Need to query execution results through `/job?id=xxx` interface
-    3. Only `/device/test-connection` is synchronous and returns results immediately
+    3. Only `/device/test` is synchronous and returns results immediately
     
     **Query Task Results:**
     ```bash
