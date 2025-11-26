@@ -1,7 +1,7 @@
 {
 	"info": {
 		"_postman_id": "d1f438db-a94c-400d-9709-dea8a05935cd",
-		"name": "NetPulse API Collection -v 0.2",
+		"name": "NetPulse API Collection v0.3.0",
 		"description": "NetPulse 网络设备管理 API",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "7085138"
@@ -686,7 +686,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "最简单的单命令查询 - 不使用任何高级参数"
@@ -705,7 +705,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show ip interface brief\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 180\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show ip interface brief\",\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 180\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -714,7 +714,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "使用FIFO队列策略的基础查询"
@@ -733,7 +733,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show interfaces status\",\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show interfaces status\",\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 300\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -742,7 +742,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "使用设备绑定队列策略的基础查询 - 连接复用"
@@ -761,7 +761,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 120,\n    \"global_delay_factor\": 3\n  },\n  \"command\": \"show running-config\",\n  \"driver_args\": {\n    \"read_timeout\": 120,\n    \"delay_factor\": 4,\n    \"max_loops\": 1000,\n    \"auto_find_prompt\": true,\n    \"strip_prompt\": true,\n    \"cmd_verify\": false\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 120,\n    \"global_delay_factor\": 3\n  },\n  \"command\": \"show running-config\",\n  \"driver_args\": {\n    \"read_timeout\": 120,\n    \"delay_factor\": 4,\n    \"max_loops\": 1000,\n    \"auto_find_prompt\": true,\n    \"strip_prompt\": true,\n    \"cmd_verify\": false\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 600\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -770,7 +770,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "针对慢速设备或大量输出的优化配置"
@@ -789,7 +789,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 60,\n    \"keepalive\": 30\n  },\n  \"command\": \"dis cu\",\n  \"driver_args\": {\n    \"read_timeout\": 60,\n    \"delay_factor\": 2,\n    \"max_loops\": 1000,\n    \"auto_find_prompt\": true,\n    \"strip_prompt\": true,\n    \"strip_command\": true,\n    \"normalize\": true,\n    \"cmd_verify\": false\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 60,\n    \"keepalive\": 30\n  },\n  \"command\": \"dis cu\",\n  \"driver_args\": {\n    \"read_timeout\": 60,\n    \"delay_factor\": 2,\n    \"max_loops\": 1000,\n    \"auto_find_prompt\": true,\n    \"strip_prompt\": true,\n    \"strip_command\": true,\n    \"normalize\": true,\n    \"cmd_verify\": false\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 600\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -798,7 +798,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "高级单命令查询 - 使用driver_args优化大输出命令"
@@ -817,7 +817,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show ip interface brief\",\n  \"driver_args\": {\n    \"read_timeout\": 30,\n    \"strip_prompt\": true,\n    \"strip_command\": true,\n    \"normalize\": true\n  },\n  \"options\": {\n    \"parsing\": {\n      \"name\": \"textfsm\",\n      \"template\": \"cisco_ios_show_ip_interface_brief.textfsm\"\n    },\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show ip interface brief\",\n  \"driver_args\": {\n    \"read_timeout\": 30,\n    \"strip_prompt\": true,\n    \"strip_command\": true,\n    \"normalize\": true\n  },\n  \"parsing\": {\n    \"name\": \"textfsm\",\n    \"template\": \"cisco_ios_show_ip_interface_brief.textfsm\"\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 300\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -826,7 +826,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "带TextFSM解析的查询 - 结构化输出"
@@ -845,7 +845,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"display version\",\n  \"driver_args\": {\n    \"read_timeout\": 45,\n    \"strip_prompt\": true,\n    \"normalize\": true\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300,\n    \"webhook\": {\n      \"name\": \"basic\",\n      \"url\": \"http://127.0.0.1:8888/webhook\", //根据实际情况修改\n      \"method\": \"POST\",\n      \"headers\": {\n        \"Content-Type\": \"application/json\"\n      },\n      \"timeout\": 30\n    }\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"display version\",\n  \"driver_args\": {\n    \"read_timeout\": 45,\n    \"strip_prompt\": true,\n    \"normalize\": true\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 300,\n  \"webhook\": {\n    \"name\": \"basic\",\n    \"url\": \"http://127.0.0.1:8888/webhook\",\n    \"method\": \"POST\",\n    \"headers\": {\n      \"Content-Type\": \"application/json\"\n    },\n    \"timeout\": 30\n  }\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -854,7 +854,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "带Webhook回调的查询 - 自动推送结果到外部系统"
@@ -879,7 +879,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [\n    \"show version\",\n    \"show ip interface brief\",\n    \"show interfaces status\"\n  ],\n  \"options\": {\n    \"queue_strategy\": \"pinned\", // 可选，netmiko驱动默认为pinned\n    \"ttl\": 300\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [\n    \"show version\",\n    \"show ip interface brief\",\n    \"show interfaces status\"\n  ],\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 300\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -888,7 +888,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "基础多命令查询 - 设备基本信息收集"
@@ -907,7 +907,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 90,\n    \"keepalive\": 60\n  },\n  \"command\": [\n    \"show version\",\n    \"show ip interface brief\",\n    \"show vlan brief\",\n    \"show spanning-tree summary\",\n    \"show mac address-table count\",\n    \"show processes cpu\",\n    \"show memory statistics\"\n  ],\n  \"driver_args\": {\n    \"read_timeout\": 45,\n    \"delay_factor\": 1.5,\n    \"auto_find_prompt\": true,\n    \"strip_prompt\": true,\n    \"strip_command\": true,\n    \"normalize\": true,\n    \"cmd_verify\": true\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 90,\n    \"keepalive\": 60\n  },\n  \"command\": [\n    \"show version\",\n    \"show ip interface brief\",\n    \"show vlan brief\",\n    \"show spanning-tree summary\",\n    \"show mac address-table count\",\n    \"show processes cpu\",\n    \"show memory statistics\"\n  ],\n  \"driver_args\": {\n    \"read_timeout\": 45,\n    \"delay_factor\": 1.5,\n    \"auto_find_prompt\": true,\n    \"strip_prompt\": true,\n    \"strip_command\": true,\n    \"normalize\": true,\n    \"cmd_verify\": true\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 600\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -916,7 +916,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "优化的多命令查询 - 完整设备状态收集"
@@ -935,7 +935,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [\n    \"show ip route summary\",\n    \"show ip arp\",\n    \"show cdp neighbors detail\",\n    \"show lldp neighbors detail\",\n    \"show interface counters errors\",\n    \"show logging | include ERROR|WARN\"\n  ],\n  \"driver_args\": {\n    \"read_timeout\": 60,\n    \"delay_factor\": 2,\n    \"strip_prompt\": true,\n    \"normalize\": true\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 450\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [\n    \"show ip route summary\",\n    \"show ip arp\",\n    \"show cdp neighbors detail\",\n    \"show lldp neighbors detail\",\n    \"show interface counters errors\",\n    \"show logging | include ERROR|WARN\"\n  ],\n  \"driver_args\": {\n    \"read_timeout\": 60,\n    \"delay_factor\": 2,\n    \"strip_prompt\": true,\n    \"normalize\": true\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 450\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -944,7 +944,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "网络诊断多命令组合 - 全面网络状态检查"
@@ -963,7 +963,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [\n    \"show running-config | include aaa|login|enable|service\",\n    \"show users\",\n    \"show privilege\",\n    \"show access-lists\",\n    \"show ip ssh\",\n    \"show snmp community\",\n    \"show logging\"\n  ],\n  \"driver_args\": {\n    \"read_timeout\": 60,\n    \"delay_factor\": 2,\n    \"strip_prompt\": true,\n    \"strip_command\": true,\n    \"normalize\": true\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600,\n    \"webhook\": {\n      \"url\": \"https://security-audit.company.com/device-scan\",\n      \"method\": \"POST\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {{security_token}}\"\n      }\n    }\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [\n    \"show running-config | include aaa|login|enable|service\",\n    \"show users\",\n    \"show privilege\",\n    \"show access-lists\",\n    \"show ip ssh\",\n    \"show snmp community\",\n    \"show logging\"\n  ],\n  \"driver_args\": {\n    \"read_timeout\": 60,\n    \"delay_factor\": 2,\n    \"strip_prompt\": true,\n    \"strip_command\": true,\n    \"normalize\": true\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 600,\n  \"webhook\": {\n    \"url\": \"https://security-audit.company.com/device-scan\",\n    \"method\": \"POST\",\n    \"headers\": {\n      \"Authorization\": \"Bearer {{security_token}}\"\n    }\n  }\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -972,7 +972,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "安全审计多命令组合 - 收集安全配置信息"
@@ -1003,7 +1003,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": \"hostname NetPulse-SW01\",\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": \"hostname NetPulse-SW01\",\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 300\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1012,7 +1012,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "最简单的单配置推送 - 修改主机名"
@@ -1031,7 +1031,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": \"ip domain-name company.local\",\n  \"driver_args\": {\n    \"exit_config_mode\": true,\n    \"enter_config_mode\": true,\n    \"cmd_verify\": true,\n    \"delay_factor\": 1,\n    \"error_pattern\": \"% Invalid|% Error\"\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": \"ip domain-name company.local\",\n  \"driver_args\": {\n    \"exit_config_mode\": true,\n    \"enter_config_mode\": true,\n    \"cmd_verify\": true,\n    \"delay_factor\": 1,\n    \"error_pattern\": \"% Invalid|% Error\"\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 300\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1040,7 +1040,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "带driver_args的基础配置 - 错误检测和模式控制"
@@ -1065,7 +1065,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": [\n    \"interface GigabitEthernet0/1\",\n    \"description Server Connection\",\n    \"switchport mode access\",\n    \"switchport access vlan 100\",\n    \"no shutdown\"\n  ],\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": [\n    \"interface GigabitEthernet0/1\",\n    \"description Server Connection\",\n    \"switchport mode access\",\n    \"switchport access vlan 100\",\n    \"no shutdown\"\n  ],\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 300\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1074,7 +1074,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "基础接口配置 - 单个接口设置"
@@ -1093,7 +1093,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": [\n    \"interface range GigabitEthernet0/1-10\",\n    \"description User Ports\",\n    \"switchport mode access\",\n    \"switchport access vlan 200\",\n    \"spanning-tree portfast\",\n    \"spanning-tree bpduguard enable\",\n    \"no shutdown\"\n  ],\n  \"driver_args\": {\n    \"exit_config_mode\": true,\n    \"enter_config_mode\": true,\n    \"cmd_verify\": true,\n    \"delay_factor\": 2,\n    \"read_timeout\": 60,\n    \"error_pattern\": \"% Invalid|% Error|% Bad\"\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": [\n    \"interface range GigabitEthernet0/1-10\",\n    \"description User Ports\",\n    \"switchport mode access\",\n    \"switchport access vlan 200\",\n    \"spanning-tree portfast\",\n    \"spanning-tree bpduguard enable\",\n    \"no shutdown\"\n  ],\n  \"driver_args\": {\n    \"exit_config_mode\": true,\n    \"enter_config_mode\": true,\n    \"cmd_verify\": true,\n    \"delay_factor\": 2,\n    \"read_timeout\": 60,\n    \"error_pattern\": \"% Invalid|% Error|% Bad\"\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 600\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1102,7 +1102,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "批量接口配置 - 范围配置和安全特性"
@@ -1121,7 +1121,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": [\n    \"interface range GigabitEthernet0/1-10\",\n    \"description Batch Configuration by NetPulse\",\n    \"switchport mode access\",\n    \"switchport access vlan 200\",\n    \"spanning-tree portfast\",\n    \"no shutdown\"\n  ],\n  \"driver_args\": {\n    \"exit_config_mode\": true,\n    \"config_mode_command\": \"configure terminal\",\n    \"enter_config_mode\": true,\n    \"cmd_verify\": true,\n    \"delay_factor\": 2,\n    \"read_timeout\": 60,\n    \"error_pattern\": \"% Invalid|% Error|% Bad\",\n    \"terminator\": \"#\",\n    \"strip_prompt\": false,\n    \"strip_command\": false\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600,\n    \"webhook\": {\n      \"url\": \"https://config-mgmt.company.com/callback\",\n      \"method\": \"POST\"\n    }\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": [\n    \"interface range GigabitEthernet0/1-10\",\n    \"description Batch Configuration by NetPulse\",\n    \"switchport mode access\",\n    \"switchport access vlan 200\",\n    \"spanning-tree portfast\",\n    \"no shutdown\"\n  ],\n  \"driver_args\": {\n    \"exit_config_mode\": true,\n    \"config_mode_command\": \"configure terminal\",\n    \"enter_config_mode\": true,\n    \"cmd_verify\": true,\n    \"delay_factor\": 2,\n    \"read_timeout\": 60,\n    \"error_pattern\": \"% Invalid|% Error|% Bad\",\n    \"terminator\": \"#\",\n    \"strip_prompt\": false,\n    \"strip_command\": false\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 600,\n  \"webhook\": {\n    \"url\": \"https://config-mgmt.company.com/callback\",\n    \"method\": \"POST\"\n  }\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1130,7 +1130,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "高级配置推送，包含driver_args配置和webhook回调"
@@ -1149,7 +1149,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": [\n    \"ntp server 8.8.8.8\",\n    \"ntp server 8.8.4.4\",\n    \"logging host 192.168.1.100\",\n    \"logging trap informational\",\n    \"snmp-server community public RO\",\n    \"snmp-server location Datacenter-Rack01\",\n    \"snmp-server contact admin@company.com\",\n    \"ip domain-name company.local\",\n    \"clock timezone EST -5\",\n    \"service timestamps log datetime msec\"\n  ],\n  \"driver_args\": {\n    \"exit_config_mode\": true,\n    \"enter_config_mode\": true,\n    \"cmd_verify\": true,\n    \"delay_factor\": 1,\n    \"read_timeout\": 45,\n    \"error_pattern\": \"% Invalid|% Error\",\n    \"strip_prompt\": false,\n    \"strip_command\": false\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600,\n    \"webhook\": {\n      \"url\": \"https://config-mgmt.company.com/device-config\",\n      \"method\": \"POST\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {{config_token}}\"\n      }\n    }\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": [\n    \"ntp server 8.8.8.8\",\n    \"ntp server 8.8.4.4\",\n    \"logging host 192.168.1.100\",\n    \"logging trap informational\",\n    \"snmp-server community public RO\",\n    \"snmp-server location Datacenter-Rack01\",\n    \"snmp-server contact admin@company.com\",\n    \"ip domain-name company.local\",\n    \"clock timezone EST -5\",\n    \"service timestamps log datetime msec\"\n  ],\n  \"driver_args\": {\n    \"exit_config_mode\": true,\n    \"enter_config_mode\": true,\n    \"cmd_verify\": true,\n    \"delay_factor\": 1,\n    \"read_timeout\": 45,\n    \"error_pattern\": \"% Invalid|% Error\",\n    \"strip_prompt\": false,\n    \"strip_command\": false\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 600,\n  \"webhook\": {\n    \"url\": \"https://config-mgmt.company.com/device-config\",\n    \"method\": \"POST\",\n    \"headers\": {\n      \"Authorization\": \"Bearer {{config_token}}\"\n    }\n  }\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1158,7 +1158,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "系统级配置推送 - NTP、日志、SNMP等基础设施"
@@ -1177,7 +1177,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": [\n    \"ip access-list extended MANAGEMENT_ACCESS\",\n    \"permit tcp 192.168.1.0 0.0.0.255 any eq 22\",\n    \"permit tcp 192.168.1.0 0.0.0.255 any eq 443\",\n    \"permit icmp 192.168.1.0 0.0.0.255 any\",\n    \"deny ip any any log\",\n    \"exit\",\n    \"line vty 0 4\",\n    \"access-class MANAGEMENT_ACCESS in\",\n    \"transport input ssh\",\n    \"exit\",\n    \"ip ssh version 2\",\n    \"ip ssh time-out 60\",\n    \"ip ssh authentication-retries 3\"\n  ],\n  \"driver_args\": {\n    \"exit_config_mode\": true,\n    \"enter_config_mode\": true,\n    \"cmd_verify\": true,\n    \"delay_factor\": 2,\n    \"read_timeout\": 60,\n    \"error_pattern\": \"% Invalid|% Error|% Incomplete\"\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"config\": [\n    \"ip access-list extended MANAGEMENT_ACCESS\",\n    \"permit tcp 192.168.1.0 0.0.0.255 any eq 22\",\n    \"permit tcp 192.168.1.0 0.0.0.255 any eq 443\",\n    \"permit icmp 192.168.1.0 0.0.0.255 any\",\n    \"deny ip any any log\",\n    \"exit\",\n    \"line vty 0 4\",\n    \"access-class MANAGEMENT_ACCESS in\",\n    \"transport input ssh\",\n    \"exit\",\n    \"ip ssh version 2\",\n    \"ip ssh time-out 60\",\n    \"ip ssh authentication-retries 3\"\n  ],\n  \"driver_args\": {\n    \"exit_config_mode\": true,\n    \"enter_config_mode\": true,\n    \"cmd_verify\": true,\n    \"delay_factor\": 2,\n    \"read_timeout\": 60,\n    \"error_pattern\": \"% Invalid|% Error|% Incomplete\"\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 600\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1186,7 +1186,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "安全配置推送 - ACL和SSH安全设置"
@@ -1217,7 +1217,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"eos\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"get_facts\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
+									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"eos\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"get_facts\",\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 300\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1226,7 +1226,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "NAPALM基础设备事实收集 - 跨厂商标准化"
@@ -1245,7 +1245,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"ios\",\n    \"hostname\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 60,\n    \"optional_args\": {\n      \"port\": 22,\n      \"secret\": \"{{enable_password}}\"\n    }\n  },\n  \"command\": [\n    \"get_facts\",\n    \"get_interfaces\",\n    \"get_interfaces_ip\",\n    \"get_arp_table\",\n    \"get_mac_address_table\"\n  ],\n  \"driver_args\": {\n    \"retrieve\": \"all\",\n    \"full\": true,\n    \"sanitized\": false\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 600\n  }\n}"
+									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"ios\",\n    \"hostname\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 60,\n    \"optional_args\": {\n      \"port\": 22,\n      \"secret\": \"{{enable_password}}\"\n    }\n  },\n  \"command\": [\n    \"get_facts\",\n    \"get_interfaces\",\n    \"get_interfaces_ip\",\n    \"get_arp_table\",\n    \"get_mac_address_table\"\n  ],\n  \"driver_args\": {\n    \"retrieve\": \"all\",\n    \"full\": true,\n    \"sanitized\": false\n  },\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 600\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1254,7 +1254,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "NAPALM多方法组合查询 - 全面设备状态收集"
@@ -1273,7 +1273,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"iosxr\",\n    \"hostname\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"optional_args\": {\n      \"port\": 22,\n      \"secret\": \"{{enable_password}}\"\n    }\n  },\n  \"command\": [\n    \"get_route_to\",\n    \"get_bgp_neighbors\",\n    \"get_bgp_neighbors_detail\"\n  ],\n  \"driver_args\": {\n    \"destination\": \"8.8.8.8\",\n    \"protocol\": \"ipv4\"\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 450\n  }\n}"
+									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"iosxr\",\n    \"hostname\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"optional_args\": {\n      \"port\": 22,\n      \"secret\": \"{{enable_password}}\"\n    }\n  },\n  \"command\": [\n    \"get_route_to\",\n    \"get_bgp_neighbors\",\n    \"get_bgp_neighbors_detail\"\n  ],\n  \"driver_args\": {\n    \"destination\": \"8.8.8.8\",\n    \"protocol\": \"ipv4\"\n  },\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 450\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1282,7 +1282,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "NAPALM路由和BGP信息查询 - 网络协议状态"
@@ -1307,7 +1307,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"ios\",\n    \"hostname\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"optional_args\": {\n      \"secret\": \"{{enable_password}}\"\n    }\n  },\n  \"config\": \"hostname NAPALM-Test-Device\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
+									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"ios\",\n    \"hostname\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"optional_args\": {\n      \"secret\": \"{{enable_password}}\"\n    }\n  },\n  \"config\": \"hostname NAPALM-Test-Device\",\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 300\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1316,7 +1316,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "NAPALM基础配置推送 - 单命令配置"
@@ -1335,7 +1335,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"ios\",\n    \"hostname\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"optional_args\": {\n      \"secret\": \"{{enable_password}}\"\n    }\n  },\n  \"config\": [\n    \"interface GigabitEthernet0/1\",\n    \"description NAPALM Configured Interface\",\n    \"ip address 192.168.100.1 255.255.255.0\",\n    \"no shutdown\"\n  ],\n  \"driver_args\": {\n    \"commit_message\": \"NAPALM interface configuration\",\n    \"confirm\": 60,\n    \"comment\": \"NetPulse automated config\"\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 600\n  }\n}"
+									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"ios\",\n    \"hostname\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"optional_args\": {\n      \"secret\": \"{{enable_password}}\"\n    }\n  },\n  \"config\": [\n    \"interface GigabitEthernet0/1\",\n    \"description NAPALM Configured Interface\",\n    \"ip address 192.168.100.1 255.255.255.0\",\n    \"no shutdown\"\n  ],\n  \"driver_args\": {\n    \"commit_message\": \"NAPALM interface configuration\",\n    \"confirm\": 60,\n    \"comment\": \"NetPulse automated config\"\n  },\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 600\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1344,7 +1344,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "NAPALM接口配置 - 使用commit参数和确认机制"
@@ -1363,7 +1363,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"junos\",\n    \"hostname\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"config\": {\n    \"snmp\": {\n      \"community\": \"napalm_ro\",\n      \"location\": \"Datacenter-01\",\n      \"contact\": \"netops@company.com\"\n    },\n    \"ntp\": {\n      \"servers\": [\"8.8.8.8\", \"8.8.4.4\"]\n    }\n  },\n  \"driver_args\": {\n    \"replace\": true,\n    \"commit_message\": \"NAPALM configuration replacement\",\n    \"confirm\": 120\n  },\n  \"options\": {\n    \"rendering\": {\n      \"name\": \"jinja2\",\n      \"template\": \"snmp community {{ snmp.community }} authorization read-only\\nsnmp location {{ snmp.location }}\\nsnmp contact {{ snmp.contact }}\\n{% for server in ntp.servers %}ntp server {{ server }}\\n{% endfor %}\"\n    },\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 600\n  }\n}"
+									"raw": "{\n  \"driver\": \"napalm\",\n  \"connection_args\": {\n    \"device_type\": \"junos\",\n    \"hostname\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"config\": {\n    \"snmp\": {\n      \"community\": \"napalm_ro\",\n      \"location\": \"Datacenter-01\",\n      \"contact\": \"netops@company.com\"\n    },\n    \"ntp\": {\n      \"servers\": [\n        \"8.8.8.8\",\n        \"8.8.4.4\"\n      ]\n    }\n  },\n  \"driver_args\": {\n    \"replace\": true,\n    \"commit_message\": \"NAPALM configuration replacement\",\n    \"confirm\": 120\n  },\n  \"rendering\": {\n    \"name\": \"jinja2\",\n    \"template\": \"snmp community {{ snmp.community }} authorization read-only\\nsnmp location {{ snmp.location }}\\nsnmp contact {{ snmp.contact }}\\n{% for server in ntp.servers %}ntp server {{ server }}\\n{% endfor %}\"\n  },\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 600\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1372,7 +1372,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "NAPALM配置替换 - 使用模板渲染和replace模式"
@@ -1403,7 +1403,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host_2}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"command\": \"show version\",\n  \"driver_args\": {\n    \"encoding\": \"json\",\n    \"format\": \"json\"\n  },\n  // options 可选 pyeapi会默认用fifo worker\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
+									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host_2}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"command\": \"show version\",\n  \"driver_args\": {\n    \"encoding\": \"json\",\n    \"format\": \"json\"\n  },\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 300\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1412,7 +1412,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "PyEAPI基础查询 - JSON格式输出"
@@ -1431,7 +1431,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443,\n    \"timeout\": 60\n  },\n  \"command\": [\n    \"show version\",\n    \"show interfaces status\",\n    \"show ip interface brief\",\n    \"show vlan brief\",\n    \"show mac address-table\"\n  ],\n  \"driver_args\": {\n    \"encoding\": \"json\",\n    \"format\": \"json\",\n    \"timestamps\": true\n  },\n  // options 可选 pyeapi会默认用fifo worker\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 600\n  }\n}"
+									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443,\n    \"timeout\": 60\n  },\n  \"command\": [\n    \"show version\",\n    \"show interfaces status\",\n    \"show ip interface brief\",\n    \"show vlan brief\",\n    \"show mac address-table\"\n  ],\n  \"driver_args\": {\n    \"encoding\": \"json\",\n    \"format\": \"json\",\n    \"timestamps\": true\n  },\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 600\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1440,7 +1440,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "PyEAPI多命令JSON查询 - 结构化数据收集"
@@ -1459,7 +1459,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"command\": \"show interfaces ethernet status\",\n  \"driver_args\": {\n    \"encoding\": \"json\",\n    \"format\": \"json\",\n    \"expand\": true,\n    \"detail\": true\n  },\n  \"options\": {\n    \"parsing\": {\n      \"name\": \"json\",\n      \"path\": \"interfaceStatuses\"\n    },\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300,\n    \"webhook\": {\n      \"url\": \"https://monitoring.company.com/arista-interfaces\",\n      \"method\": \"POST\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {{api_token}}\"\n      }\n    }\n  }\n}"
+									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"command\": \"show interfaces ethernet status\",\n  \"driver_args\": {\n    \"encoding\": \"json\",\n    \"format\": \"json\",\n    \"expand\": true,\n    \"detail\": true\n  },\n  \"parsing\": {\n    \"name\": \"json\",\n    \"path\": \"interfaceStatuses\"\n  },\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 300,\n  \"webhook\": {\n    \"url\": \"https://monitoring.company.com/arista-interfaces\",\n    \"method\": \"POST\",\n    \"headers\": {\n      \"Authorization\": \"Bearer {{api_token}}\"\n    }\n  }\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1468,7 +1468,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "PyEAPI高级查询 - JSON解析和webhook集成"
@@ -1493,7 +1493,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"config\": \"hostname PyEAPI-Test-Switch\",\n  \"driver_args\": {\n    \"format\": \"text\",\n    \"autoComplete\": true\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
+									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"config\": \"hostname PyEAPI-Test-Switch\",\n  \"driver_args\": {\n    \"format\": \"text\",\n    \"autoComplete\": true\n  },\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 300\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1502,7 +1502,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "PyEAPI基础配置推送 - 单命令配置"
@@ -1521,7 +1521,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"config\": [\n    \"vlan 100\",\n    \"name DATA_VLAN\",\n    \"vlan 200\",\n    \"name VOICE_VLAN\",\n    \"vlan 300\",\n    \"name GUEST_VLAN\",\n    \"interface range Ethernet1-10\",\n    \"switchport mode access\",\n    \"switchport access vlan 100\"\n  ],\n  \"driver_args\": {\n    \"format\": \"text\",\n    \"autoComplete\": true,\n    \"expandAliases\": true\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 600\n  }\n}"
+									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"config\": [\n    \"vlan 100\",\n    \"name DATA_VLAN\",\n    \"vlan 200\",\n    \"name VOICE_VLAN\",\n    \"vlan 300\",\n    \"name GUEST_VLAN\",\n    \"interface range Ethernet1-10\",\n    \"switchport mode access\",\n    \"switchport access vlan 100\"\n  ],\n  \"driver_args\": {\n    \"format\": \"text\",\n    \"autoComplete\": true,\n    \"expandAliases\": true\n  },\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 600\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1530,7 +1530,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "PyEAPI VLAN和接口批量配置 - Arista特性"
@@ -1549,7 +1549,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"config\": {\n    \"local_asn\": 65001,\n    \"router_id\": \"1.1.1.1\",\n    \"neighbors\": [\n      {\"ip\": \"10.1.1.2\", \"asn\": 65002, \"description\": \"Peer-1\"},\n      {\"ip\": \"10.1.1.3\", \"asn\": 65003, \"description\": \"Peer-2\"}\n    ]\n  },\n  \"driver_args\": {\n    \"format\": \"text\",\n    \"autoComplete\": true\n  },\n  \"options\": {\n    \"rendering\": {\n      \"name\": \"jinja2\",\n      \"template\": \"router bgp {{ local_asn }}\\n router-id {{ router_id }}\\n{% for neighbor in neighbors %}\\n neighbor {{ neighbor.ip }} remote-as {{ neighbor.asn }}\\n neighbor {{ neighbor.ip }} description {{ neighbor.description }}\\n{% endfor %}\"\n    },\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 600\n  }\n}"
+									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"config\": {\n    \"local_asn\": 65001,\n    \"router_id\": \"1.1.1.1\",\n    \"neighbors\": [\n      {\n        \"ip\": \"10.1.1.2\",\n        \"asn\": 65002,\n        \"description\": \"Peer-1\"\n      },\n      {\n        \"ip\": \"10.1.1.3\",\n        \"asn\": 65003,\n        \"description\": \"Peer-2\"\n      }\n    ]\n  },\n  \"driver_args\": {\n    \"format\": \"text\",\n    \"autoComplete\": true\n  },\n  \"rendering\": {\n    \"name\": \"jinja2\",\n    \"template\": \"router bgp {{ local_asn }}\\n router-id {{ router_id }}\\n{% for neighbor in neighbors %}\\n neighbor {{ neighbor.ip }} remote-as {{ neighbor.asn }}\\n neighbor {{ neighbor.ip }} description {{ neighbor.description }}\\n{% endfor %}\"\n  },\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 600\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1558,7 +1558,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "PyEAPI BGP配置 - 使用Jinja2模板渲染"
@@ -1589,7 +1589,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22,\n    \"timeout\": 30.0\n  },\n  \"command\": \"uname -a\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22,\n    \"timeout\": 30.0\n  },\n  \"command\": \"uname -a\",\n  \"queue_strategy\": \"fifo\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1598,7 +1598,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "Paramiko基础单命令查询 - 系统信息"
@@ -1617,7 +1617,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22\n  },\n  \"command\": [\n    \"uname -a\",\n    \"df -h\",\n    \"free -m\",\n    \"uptime\",\n    \"whoami\"\n  ],\n  \"driver_args\": {\n    \"timeout\": 30.0\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22\n  },\n  \"command\": [\n    \"uname -a\",\n    \"df -h\",\n    \"free -m\",\n    \"uptime\",\n    \"whoami\"\n  ],\n  \"driver_args\": {\n    \"timeout\": 30.0\n  },\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 300\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1626,7 +1626,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "Paramiko多命令查询 - 系统信息采集"
@@ -1645,7 +1645,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"key_filename\": \"/path/to/private_key\",\n    \"passphrase\": \"{{key_passphrase}}\",\n    \"port\": 22\n  },\n  \"command\": \"df -h\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"key_filename\": \"/path/to/private_key\",\n    \"passphrase\": \"{{key_passphrase}}\",\n    \"port\": 22\n  },\n  \"command\": \"df -h\",\n  \"queue_strategy\": \"fifo\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1654,7 +1654,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "Paramiko查询 - 使用密钥文件认证"
@@ -1673,7 +1673,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [\n    \"ip addr show\",\n    \"ip route show\",\n    \"ss -tuln\",\n    \"netstat -rn\"\n  ],\n  \"driver_args\": {\n    \"timeout\": 60.0\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [\n    \"ip addr show\",\n    \"ip route show\",\n    \"ss -tuln\",\n    \"netstat -rn\"\n  ],\n  \"driver_args\": {\n    \"timeout\": 60.0\n  },\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 300\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1682,7 +1682,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "Paramiko网络诊断 - 网络配置和连接状态"
@@ -1707,7 +1707,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"config\": \"echo 'Hello World' > /tmp/test.txt\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"config\": \"echo 'Hello World' > /tmp/test.txt\",\n  \"queue_strategy\": \"fifo\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1716,7 +1716,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "Paramiko基础配置 - 单命令执行"
@@ -1735,7 +1735,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"config\": [\n    \"echo 'server.example.com' > /etc/hostname\",\n    \"systemctl restart hostname\"\n  ],\n  \"driver_args\": {\n    \"sudo\": true,\n    \"sudo_password\": \"{{sudo_password}}\",\n    \"timeout\": 60.0\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 300\n  }\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"config\": [\n    \"echo 'server.example.com' > /etc/hostname\",\n    \"systemctl restart hostname\"\n  ],\n  \"driver_args\": {\n    \"sudo\": true,\n    \"sudo_password\": \"{{sudo_password}}\",\n    \"timeout\": 60.0\n  },\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 300\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1744,7 +1744,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "Paramiko配置操作 - 使用sudo权限执行"
@@ -1763,7 +1763,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"key_filename\": \"/path/to/private_key\"\n  },\n  \"config\": [\n    \"cat > /tmp/config.sh << 'EOF'\",\n    \"#!/bin/bash\",\n    \"echo 'Configuration script'\",\n    \"EOF\",\n    \"chmod +x /tmp/config.sh\"\n  ],\n  \"driver_args\": {\n    \"timeout\": 30.0,\n    \"get_pty\": true\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"key_filename\": \"/path/to/private_key\"\n  },\n  \"config\": [\n    \"cat > /tmp/config.sh << 'EOF'\",\n    \"#!/bin/bash\",\n    \"echo 'Configuration script'\",\n    \"EOF\",\n    \"chmod +x /tmp/config.sh\"\n  ],\n  \"driver_args\": {\n    \"timeout\": 30.0,\n    \"get_pty\": true\n  },\n  \"queue_strategy\": \"fifo\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1772,7 +1772,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "Paramiko多行配置 - 创建脚本文件"
@@ -1797,7 +1797,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22\n  },\n  \"command\": [\"__FILE_TRANSFER__\"],\n  \"driver_args\": {\n    \"file_transfer\": {\n      \"operation\": \"upload\",\n      \"local_path\": \"/local/file.txt\",\n      \"remote_path\": \"/remote/file.txt\",\n      \"resume\": false,\n      \"chunk_size\": 32768\n    }\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22\n  },\n  \"command\": [\n    \"__FILE_TRANSFER__\"\n  ],\n  \"driver_args\": {\n    \"file_transfer\": {\n      \"operation\": \"upload\",\n      \"local_path\": \"/local/file.txt\",\n      \"remote_path\": \"/remote/file.txt\",\n      \"resume\": false,\n      \"chunk_size\": 32768\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1806,7 +1806,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "Paramiko文件上传 - SFTP上传文件到远程服务器"
@@ -1825,7 +1825,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22\n  },\n  \"command\": [\"__FILE_TRANSFER__\"],\n  \"driver_args\": {\n    \"file_transfer\": {\n      \"operation\": \"download\",\n      \"local_path\": \"/local/file.txt\",\n      \"remote_path\": \"/remote/file.txt\",\n      \"resume\": true,\n      \"chunk_size\": 32768\n    }\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"port\": 22\n  },\n  \"command\": [\n    \"__FILE_TRANSFER__\"\n  ],\n  \"driver_args\": {\n    \"file_transfer\": {\n      \"operation\": \"download\",\n      \"local_path\": \"/local/file.txt\",\n      \"remote_path\": \"/remote/file.txt\",\n      \"resume\": true,\n      \"chunk_size\": 32768\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1834,7 +1834,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "Paramiko文件下载 - SFTP从远程服务器下载文件（支持断点续传）"
@@ -1859,7 +1859,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"proxy_host\": \"{{proxy_host}}\",\n    \"proxy_username\": \"{{proxy_username}}\",\n    \"proxy_password\": \"{{proxy_password}}\",\n    \"proxy_port\": 22\n  },\n  \"command\": \"uname -a\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"proxy_host\": \"{{proxy_host}}\",\n    \"proxy_username\": \"{{proxy_username}}\",\n    \"proxy_password\": \"{{proxy_password}}\",\n    \"proxy_port\": 22\n  },\n  \"command\": \"uname -a\",\n  \"queue_strategy\": \"fifo\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1868,7 +1868,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "Paramiko SSH代理连接 - 通过跳板机连接（密码认证）"
@@ -1887,7 +1887,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"key_filename\": \"/path/to/key\",\n    \"proxy_host\": \"{{proxy_host}}\",\n    \"proxy_username\": \"{{proxy_username}}\",\n    \"proxy_key_filename\": \"/path/to/proxy_key\"\n  },\n  \"command\": \"df -h\",\n  \"options\": {\n    \"queue_strategy\": \"fifo\"\n  }\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"key_filename\": \"/path/to/key\",\n    \"proxy_host\": \"{{proxy_host}}\",\n    \"proxy_username\": \"{{proxy_username}}\",\n    \"proxy_key_filename\": \"/path/to/proxy_key\"\n  },\n  \"command\": \"df -h\",\n  \"queue_strategy\": \"fifo\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1896,7 +1896,7 @@
 									],
 									"path": [
 										"device",
-										"execute"
+										"exec"
 									]
 								},
 								"description": "Paramiko SSH代理连接 - 通过跳板机连接（密钥认证）"
@@ -1983,7 +1983,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"localhost\",  // 默认值，仅用于通过验证\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"devices\": [\n    {\"host\": \"{{device_host}}\"},\n    {\"host\": \"{{device_host_2}}\"},\n    {\"host\": \"{{device_host_3}}\"}\n  ],\n  \"command\": [\n    \"show version\",\n    \"show interfaces status\",\n    \"show vlan brief\"\n  ],\n  \"driver_args\": {\n    \"encoding\": \"json\",\n    \"format\": \"json\"\n  },\n  \"options\": {\n    \"queue_strategy\": \"fifo\",\n    \"ttl\": 600\n  }\n}"
+									"raw": "{\n  \"driver\": \"pyeapi\",\n  \"connection_args\": {\n    \"host\": \"localhost\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"transport\": \"https\",\n    \"port\": 443\n  },\n  \"devices\": [\n    {\n      \"host\": \"{{device_host}}\"\n    },\n    {\n      \"host\": \"{{device_host_2}}\"\n    },\n    {\n      \"host\": \"{{device_host_3}}\"\n    }\n  ],\n  \"command\": [\n    \"show version\",\n    \"show interfaces status\",\n    \"show vlan brief\"\n  ],\n  \"driver_args\": {\n    \"encoding\": \"json\",\n    \"format\": \"json\"\n  },\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 600\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/bulk",
@@ -2017,7 +2017,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 60\n  },\n  \"devices\": [\n    {\n      \"host\": \"{{device_host}}\",\n      \"device_type\": \"cisco_ios\",\n      \"site\": \"HQ\",\n      \"role\": \"core\"\n    },\n    {\n      \"host\": \"{{device_host_2}}\",\n      \"device_type\": \"cisco_nxos\",\n      \"site\": \"Branch1\",\n      \"role\": \"access\"\n    },\n    {\n      \"host\": \"{{device_host_3}}\",\n      \"device_type\": \"juniper_junos\",\n      \"site\": \"Branch2\",\n      \"role\": \"edge\"\n    }\n  ],\n  \"command\": \"show version\",\n  \"driver_args\": {\n    \"read_timeout\": 45,\n    \"strip_prompt\": true,\n    \"normalize\": true\n  },\n  \"options\": {\n    \"ttl\": 600,\n    \"webhook\": {\n      \"url\": \"https://inventory.company.com/device-discovery\",\n      \"method\": \"POST\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {{inventory_token}}\"\n      }\n    }\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 60\n  },\n  \"devices\": [\n    {\n      \"host\": \"{{device_host}}\",\n      \"device_type\": \"cisco_ios\",\n      \"site\": \"HQ\",\n      \"role\": \"core\"\n    },\n    {\n      \"host\": \"{{device_host_2}}\",\n      \"device_type\": \"cisco_nxos\",\n      \"site\": \"Branch1\",\n      \"role\": \"access\"\n    },\n    {\n      \"host\": \"{{device_host_3}}\",\n      \"device_type\": \"juniper_junos\",\n      \"site\": \"Branch2\",\n      \"role\": \"edge\"\n    }\n  ],\n  \"command\": \"show version\",\n  \"driver_args\": {\n    \"read_timeout\": 45,\n    \"strip_prompt\": true,\n    \"normalize\": true\n  },\n  \"ttl\": 600,\n  \"webhook\": {\n    \"url\": \"https://inventory.company.com/device-discovery\",\n    \"method\": \"POST\",\n    \"headers\": {\n      \"Authorization\": \"Bearer {{inventory_token}}\"\n    }\n  }\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/bulk",
@@ -2045,7 +2045,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"devices\": [\n    {\n      \"host\": \"{{device_host}}\",\n      \"device_type\": \"cisco_ios\",\n      \"timezone\": \"EST\",\n      \"ntp_server\": \"8.8.8.8\"\n    },\n    {\n      \"host\": \"{{device_host_2}}\",\n      \"device_type\": \"cisco_nxos\",\n      \"timezone\": \"EST\",\n      \"ntp_server\": \"8.8.4.4\"\n    },\n    {\n      \"host\": \"{{device_host_3}}\",\n      \"device_type\": \"arista_eos\",\n      \"timezone\": \"EST\",\n      \"ntp_server\": \"pool.ntp.org\"\n    }\n  ],\n  \"config\": {\n    \"timezone\": \"{{ timezone }}\",\n    \"ntp_server\": \"{{ ntp_server }}\",\n    \"domain_name\": \"company.local\"\n  },\n  \"driver_args\": {\n    \"exit_config_mode\": true,\n    \"enter_config_mode\": true,\n    \"cmd_verify\": true\n  },\n  \"options\": {\n    \"rendering\": {\n      \"name\": \"jinja2\",\n      \"template\": \"{% if 'ios' in ansible_network_os %}clock timezone {{ timezone }} -5{% elif 'nxos' in ansible_network_os %}clock timezone {{ timezone }} -5 0{% elif 'eos' in ansible_network_os %}clock timezone {{ timezone }}{% endif %}\\nntp server {{ ntp_server }}\\nip domain-name {{ domain_name }}\"\n    },\n    \"ttl\": 900\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"secret\": \"{{enable_password}}\"\n  },\n  \"devices\": [\n    {\n      \"host\": \"{{device_host}}\",\n      \"device_type\": \"cisco_ios\",\n      \"timezone\": \"EST\",\n      \"ntp_server\": \"8.8.8.8\"\n    },\n    {\n      \"host\": \"{{device_host_2}}\",\n      \"device_type\": \"cisco_nxos\",\n      \"timezone\": \"EST\",\n      \"ntp_server\": \"8.8.4.4\"\n    },\n    {\n      \"host\": \"{{device_host_3}}\",\n      \"device_type\": \"arista_eos\",\n      \"timezone\": \"EST\",\n      \"ntp_server\": \"pool.ntp.org\"\n    }\n  ],\n  \"config\": {\n    \"timezone\": \"{{ timezone }}\",\n    \"ntp_server\": \"{{ ntp_server }}\",\n    \"domain_name\": \"company.local\"\n  },\n  \"driver_args\": {\n    \"exit_config_mode\": true,\n    \"enter_config_mode\": true,\n    \"cmd_verify\": true\n  },\n  \"rendering\": {\n    \"name\": \"jinja2\",\n    \"template\": \"{% if 'ios' in ansible_network_os %}clock timezone {{ timezone }} -5{% elif 'nxos' in ansible_network_os %}clock timezone {{ timezone }} -5 0{% elif 'eos' in ansible_network_os %}clock timezone {{ timezone }}{% endif %}\\nntp server {{ ntp_server }}\\nip domain-name {{ domain_name }}\"\n  },\n  \"ttl\": 900\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/bulk",
@@ -2079,7 +2079,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"cisco_ios\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 30,\n    \"keepalive\": 60\n  },\n  \"devices\": [\n    {\"host\": \"192.168.1.1\", \"site\": \"HQ\"},\n    {\"host\": \"192.168.1.2\", \"site\": \"HQ\"},\n    {\"host\": \"192.168.2.1\", \"site\": \"Branch1\"},\n    {\"host\": \"192.168.2.2\", \"site\": \"Branch1\"},\n    {\"host\": \"192.168.3.1\", \"site\": \"Branch2\"}\n  ],\n  \"command\": [\n    \"show processes cpu | include five\",\n    \"show memory statistics | include Processor\",\n    \"show interface status | include connected\",\n    \"show logging | include ERROR\"\n  ],\n  \"driver_args\": {\n    \"read_timeout\": 30,\n    \"delay_factor\": 1,\n    \"strip_prompt\": true,\n    \"normalize\": true\n  },\n  \"options\": {\n    \"parsing\": {\n      \"name\": \"textfsm\",\n      \"template\": \"health_check_template.textfsm\"\n    },\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 1800,\n    \"webhook\": {\n      \"url\": \"https://monitoring.company.com/health-report\",\n      \"method\": \"POST\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {{monitoring_token}}\",\n        \"Content-Type\": \"application/json\"\n      },\n      \"timeout\": 60\n    }\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"cisco_ios\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 30,\n    \"keepalive\": 60\n  },\n  \"devices\": [\n    {\n      \"host\": \"192.168.1.1\",\n      \"site\": \"HQ\"\n    },\n    {\n      \"host\": \"192.168.1.2\",\n      \"site\": \"HQ\"\n    },\n    {\n      \"host\": \"192.168.2.1\",\n      \"site\": \"Branch1\"\n    },\n    {\n      \"host\": \"192.168.2.2\",\n      \"site\": \"Branch1\"\n    },\n    {\n      \"host\": \"192.168.3.1\",\n      \"site\": \"Branch2\"\n    }\n  ],\n  \"command\": [\n    \"show processes cpu | include five\",\n    \"show memory statistics | include Processor\",\n    \"show interface status | include connected\",\n    \"show logging | include ERROR\"\n  ],\n  \"driver_args\": {\n    \"read_timeout\": 30,\n    \"delay_factor\": 1,\n    \"strip_prompt\": true,\n    \"normalize\": true\n  },\n  \"parsing\": {\n    \"name\": \"textfsm\",\n    \"template\": \"health_check_template.textfsm\"\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 1800,\n  \"webhook\": {\n    \"url\": \"https://monitoring.company.com/health-report\",\n    \"method\": \"POST\",\n    \"headers\": {\n      \"Authorization\": \"Bearer {{monitoring_token}}\",\n      \"Content-Type\": \"application/json\"\n    },\n    \"timeout\": 60\n  }\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/bulk",
@@ -2107,7 +2107,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 90\n  },\n  \"devices\": [\n    {\"host\": \"192.168.1.1\", \"device_type\": \"cisco_ios\", \"criticality\": \"high\"},\n    {\"host\": \"192.168.1.2\", \"device_type\": \"cisco_nxos\", \"criticality\": \"medium\"},\n    {\"host\": \"192.168.1.3\", \"device_type\": \"juniper_junos\", \"criticality\": \"high\"}\n  ],\n  \"command\": [\n    \"show running-config | include aaa|login|enable|service|ssh\",\n    \"show users\",\n    \"show access-lists\",\n    \"show crypto key mypubkey rsa\",\n    \"show ip ssh\"\n  ],\n  \"driver_args\": {\n    \"read_timeout\": 120,\n    \"delay_factor\": 2,\n    \"strip_prompt\": true,\n    \"strip_command\": true,\n    \"normalize\": true\n  },\n  \"options\": {\n    \"parsing\": {\n      \"name\": \"textfsm\",\n      \"template\": \"security_audit_template.textfsm\"\n    },\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 3600,\n    \"webhook\": {\n      \"url\": \"https://security.company.com/compliance-scan\",\n      \"method\": \"POST\",\n      \"headers\": {\n        \"Authorization\": \"Bearer {{security_token}}\",\n        \"X-Scan-Type\": \"network-compliance\",\n        \"Content-Type\": \"application/json\"\n      },\n      \"timeout\": 30\n    }\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 90\n  },\n  \"devices\": [\n    {\n      \"host\": \"192.168.1.1\",\n      \"device_type\": \"cisco_ios\",\n      \"criticality\": \"high\"\n    },\n    {\n      \"host\": \"192.168.1.2\",\n      \"device_type\": \"cisco_nxos\",\n      \"criticality\": \"medium\"\n    },\n    {\n      \"host\": \"192.168.1.3\",\n      \"device_type\": \"juniper_junos\",\n      \"criticality\": \"high\"\n    }\n  ],\n  \"command\": [\n    \"show running-config | include aaa|login|enable|service|ssh\",\n    \"show users\",\n    \"show access-lists\",\n    \"show crypto key mypubkey rsa\",\n    \"show ip ssh\"\n  ],\n  \"driver_args\": {\n    \"read_timeout\": 120,\n    \"delay_factor\": 2,\n    \"strip_prompt\": true,\n    \"strip_command\": true,\n    \"normalize\": true\n  },\n  \"parsing\": {\n    \"name\": \"textfsm\",\n    \"template\": \"security_audit_template.textfsm\"\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 3600,\n  \"webhook\": {\n    \"url\": \"https://security.company.com/compliance-scan\",\n    \"method\": \"POST\",\n    \"headers\": {\n      \"Authorization\": \"Bearer {{security_token}}\",\n      \"X-Scan-Type\": \"network-compliance\",\n      \"Content-Type\": \"application/json\"\n    },\n    \"timeout\": 30\n  }\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/bulk",
@@ -2128,182 +2128,6 @@
 				}
 			],
 			"description": "各种批量设备操作场景"
-		},
-		{
-			"name": "Legacy Pull API (/pull/*) discard",
-			"item": [
-				{
-					"name": "Pull - 基础命令",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show version\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/pull",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"pull"
-							]
-						},
-						"description": "Legacy Pull API - 基础命令执行"
-					},
-					"response": []
-				},
-				{
-					"name": "Pull - 带模板解析",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show ip interface brief\",\n  \"parsing\": {\n    \"name\": \"textfsm\",\n    \"template\": \"Value INTERFACE (\\\\S+)\\nValue IP ([\\\\d\\\\.]+)\\nValue STATUS (\\\\S+)\\n\\nStart\\n  ^${INTERFACE}\\\\s+${IP}\\\\s+\\\\w+\\\\s+\\\\w+\\\\s+${STATUS} -> Record\"\n  }\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/pull",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"pull"
-							]
-						},
-						"description": "Legacy Pull API - 带TextFSM模板解析"
-					},
-					"response": []
-				},
-				{
-					"name": "Pull Batch - 批量执行",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"devices\": [\n    {\"host\": \"{{device_host}}\"},\n    {\"host\": \"{{device_host_2}}\"},\n    {\"host\": \"{{device_host_3}}\"}\n  ],\n  \"command\": \"show version\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/pull/batch",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"pull",
-								"batch"
-							]
-						},
-						"description": "Legacy Pull API - 批量设备命令执行"
-					},
-					"response": []
-				}
-			],
-			"description": "传统Pull API - 用于向后兼容"
-		},
-		{
-			"name": "Legacy Push API (/push/*) discard",
-			"item": [
-				{
-					"name": "Push - 基础配置",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"config\": [\n    \"interface GigabitEthernet0/2\",\n    \"description Legacy Push API配置\",\n    \"no shutdown\"\n  ]\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/push",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"push"
-							]
-						},
-						"description": "Legacy Push API - 基础配置推送"
-					},
-					"response": []
-				},
-				{
-					"name": "Push - 带模板渲染",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"config\": {\n    \"interface\": \"GigabitEthernet0/3\",\n    \"description\": \"模板渲染配置的接口\",\n    \"vlan\": 200\n  },\n  \"rendering\": {\n    \"name\": \"jinja2\",\n    \"template\": \"interface {{ interface }}\\n description {{ description }}\\n switchport mode access\\n switchport access vlan {{ vlan }}\\n no shutdown\"\n  }\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/push",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"push"
-							]
-						},
-						"description": "Legacy Push API - 带Jinja2模板渲染"
-					},
-					"response": []
-				},
-				{
-					"name": "Push Batch - 批量配置",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"devices\": [\n    {\"host\": \"{{device_host}}\"},\n    {\"host\": \"{{device_host_2}}\"},\n    {\"host\": \"{{device_host_3}}\"}\n  ],\n  \"config\": \"clock timezone EST -5\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/push/batch",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"push",
-								"batch"
-							]
-						},
-						"description": "Legacy Push API - 批量时区配置推送"
-					},
-					"response": []
-				}
-			],
-			"description": "传统Push API - 用于向后兼容"
 		},
 		{
 			"name": "Template Operations",
@@ -2541,7 +2365,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 120\n  },\n  \"command\": [\n    \"show version\",\n    \"show inventory\",\n    \"show interfaces\",\n    \"show ip interface brief\",\n    \"show vlan brief\",\n    \"show running-config | include hostname|ntp|logging|snmp\",\n    \"show users\",\n    \"show processes cpu\",\n    \"show memory statistics\"\n  ],\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600\n  },\n  \"webhook\": {\n    \"url\": \"http://audit-system.company.com/webhook\",\n    \"method\": \"POST\",\n    \"headers\": {\n      \"Authorization\": \"Bearer audit-token\",\n      \"Content-Type\": \"application/json\"\n    }\n  }\n}"
+							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 120\n  },\n  \"command\": [\n    \"show version\",\n    \"show inventory\",\n    \"show interfaces\",\n    \"show ip interface brief\",\n    \"show vlan brief\",\n    \"show running-config | include hostname|ntp|logging|snmp\",\n    \"show users\",\n    \"show processes cpu\",\n    \"show memory statistics\"\n  ],\n  \"webhook\": {\n    \"url\": \"http://audit-system.company.com/webhook\",\n    \"method\": \"POST\",\n    \"headers\": {\n      \"Authorization\": \"Bearer audit-token\",\n      \"Content-Type\": \"application/json\"\n    }\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 600\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/device/exec",
@@ -2550,7 +2374,7 @@
 							],
 							"path": [
 								"device",
-								"execute"
+								"exec"
 							]
 						},
 						"description": "网络设备审计 - 收集所有关键信息并发送到审计系统"
@@ -2569,7 +2393,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show running-config | include aaa|login|enable|service|no service|logging|ntp|snmp\",\n  \"parsing\": {\n    \"name\": \"textfsm\",\n    \"template\": \"Value List AAA_COMMANDS (.+aaa.*)\\nValue List LOGIN_COMMANDS (.+login.*)\\nValue List SERVICE_COMMANDS (.+service.*)\\nValue List LOGGING_COMMANDS (.+logging.*)\\n\\nStart\\n  ^(aaa.*)$$ -> Record.AAA_COMMANDS\\n  ^(.*login.*)$$ -> Record.LOGIN_COMMANDS\\n  ^(.*service.*)$$ -> Record.SERVICE_COMMANDS\\n  ^(logging.*)$$ -> Record.LOGGING_COMMANDS\"\n  },\n  \"options\": {\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 300\n  }\n}"
+							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show running-config | include aaa|login|enable|service|no service|logging|ntp|snmp\",\n  \"parsing\": {\n    \"name\": \"textfsm\",\n    \"template\": \"Value List AAA_COMMANDS (.+aaa.*)\\nValue List LOGIN_COMMANDS (.+login.*)\\nValue List SERVICE_COMMANDS (.+service.*)\\nValue List LOGGING_COMMANDS (.+logging.*)\\n\\nStart\\n  ^(aaa.*)$$ -> Record.AAA_COMMANDS\\n  ^(.*login.*)$$ -> Record.LOGIN_COMMANDS\\n  ^(.*service.*)$$ -> Record.SERVICE_COMMANDS\\n  ^(logging.*)$$ -> Record.LOGGING_COMMANDS\"\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 300\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/device/exec",
@@ -2578,7 +2402,7 @@
 							],
 							"path": [
 								"device",
-								"execute"
+								"exec"
 							]
 						},
 						"description": "安全合规检查 - 提取和解析安全相关配置"
@@ -2597,7 +2421,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 90\n  },\n  \"devices\": [\n    {\"host\": \"{{device_host}}\", \"site\": \"HQ\"},\n    {\"host\": \"{{device_host_2}}\", \"site\": \"Branch1\"},\n    {\"host\": \"{{device_host_3}}\", \"site\": \"Branch2\"}\n  ],\n  \"config\": {\n    \"site\": \"{{ site }}\",\n    \"ntp_servers\": [\"8.8.8.8\", \"8.8.4.4\"],\n    \"logging_server\": \"192.168.1.100\",\n    \"snmp_community\": \"company_ro\",\n    \"domain_name\": \"company.com\"\n  },\n  \"options\": {\n    \"rendering\": {\n      \"name\": \"jinja2\",\n      \"template\": \"!\\n! 标准化配置 - {{ site }}站点\\n!\\nip domain-name {{ domain_name }}\\n{% for server in ntp_servers %}\\nntp server {{ server }}\\n{% endfor %}\\nlogging host {{ logging_server }}\\nsnmp-server community {{ snmp_community }} RO\\nsnmp-server location {{ site }}\\nsnmp-server contact netadmin@{{ domain_name }}\\nbanner motd ^\\n警告: 仅授权用户可访问此设备\\n所有活动均被监控和记录\\n^\\n!\"\n    },\n    \"queue_strategy\": \"pinned\",\n    \"ttl\": 600\n  }\n}"
+							"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\",\n    \"timeout\": 90\n  },\n  \"devices\": [\n    {\n      \"host\": \"{{device_host}}\",\n      \"site\": \"HQ\"\n    },\n    {\n      \"host\": \"{{device_host_2}}\",\n      \"site\": \"Branch1\"\n    },\n    {\n      \"host\": \"{{device_host_3}}\",\n      \"site\": \"Branch2\"\n    }\n  ],\n  \"config\": {\n    \"site\": \"{{ site }}\",\n    \"ntp_servers\": [\n      \"8.8.8.8\",\n      \"8.8.4.4\"\n    ],\n    \"logging_server\": \"192.168.1.100\",\n    \"snmp_community\": \"company_ro\",\n    \"domain_name\": \"company.com\"\n  },\n  \"rendering\": {\n    \"name\": \"jinja2\",\n    \"template\": \"!\\n! 标准化配置 - {{ site }}站点\\n!\\nip domain-name {{ domain_name }}\\n{% for server in ntp_servers %}\\nntp server {{ server }}\\n{% endfor %}\\nlogging host {{ logging_server }}\\nsnmp-server community {{ snmp_community }} RO\\nsnmp-server location {{ site }}\\nsnmp-server contact netadmin@{{ domain_name }}\\nbanner motd ^\\n警告: 仅授权用户可访问此设备\\n所有活动均被监控和记录\\n^\\n!\"\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 600\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/device/bulk",

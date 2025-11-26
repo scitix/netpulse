@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0] - 2025-12-15
+
+### Added 
+
+- 支持在任意命令之前执行 template rendering，在命令执行之后进行 template parsing
+- 添加单元测试、端到端测试、CI/CD 集成
+
+### Changed
+
+- 重构 API 设计，提升扩展性和可维护性
+- 优化 Docker 镜像构建流程，减小镜像体积
+
 ## [0.2.0] - 2025-11-09
 
 ### Added
