@@ -233,7 +233,7 @@ class Manager:
         assert len(funcs) == len(kwargses), "Function and kwargs mismatch"
 
         if not on_failure:
-            on_failure_cb = rpc_exception_callback
+            on_failure = rpc_exception_callback
 
         # Wraps the function with timeout in a Callback object
         on_success_cb = rpc_callback_factory(on_success, timeout=self.job_timeout)
