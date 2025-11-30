@@ -1,10 +1,11 @@
 {
 	"info": {
-		"_postman_id": "d1f438db-a94c-400d-9709-dea8a05935cd",
+		"_postman_id": "7eaf315a-de6e-447d-ae13-957d5cb97748",
 		"name": "NetPulse API Collection v0.3.0",
 		"description": "NetPulse 网络设备管理 API",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "7085138"
+		"_exporter_id": "15361380",
+		"_collection_link": "https://naivfun.postman.co/workspace/My-Workspace~3a1a7d62-3432-4e76-805a-2d9e450075ee/collection/15361380-7eaf315a-de6e-447d-ae13-957d5cb97748?action=share&source=collection_link&creator=15361380"
 	},
 	"item": [
 		{
@@ -517,6 +518,63 @@
 					"response": []
 				},
 				{
+					"name": "Netmiko连接测试 - Vault 凭据",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"连接测试响应格式正确\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('code');",
+									"    pm.expect(jsonData).to.have.property('data');",
+									"    pm.expect(jsonData.data).to.have.property('success');",
+									"    pm.expect(jsonData.data).to.have.property('latency');",
+									"    pm.expect(jsonData.data).to.have.property('timestamp');",
+									"});",
+									"",
+									"pm.test(\"连接时间合理\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data.success) {",
+									"        pm.expect(jsonData.data.latency).to.be.a('number');",
+									"        pm.expect(jsonData.data.latency).to.be.above(0);",
+									"        pm.expect(jsonData.data.latency).to.be.below(60);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"driver\": \"netmiko\",\n    \"connection_args\": {\n        \"device_type\": \"{{device_type}}\",\n        \"host\": \"{{device_host}}\",\n        \"port\": 10005\n    },\n    \"credential\": {\n        \"name\": \"vault_kv\",\n        \"ref\": \"{{device_cred_ref}}\",\n        \"mount\": \"kv\",\n        \"field_mapping\": {\n            \"username\": \"username\",\n            \"password\": \"password\"\n        }\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/device/test",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"test"
+							]
+						},
+						"description": "使用 Credential 字段从 Vault 获取凭据，避免明文泄露"
+					},
+					"response": []
+				},
+				{
 					"name": "Netmiko连接测试 - 完整参数",
 					"request": {
 						"method": "POST",
@@ -677,7 +735,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"display version\"\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show version\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -690,6 +748,34 @@
 									]
 								},
 								"description": "最简单的单命令查询 - 不使用任何高级参数"
+							},
+							"response": []
+						},
+						{
+							"name": "基础查询 - Vault 凭据",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"driver\": \"netmiko\",\n    \"connection_args\": {\n        \"device_type\": \"{{device_type}}\",\n        \"host\": \"{{device_host}}\",\n        \"port\": 10005\n    },\n    \"credential\": {\n        \"name\": \"vault_kv\",\n        \"ref\": \"{{device_cred_ref}}\",\n        \"mount\": \"kv\",\n        \"field_mapping\": {\n            \"username\": \"username\",\n            \"password\": \"password\"\n        }\n    },\n    \"command\": \"show version\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "使用 Credential 字段从 Vault 获取凭据，避免明文泄露"
 							},
 							"response": []
 						},
@@ -845,7 +931,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"display version\",\n  \"driver_args\": {\n    \"read_timeout\": 45,\n    \"strip_prompt\": true,\n    \"normalize\": true\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 300,\n  \"webhook\": {\n    \"name\": \"basic\",\n    \"url\": \"http://127.0.0.1:8888/webhook\",\n    \"method\": \"POST\",\n    \"headers\": {\n      \"Content-Type\": \"application/json\"\n    },\n    \"timeout\": 30\n  }\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show version\",\n  \"driver_args\": {\n    \"read_timeout\": 45,\n    \"strip_prompt\": true,\n    \"normalize\": true\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 300,\n  \"webhook\": {\n    \"name\": \"basic\",\n    \"url\": \"http://127.0.0.1:8888/webhook\",\n    \"method\": \"POST\",\n    \"headers\": {\n      \"Content-Type\": \"application/json\"\n    },\n    \"timeout\": 30\n  }\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -2462,6 +2548,7 @@
 			"script": {
 				"type": "text/javascript",
 				"packages": {},
+				"requests": {},
 				"exec": [
 					""
 				]
@@ -2472,6 +2559,7 @@
 			"script": {
 				"type": "text/javascript",
 				"packages": {},
+				"requests": {},
 				"exec": [
 					""
 				]
@@ -2525,8 +2613,7 @@
 		},
 		{
 			"key": "api_token",
-			"value": "your-api-token-here",
-			"type": "string"
+			"value": "your-api-token-here"
 		},
 		{
 			"key": "key_passphrase",
@@ -2547,6 +2634,10 @@
 		{
 			"key": "proxy_password",
 			"value": "your_proxy_password"
+		},
+		{
+			"key": "device_cred_ref",
+			"value": "netpulse/cisco"
 		}
 	]
 }
