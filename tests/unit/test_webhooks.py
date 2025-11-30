@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from typing import Any
 
 from pydantic import HttpUrl
 
@@ -12,7 +13,7 @@ from netpulse.plugins.webhooks.basic import BasicWebHookCaller
 def test_basic_webhook_calls_requests(monkeypatch):
     """BasicWebHookCaller should send JSON payload with job id, result, device info, and command."""
     hook = WebHook(name="basic", url=HttpUrl("http://example.com/hook"))
-    captured: dict[str, object] = {}
+    captured: dict[str, Any] = {}
 
     class DummyResponse:
         def raise_for_status(self):
@@ -38,7 +39,8 @@ def test_basic_webhook_calls_requests(monkeypatch):
 
     assert captured["method"] == hook.method.value
     assert captured["url"] == hook.url.unicode_string()
-    payload = captured["json"]
+
+    payload: dict = captured["json"]
     assert payload["id"] == "job-1"
     assert "Command: show version" in payload["result"]
     assert "Cisco IOS Software" in payload["result"]
@@ -71,7 +73,7 @@ def test_basic_webhook_swallows_request_errors(monkeypatch):
 def test_basic_webhook_handles_failure_status(monkeypatch):
     """BasicWebHookCaller should mark status as failed for error tuples."""
     hook = WebHook(name="basic", url=HttpUrl("http://example.com/hook"))
-    captured: dict[str, object] = {}
+    captured: dict[str, Any] = {}
 
     class DummyResponse:
         def raise_for_status(self):
@@ -94,7 +96,7 @@ def test_basic_webhook_handles_failure_status(monkeypatch):
     error_tuple = ("ConnectionError", "Unable to connect to device")
     caller.call(req=req, job=SimpleNamespace(id="job-3"), result=error_tuple)  # type: ignore
 
-    payload = captured["json"]
+    payload: dict = captured["json"]
     assert payload["status"] == "failed"
     assert payload["id"] == "job-3"
     assert "ConnectionError" in payload["result"]
@@ -103,7 +105,7 @@ def test_basic_webhook_handles_failure_status(monkeypatch):
 def test_basic_webhook_formats_multiple_commands(monkeypatch):
     """BasicWebHookCaller should format multiple commands result correctly."""
     hook = WebHook(name="basic", url=HttpUrl("http://example.com/hook"))
-    captured: dict[str, object] = {}
+    captured: dict[str, Any] = {}
 
     class DummyResponse:
         def raise_for_status(self):
@@ -129,7 +131,7 @@ def test_basic_webhook_formats_multiple_commands(monkeypatch):
     }
     caller.call(req=req, job=SimpleNamespace(id="job-4"), result=multi_cmd_result)  # type: ignore
 
-    payload = captured["json"]
+    payload: dict = captured["json"]
     assert payload["status"] == "success"
     assert payload["id"] == "job-4"
     assert "Command: show version" in payload["result"]
@@ -142,7 +144,7 @@ def test_basic_webhook_formats_multiple_commands(monkeypatch):
 def test_basic_webhook_formats_nested_dict_result(monkeypatch):
     """BasicWebHookCaller should format nested dict result (paramiko format) correctly."""
     hook = WebHook(name="basic", url=HttpUrl("http://example.com/hook"))
-    captured: dict[str, object] = {}
+    captured: dict[str, Any] = {}
 
     class DummyResponse:
         def raise_for_status(self):
@@ -171,7 +173,7 @@ def test_basic_webhook_formats_nested_dict_result(monkeypatch):
     }
     caller.call(req=req, job=SimpleNamespace(id="job-5"), result=nested_result)  # type: ignore
 
-    payload = captured["json"]
+    payload: dict = captured["json"]
     assert payload["status"] == "success"
     assert "Command: show version" in payload["result"]
     assert "Output:" in payload["result"]

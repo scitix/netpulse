@@ -3,7 +3,15 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseModel, DirectoryPath, Field, FilePath, ValidationError, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    DirectoryPath,
+    Field,
+    FilePath,
+    ValidationError,
+    model_validator,
+)
 from pydantic_settings import (
     BaseSettings,
     SettingsConfigDict,
@@ -32,6 +40,13 @@ class WorkerConfig(BaseModel):
     scheduler: str = "least_load"
     ttl: int = 300
     pinned_per_node: int = 32
+
+
+class CredentialConfig(BaseModel):
+    enabled: bool = False
+    name: str | None = None
+
+    model_config = ConfigDict(extra="allow")
 
 
 class RedisConfig(BaseModel):
@@ -77,6 +92,7 @@ class PluginConfig(BaseModel):
     webhook: DirectoryPath = Path("netpulse/plugins/webhooks/")
     template: DirectoryPath = Path("netpulse/plugins/templates/")
     scheduler: DirectoryPath = Path("netpulse/plugins/schedulers/")
+    credential: DirectoryPath = Path("netpulse/plugins/credentials/")
 
 
 class LogConfig(BaseModel):
@@ -85,13 +101,16 @@ class LogConfig(BaseModel):
 
 
 class AppConfig(BaseSettings):
+    # Must be provided fields
     server: ServerConfig
     worker: WorkerConfig
     redis: RedisConfig
     plugin: PluginConfig
+
     # With default values
     job: JobConfig = JobConfig()
     log: LogConfig = LogConfig()
+    credential: CredentialConfig = CredentialConfig()
 
     model_config = SettingsConfigDict(
         env_prefix="NETPULSE_",

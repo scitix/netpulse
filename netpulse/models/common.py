@@ -108,6 +108,37 @@ class WebHook(BaseModel):
     )
 
 
+class CredentialRef(BaseModel):
+    """
+    Reference to a credential entry resolved by credential providers.
+    """
+
+    name: str = Field(..., description="Credential provider name")
+    ref: str = Field(..., description="Provider-specific reference (e.g., secret path or ID)")
+
+    mount: Optional[str] = Field(default=None, description="Optional mount point or backend name")
+    version: Optional[int] = Field(
+        default=None, description="Optional version for versioned stores"
+    )
+    field_mapping: Optional[dict[str, str]] = Field(
+        default=None,
+        description="Mapping from provider fields to connection_args keys",
+    )
+    namespace: Optional[str] = Field(default=None, description="Optional namespace or tenant scope")
+
+    model_config = ConfigDict(
+        extra="allow",
+        json_schema_extra={
+            "example": {
+                "name": "vault_kv",
+                "ref": "netpulse/device-a",
+                "mount": "kv",
+                "field_mapping": {"username": "user", "password": "pass"},
+            }
+        },
+    )
+
+
 class DriverConnectionArgs(BaseModel):
     """ """
 

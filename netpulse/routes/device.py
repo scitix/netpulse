@@ -4,22 +4,72 @@ from datetime import datetime
 
 from fastapi import APIRouter
 
+from ..models import DriverConnectionArgs
 from ..models.request import (
     BulkExecutionRequest,
     ConnectionTestRequest,
     ExecutionRequest,
 )
 from ..models.response import BatchSubmitJobResponse, ConnectionTestResponse, SubmitJobResponse
-from ..plugins import drivers
+from ..plugins import credentials, drivers
 from ..services.manager import g_mgr
+from ..utils import g_config
 
 log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/device", tags=["device"])
 
 
+def _resolve_request_credentials(req: ExecutionRequest | ConnectionTestRequest) -> None:
+    """
+    Hydrate req.connection_args using a credential provider, then drop the reference.
+    """
+    cred_ref = getattr(req, "credential", None)
+    if not g_config.credential.enabled:
+        if cred_ref is None:
+            return
+        raise ValueError("Credential support is disabled in server configuration")
+
+    if cred_ref is None:
+        return
+
+    if not g_config.credential.name:
+        raise ValueError("Credential is enabled but no provider name is configured")
+
+    if cred_ref.name != g_config.credential.name:
+        raise ValueError(f"Unsupported credential provider: {cred_ref.name}")
+
+    provider_cls = credentials.get(cred_ref.name)
+    if provider_cls is None:
+        raise ValueError(f"Credential provider not found: {cred_ref.name}")
+
+    try:
+        # Pass raw credential config for provider-specific validation
+        provider = provider_cls.from_credential_ref(cred_ref, g_config.credential)
+    except Exception as exc:
+        log.error(f"Error initializing credential provider '{cred_ref.name}': {exc}")
+        raise
+
+    try:
+        resolved_args = provider.resolve(req=req, conn_args=req.connection_args)
+    except Exception as exc:
+        log.error(f"Error resolving credential via '{cred_ref.name}': {exc}")
+        raise
+
+    if not isinstance(resolved_args, DriverConnectionArgs):
+        raise TypeError(
+            f"Credential provider '{cred_ref.name}' must return "
+            f"DriverConnectionArgs-compatible object"
+        )
+
+    req.connection_args = resolved_args
+    req.credential = None
+
+
 @router.post("/exec", response_model=SubmitJobResponse, status_code=201)
 def execute_on_device(req: ExecutionRequest):
+    _resolve_request_credentials(req)
+
     if req.connection_args.host is None:
         raise ValueError("'host' in connection_args is required")
 
@@ -37,11 +87,12 @@ def execute_on_device(req: ExecutionRequest):
 def execute_on_bulk_devices(req: BulkExecutionRequest):
     # Create base request template excluding devices
     base_req = ExecutionRequest.model_validate(req.model_dump(exclude={"devices"}))
+    _resolve_request_credentials(base_req)
 
     expanded: list[ExecutionRequest] = []
     for device in req.devices:
         # Generate connection_args with device-specific overrides
-        connection_args = req.connection_args.model_copy(
+        connection_args = base_req.connection_args.model_copy(
             update=device.model_dump(exclude_defaults=True, exclude_none=True, exclude_unset=True),
             deep=True,
         )
@@ -76,6 +127,8 @@ def execute_on_bulk_devices(req: BulkExecutionRequest):
 
 @router.post("/test", response_model=ConnectionTestResponse, status_code=200)
 def test_device_connection(req: ConnectionTestRequest):
+    _resolve_request_credentials(req)
+
     dobj = drivers.get(req.driver, None)
     if dobj is None:
         raise ValueError(f"Unsupported driver: {req.driver}")

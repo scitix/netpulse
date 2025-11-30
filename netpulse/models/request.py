@@ -3,6 +3,7 @@ from typing import List, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .common import (
+    CredentialRef,
     DriverArgs,
     DriverConnectionArgs,
     DriverName,
@@ -60,6 +61,9 @@ class ExecutionRequest(BaseModel):
 
     # Device connection parameters
     connection_args: DriverConnectionArgs = Field(..., description="Device connection parameters")
+    credential: Optional[CredentialRef] = Field(
+        default=None, description="External credential reference to populate connection_args"
+    )
 
     # Operation to execute
     config: Union[dict, List[str], str, None] = Field(
@@ -149,6 +153,9 @@ class ConnectionTestRequest(BaseModel):
 
     driver: DriverName = Field(..., description="Device driver")
     connection_args: DriverConnectionArgs = Field(..., description="Device connection parameters")
+    credential: Optional[CredentialRef] = Field(
+        default=None, description="External credential reference to populate connection_args"
+    )
 
     model_config = ConfigDict(
         extra="allow",

@@ -41,6 +41,19 @@ plugin:
   webhook: netpulse/plugins/webhooks/
   template: netpulse/plugins/templates/
   scheduler: netpulse/plugins/schedulers/
+  credential: netpulse/plugins/credentials/
+
+credential:
+  enabled: false
+  name: vault_kv
+  # addr: http://vault:8200
+  # namespace: ""
+  # allowed_paths: ["kv/netpulse"]
+  # cache_ttl: 30
+  # verify: true  # or path to CA bundle
+  # token: ${NETPULSE_VAULT_TOKEN} # Modify this before use
+  # role_id: ${NETPULSE_VAULT_ROLE_ID} # Modify this before use
+  # secret_id: ${NETPULSE_VAULT_SECRET_ID} # Modify this before use
 
 log:
   config: config/log-config.yaml

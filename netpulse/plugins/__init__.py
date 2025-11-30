@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Generic, Type, TypeVar
 
 from ..utils import g_config
+from .credentials import BaseCredentialProvider
 from .drivers import BaseDriver
 from .schedulers import BaseScheduler
 from .templates import BaseTemplateParser, BaseTemplateRenderer
@@ -181,10 +182,21 @@ def load_scheduler() -> dict[str, Type[BaseScheduler]]:
     ).load()
 
 
+def load_credentials() -> dict[str, Type[BaseCredentialProvider]]:
+    """Load credential plugins"""
+    return PluginLoader(
+        load_dir=g_config.plugin.credential,
+        base_cls=BaseCredentialProvider,
+        ptype="credential",
+        name_attr="credential_name",
+    ).load()
+
+
 drivers: Dict[str, Type[BaseDriver]] = LazyDictProxy(load_drivers)  # type: ignore
 webhooks: Dict[str, Type[BaseWebHookCaller]] = LazyDictProxy(load_webhooks)  # type: ignore
 renderers: Dict[str, Type[BaseTemplateRenderer]] = LazyDictProxy(load_template_renderers)  # type: ignore
 parsers: Dict[str, Type[BaseTemplateParser]] = LazyDictProxy(load_template_parsers)  # type: ignore
 schedulers: Dict[str, Type[BaseScheduler]] = LazyDictProxy(load_scheduler)  # type: ignore
+credentials: Dict[str, Type[BaseCredentialProvider]] = LazyDictProxy(load_credentials)  # type: ignore
 
-__all__ = ["drivers", "parsers", "renderers", "schedulers", "webhooks"]
+__all__ = ["credentials", "drivers", "parsers", "renderers", "schedulers", "webhooks"]
