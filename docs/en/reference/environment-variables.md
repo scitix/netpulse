@@ -87,6 +87,27 @@ For example:
 | `NETPULSE_PLUGIN__WEBHOOK` | Webhook plugin directory | `netpulse/plugins/webhooks/` |
 | `NETPULSE_PLUGIN__TEMPLATE` | Template plugin directory | `netpulse/plugins/templates/` |
 | `NETPULSE_PLUGIN__SCHEDULER` | Scheduler plugin directory | `netpulse/plugins/schedulers/` |
+| `NETPULSE_PLUGIN__CREDENTIAL` | Credential plugin directory | `netpulse/plugins/credentials/` |
+
+## Credential Configuration
+
+| Environment Variable | Description | Default Value |
+|---------------------|-------------|---------------|
+| `NETPULSE_CREDENTIAL__ENABLED` | Whether to enable credential plugin | `false` |
+| `NETPULSE_CREDENTIAL__NAME` | Credential provider name (e.g., `vault_kv`) | `vault_kv` |
+| `NETPULSE_CREDENTIAL__ADDR` | Vault server address (e.g., `http://vault:8200`) | - |
+| `NETPULSE_CREDENTIAL__NAMESPACE` | Vault namespace | - |
+| `NETPULSE_CREDENTIAL__ALLOWED_PATHS` | Allowed path prefixes (comma-separated, e.g., `kv/netpulse`) | - |
+| `NETPULSE_CREDENTIAL__CACHE_TTL` | Credential cache TTL in seconds (0 disables cache) | `30` |
+| `NETPULSE_CREDENTIAL__VERIFY` | TLS verification (`true`/`false` or CA certificate path) | `true` |
+| `NETPULSE_VAULT_TOKEN` | Vault Token authentication (choose one with AppRole) | - |
+| `NETPULSE_VAULT_ROLE_ID` | Vault AppRole role_id (choose one with Token) | - |
+| `NETPULSE_VAULT_SECRET_ID` | Vault AppRole secret_id (choose one with Token) | - |
+
+!!! note "Authentication Method"
+    Vault supports two authentication methods, choose one:
+    - **Token Authentication**: Set `NETPULSE_VAULT_TOKEN`
+    - **AppRole Authentication**: Set both `NETPULSE_VAULT_ROLE_ID` and `NETPULSE_VAULT_SECRET_ID`
 
 ## Other Configuration
 
