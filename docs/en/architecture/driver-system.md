@@ -13,7 +13,7 @@ NetPulse provides extensible driver support through its plugin system. Users can
 
 ## Specify Device Driver
 
-In /device/execute and /device/bulk APIs, use the `driver` field to specify the driver to be used for this task:
+In /device/exec and /device/bulk APIs, use the `driver` field to specify the driver to be used for this task:
 
 ```json
 {

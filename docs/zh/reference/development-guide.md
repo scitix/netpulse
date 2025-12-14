@@ -58,8 +58,7 @@ git checkout -b feature/your-feature-name
 
 3. **代码检查和格式化**
 ```bash
-uv run black netpulse/
-uv run ruff check netpulse/
+uv run ruff check --fix netpulse/
 ```
 
 4. **提交代码**
@@ -73,8 +72,7 @@ git commit -m "feat: add new feature"
 ### 代码规范
 
 **工具配置**
-- **格式化**: Black
-- **检查**: Ruff
+- **格式化、检查**: Ruff
 - **文档**: mkdocs-material
 
 **提交信息规范**

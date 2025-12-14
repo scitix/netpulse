@@ -1,0 +1,47 @@
+server:
+  host: 127.0.0.1
+  port: 9000
+  api_key: TEST_API_KEY
+  api_key_name: X-API-KEY
+  gunicorn_worker: 1
+
+job:
+  ttl: 60
+  timeout: 30
+  result_ttl: 30
+
+worker:
+  scheduler: "load_weighted_random"
+  ttl: 60
+  pinned_per_node: 4
+
+redis:
+  host: localhost
+  port: 6379
+  password:
+  timeout: 5
+  keepalive: 5
+  tls:
+    enabled: false
+    ca:
+    cert:
+    key:
+  sentinel:
+    enabled: false
+    host: localhost
+    port: 26379
+    master_name: mymaster
+    password:
+  key:
+    host_to_node_map: netpulse:test:host_to_node_map
+    node_info_map: netpulse:test:node_info_map
+
+plugin:
+  driver: netpulse/plugins/drivers/
+  webhook: netpulse/plugins/webhooks/
+  template: netpulse/plugins/templates/
+  scheduler: netpulse/plugins/schedulers/
+
+log:
+  config: config/log-config.yaml
+  level: INFO

@@ -4,7 +4,7 @@
 
 PyEAPI driver is based on [Device Operation API](../api/device-api.md), providing dedicated operation functions for Arista devices, implementing device query and configuration management through HTTP/HTTPS API.
 
-> **Important Note**: This document focuses on PyEAPI driver-specific parameters and usage. For general API endpoints (`POST /device/execute`), request format, response format, etc., please refer to [Device Operation API](../api/device-api.md).
+> **Important Note**: This document focuses on PyEAPI driver-specific parameters and usage. For general API endpoints (`POST /device/exec`), request format, response format, etc., please refer to [Device Operation API](../api/device-api.md).
 
 ## Driver Features
 
@@ -35,10 +35,8 @@ PyEAPI driver is based on [Device Operation API](../api/device-api.md), providin
     "encoding": "json",
     "format": "json"
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -68,10 +66,8 @@ PyEAPI driver is based on [Device Operation API](../api/device-api.md), providin
     "format": "json",
     "timestamps": true
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 600
-  }
+  "queue_strategy": "fifo",
+  "ttl": 600
 }
 ```
 
@@ -95,19 +91,17 @@ PyEAPI driver is based on [Device Operation API](../api/device-api.md), providin
     "expand": true,
     "detail": true
   },
-  "options": {
-    "parsing": {
-      "name": "json",
-      "path": "interfaceStatuses"
-    },
-    "queue_strategy": "fifo",
-    "ttl": 300,
-    "webhook": {
-      "url": "https://monitoring.company.com/arista-interfaces",
-      "method": "POST",
-      "headers": {
-        "Authorization": "Bearer {{api_token}}"
-      }
+  "parsing": {
+    "name": "json",
+    "path": "interfaceStatuses"
+  },
+  "queue_strategy": "fifo",
+  "ttl": 300,
+  "webhook": {
+    "url": "https://monitoring.company.com/arista-interfaces",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer {{api_token}}"
     }
   }
 }
@@ -133,10 +127,8 @@ PyEAPI driver is based on [Device Operation API](../api/device-api.md), providin
     "encoding": "json",
     "format": "json"
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -159,10 +151,8 @@ PyEAPI driver is based on [Device Operation API](../api/device-api.md), providin
     "format": "json",
     "expand": true
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -186,10 +176,8 @@ PyEAPI driver is based on [Device Operation API](../api/device-api.md), providin
     "encoding": "json",
     "format": "json"
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -212,10 +200,8 @@ PyEAPI driver is based on [Device Operation API](../api/device-api.md), providin
     "format": "json",
     "expand": true
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -239,10 +225,8 @@ PyEAPI driver is based on [Device Operation API](../api/device-api.md), providin
     "encoding": "json",
     "format": "json"
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -264,10 +248,8 @@ PyEAPI driver is based on [Device Operation API](../api/device-api.md), providin
     "encoding": "json",
     "format": "json"
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -293,10 +275,8 @@ PyEAPI driver is based on [Device Operation API](../api/device-api.md), providin
     "format": "text",
     "autoComplete": true
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -329,10 +309,8 @@ PyEAPI driver is based on [Device Operation API](../api/device-api.md), providin
     "autoComplete": true,
     "expandAliases": true
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 600
-  }
+  "queue_strategy": "fifo",
+  "ttl": 600
 }
 ```
 
@@ -363,14 +341,12 @@ PyEAPI driver is based on [Device Operation API](../api/device-api.md), providin
     "format": "text",
     "autoComplete": true
   },
-  "options": {
-    "rendering": {
-      "name": "jinja2",
-      "template": "router bgp {{ local_asn }}\n router-id {{ router_id }}\n{% for neighbor in neighbors %}\n neighbor {{ neighbor.ip }} remote-as {{ neighbor.asn }}\n neighbor {{ neighbor.ip }} description {{ neighbor.description }}\n{% endfor %}"
-    },
-    "queue_strategy": "fifo",
-    "ttl": 600
-  }
+  "rendering": {
+    "name": "jinja2",
+    "template": "router bgp {{ local_asn }}\n router-id {{ router_id }}\n{% for neighbor in neighbors %}\n neighbor {{ neighbor.ip }} remote-as {{ neighbor.asn }}\n neighbor {{ neighbor.ip }} description {{ neighbor.description }}\n{% endfor %}"
+  },
+  "queue_strategy": "fifo",
+  "ttl": 600
 }
 ```
 
@@ -407,14 +383,12 @@ PyEAPI driver is based on [Device Operation API](../api/device-api.md), providin
     "format": "text",
     "autoComplete": true
   },
-  "options": {
-    "rendering": {
-      "name": "jinja2",
-      "template": "{% for intf in interfaces %}\ninterface {{ intf.name }}\n description {{ intf.description }}\n switchport mode {{ intf.mode }}\n switchport access vlan {{ intf.vlan }}\n{% endfor %}"
-    },
-    "queue_strategy": "fifo",
-    "ttl": 600
-  }
+  "rendering": {
+    "name": "jinja2",
+    "template": "{% for intf in interfaces %}\ninterface {{ intf.name }}\n description {{ intf.description }}\n switchport mode {{ intf.mode }}\n switchport access vlan {{ intf.vlan }}\n{% endfor %}"
+  },
+  "queue_strategy": "fifo",
+  "ttl": 600
 }
 ```
 
@@ -441,7 +415,7 @@ curl -X POST -H "Content-Type: application/json" \
       "format": "json"
     }
   }' \
-  http://localhost:9000/device/execute
+  http://localhost:9000/device/exec
 
 # Multiple command query
 curl -X POST -H "Content-Type: application/json" \
@@ -465,7 +439,7 @@ curl -X POST -H "Content-Type: application/json" \
       "format": "json"
     }
   }' \
-  http://localhost:9000/device/execute
+  http://localhost:9000/device/exec
 
 # Configuration push
 curl -X POST -H "Content-Type: application/json" \
@@ -485,7 +459,7 @@ curl -X POST -H "Content-Type: application/json" \
       "autoComplete": true
     }
   }' \
-  http://localhost:9000/device/execute
+  http://localhost:9000/device/exec
 ```
 
 ### Python Examples
@@ -518,20 +492,20 @@ class PyEapiClient:
                 "encoding": "json",
                 "format": "json"
             },
-            "options": {
-                "queue_strategy": "fifo",
-                "ttl": 300
-            }
+            "queue_strategy": "fifo",
+            "ttl": 300
         }
         
         # Add optional parameters
         if "driver_args" in kwargs:
             payload["driver_args"].update(kwargs["driver_args"])
-        if "options" in kwargs:
-            payload["options"].update(kwargs["options"])
+        if "queue_strategy" in kwargs:
+            payload["queue_strategy"] = kwargs["queue_strategy"]
+        if "ttl" in kwargs:
+            payload["ttl"] = kwargs["ttl"]
         
         response = requests.post(
-            f"{self.base_url}/device/execute",
+            f"{self.base_url}/device/exec",
             headers=self.headers,
             json=payload
         )
@@ -553,20 +527,20 @@ class PyEapiClient:
                 "encoding": "json",
                 "format": "json"
             },
-            "options": {
-                "queue_strategy": "fifo",
-                "ttl": 600
-            }
+            "queue_strategy": "fifo",
+            "ttl": 600
         }
         
         # Add optional parameters
         if "driver_args" in kwargs:
             payload["driver_args"].update(kwargs["driver_args"])
-        if "options" in kwargs:
-            payload["options"].update(kwargs["options"])
+        if "queue_strategy" in kwargs:
+            payload["queue_strategy"] = kwargs["queue_strategy"]
+        if "ttl" in kwargs:
+            payload["ttl"] = kwargs["ttl"]
         
         response = requests.post(
-            f"{self.base_url}/device/execute",
+            f"{self.base_url}/device/exec",
             headers=self.headers,
             json=payload
         )
@@ -588,20 +562,20 @@ class PyEapiClient:
                 "format": "text",
                 "autoComplete": True
             },
-            "options": {
-                "queue_strategy": "fifo",
-                "ttl": 600
-            }
+            "queue_strategy": "fifo",
+            "ttl": 600
         }
         
         # Add optional parameters
         if "driver_args" in kwargs:
             payload["driver_args"].update(kwargs["driver_args"])
-        if "options" in kwargs:
-            payload["options"].update(kwargs["options"])
+        if "queue_strategy" in kwargs:
+            payload["queue_strategy"] = kwargs["queue_strategy"]
+        if "ttl" in kwargs:
+            payload["ttl"] = kwargs["ttl"]
         
         response = requests.post(
-            f"{self.base_url}/device/execute",
+            f"{self.base_url}/device/exec",
             headers=self.headers,
             json=payload
         )
@@ -675,7 +649,7 @@ PyEAPI driver's `driver_args` supports arbitrary parameters (`extra="allow"`), a
 - `format`: Output format (for enable method, such as `json`)
 - For other parameters, please refer to [pyeapi official documentation](https://github.com/arista-eosplus/pyeapi)
 
-> **Note**: `options` parameter is a global option, common to all drivers. For detailed description, please refer to [Device Operation API](../api/device-api.md).
+> **Note**: Global options such as `queue_strategy` and `ttl` should be placed directly at the top level of the request, common to all drivers. For detailed description, please refer to [Device Operation API](../api/device-api.md).
 
 **PyEAPI Recommended Configuration**:
 - `queue_strategy`: Recommended to use `"fifo"`, HTTP stateless connection

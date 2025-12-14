@@ -218,5 +218,5 @@ def check_job_status(job_id, api_key):
 
 1. **查看日志**: 使用 `docker compose logs` 查看详细错误信息
 2. **验证配置**: 确认配置文件和环境变量设置正确
-3. **测试连接**: 使用 `/device/test-connection` 端点测试设备连接
+3. **测试连接**: 使用 `/device/test` 端点测试设备连接
 4. **检查网络**: 确认网络连接和设备可达性

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Generic, Type, TypeVar
 
 from ..utils import g_config
+from .credentials import BaseCredentialProvider
 from .drivers import BaseDriver
 from .schedulers import BaseScheduler
 from .templates import BaseTemplateParser, BaseTemplateRenderer
@@ -20,22 +21,22 @@ class PluginLoader(Generic[T]):
 
     def __init__(
         self,
-        plugin_dir: str,
-        plugin_base_cls: Type[T],
-        plugin_type: str = "plugin",
-        plugin_name_attr: str = "plugin_name",
+        load_dir: Path,
+        base_cls: Type[T],
+        ptype: str = "plugin",
+        name_attr: str = "plugin_name",
     ):
         """
         Args:
-            plugin_dir: plugin directory
-            plugin_base_cls: base class for plugins
-            plugin_type: type of plugin
-            plugin_name_attr: name attribute for plugin
+            load_dir: plugin directory
+            base_cls: base class for plugins
+            ptype: type of plugin
+            name_attr: name attribute for plugin
         """
-        self.base_class = plugin_base_cls
-        self.type = plugin_type
-        self.name_attr = plugin_name_attr
-        self.load_dir = Path(plugin_dir)
+        self.base_class = base_cls
+        self.type = ptype
+        self.name_attr = name_attr
+        self.load_dir = load_dir
 
     def load(self) -> Dict[str, Type[T]]:
         """Load plugin from directory"""
@@ -75,11 +76,11 @@ class PluginLoader(Generic[T]):
     def _process_module(self, module: Any, plugin_dict: Dict[str, Type[T]]) -> None:
         """Process a single plugin module"""
         for name in getattr(module, "__all__", []):
-            cls = getattr(module, name, None)
+            cls: Type[T] | None = getattr(module, name, None)
             if self._is_valid_class(cls):
-                plugin_name = getattr(cls, self.name_attr, None)
+                plugin_name: str | None = getattr(cls, self.name_attr, None)
                 if plugin_name:
-                    plugin_dict[plugin_name] = cls
+                    plugin_dict[plugin_name] = cls  # type: ignore
                     log.info(f"Loaded {self.type}: {plugin_name}")
 
 
@@ -134,58 +135,68 @@ class LazyDictProxy(Generic[T]):
 def load_drivers() -> dict[str, Type[BaseDriver]]:
     """Load driver plugins"""
     return PluginLoader(
-        plugin_dir=g_config.plugin.driver,
-        plugin_base_cls=BaseDriver,
-        plugin_type="driver",
-        plugin_name_attr="driver_name",
+        load_dir=g_config.plugin.driver,
+        base_cls=BaseDriver,
+        ptype="driver",
+        name_attr="driver_name",
     ).load()
 
 
 def load_webhooks() -> dict[str, Type[BaseWebHookCaller]]:
     """Load webhook plugins"""
     return PluginLoader(
-        plugin_dir=g_config.plugin.webhook,
-        plugin_base_cls=BaseWebHookCaller,
-        plugin_type="webhook",
-        plugin_name_attr="webhook_name",
+        load_dir=g_config.plugin.webhook,
+        base_cls=BaseWebHookCaller,
+        ptype="webhook",
+        name_attr="webhook_name",
     ).load()
 
 
 def load_template_renderers() -> dict[str, Type[BaseTemplateRenderer]]:
     """Load template renderer plugins"""
     return PluginLoader(
-        plugin_dir=g_config.plugin.template,
-        plugin_base_cls=BaseTemplateRenderer,
-        plugin_type="template",
-        plugin_name_attr="template_name",
+        load_dir=g_config.plugin.template,
+        base_cls=BaseTemplateRenderer,
+        ptype="template",
+        name_attr="template_name",
     ).load()
 
 
 def load_template_parsers() -> dict[str, Type[BaseTemplateParser]]:
     """Load template parser plugins"""
     return PluginLoader(
-        plugin_dir=g_config.plugin.template,
-        plugin_base_cls=BaseTemplateParser,
-        plugin_type="template",
-        plugin_name_attr="template_name",
+        load_dir=g_config.plugin.template,
+        base_cls=BaseTemplateParser,
+        ptype="template",
+        name_attr="template_name",
     ).load()
 
 
 def load_scheduler() -> dict[str, Type[BaseScheduler]]:
     """Load scheduler plugins"""
     return PluginLoader(
-        plugin_dir=g_config.plugin.scheduler,
-        plugin_base_cls=BaseScheduler,
-        plugin_type="scheduler",
-        plugin_name_attr="scheduler_name",
+        load_dir=g_config.plugin.scheduler,
+        base_cls=BaseScheduler,
+        ptype="scheduler",
+        name_attr="scheduler_name",
     ).load()
 
 
-# NOTE: Type hints added just for Ruff. Pylance could infer the type w/o hints.
-drivers: Dict[str, Type[BaseDriver]] = LazyDictProxy(load_drivers)
-webhooks: Dict[str, Type[BaseWebHookCaller]] = LazyDictProxy(load_webhooks)
-renderers: Dict[str, Type[BaseTemplateRenderer]] = LazyDictProxy(load_template_renderers)
-parsers: Dict[str, Type[BaseTemplateParser]] = LazyDictProxy(load_template_parsers)
-schedulers: Dict[str, Type[BaseScheduler]] = LazyDictProxy(load_scheduler)
+def load_credentials() -> dict[str, Type[BaseCredentialProvider]]:
+    """Load credential plugins"""
+    return PluginLoader(
+        load_dir=g_config.plugin.credential,
+        base_cls=BaseCredentialProvider,
+        ptype="credential",
+        name_attr="credential_name",
+    ).load()
 
-__all__ = ["drivers", "parsers", "renderers", "schedulers", "webhooks"]
+
+drivers: Dict[str, Type[BaseDriver]] = LazyDictProxy(load_drivers)  # type: ignore
+webhooks: Dict[str, Type[BaseWebHookCaller]] = LazyDictProxy(load_webhooks)  # type: ignore
+renderers: Dict[str, Type[BaseTemplateRenderer]] = LazyDictProxy(load_template_renderers)  # type: ignore
+parsers: Dict[str, Type[BaseTemplateParser]] = LazyDictProxy(load_template_parsers)  # type: ignore
+schedulers: Dict[str, Type[BaseScheduler]] = LazyDictProxy(load_scheduler)  # type: ignore
+credentials: Dict[str, Type[BaseCredentialProvider]] = LazyDictProxy(load_credentials)  # type: ignore
+
+__all__ = ["credentials", "drivers", "parsers", "renderers", "schedulers", "webhooks"]

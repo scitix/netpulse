@@ -79,6 +79,9 @@ generate_secure_values() {
     
     local redis_password=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
     local api_key="np_$(openssl rand -hex 32)"
+    # Generate a random Vault token for dev mode (simple alphanumeric string)
+    # Vault dev mode doesn't accept hvs. prefix, use plain random string
+    local vault_token=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
     
     # Create .env with secure values
     cat > .env << ENVEOF
@@ -95,12 +98,28 @@ NETPULSE_SERVER__API_KEY=$api_key
 TZ=Asia/Shanghai
 
 # Optional: Log Level (DEBUG, INFO, WARNING, ERROR)
-NETPULSE_LOG_LEVEL=INFO
+NETPULSE_LOG__LEVEL=INFO
+
+# Optional: Credential Provider (enabled by default, set enabled=false to disable)
+NETPULSE_CREDENTIAL__ENABLED=true
+NETPULSE_CREDENTIAL__NAME=vault_kv
+
+# Optional: Vault KV v2 settings (token OR AppRole)
+NETPULSE_CREDENTIAL__ADDR=http://vault:8200
+NETPULSE_CREDENTIAL__ALLOWED_PATHS=kv/netpulse
+NETPULSE_CREDENTIAL__VERIFY=false
+NETPULSE_CREDENTIAL__CACHE_TTL=30
+
+# Vault Token (randomly generated for each deployment)
+# This token will be used as the root token for Vault dev mode
+# For production, generate a proper token with limited permissions via Vault CLI
+NETPULSE_VAULT_TOKEN=$vault_token
 ENVEOF
     
     print_success "Secure environment variables generated!"
     print_warning "Your API Key: $api_key"
-    print_warning "Please save this API key securely!"
+    print_warning "Vault Token: $vault_token"
+    print_warning "Please save these credentials securely!"
 }
 
 check_certificates() {

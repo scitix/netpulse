@@ -143,10 +143,10 @@ NetPulse provides two queue strategies to optimize task execution. Choosing the 
 NetPulse adopts an asynchronous task processing mechanism, supporting large-scale concurrent operations and task status tracking.
 
 !!! warning "Important: Asynchronous Processing Mechanism"
-    All device operations (`/device/execute`, `/device/bulk`) are asynchronous:
+    All device operations (`/device/exec`, `/device/bulk`) are asynchronous:
     - API immediately returns job ID and status (usually `queued`)
     - Need to query execution results through `/job?id=xxx` interface
-    - Only `/device/test-connection` is synchronous, returns results immediately
+    - Only `/device/test` is synchronous, returns results immediately
 
 #### Job Lifecycle
 
@@ -177,9 +177,9 @@ Submit Job → Queue Waiting → Executing → Execution Complete
 
 !!! info "Job Storage Time"
     Job results and status are stored in Redis with TTL:
-    - **Job Results**: Default 300 seconds (5 minutes), configurable via `result_ttl`
-    - **Job Metadata**: Default 1800 seconds (30 minutes), configurable via `ttl`
-    - **Supports Customization**: Adjust via `options.ttl` parameter in API request
+    - **Job Results**: Default 300 seconds (5 minutes), configurable via `result_ttl` in config file
+    - **Job Metadata**: Default 1800 seconds (30 minutes), configurable via `ttl` in config file
+    - **Supports Customization**: Adjust via global `ttl` parameter in API request
 
 ### 4. Connection Reuse (Connection Reuse)
 

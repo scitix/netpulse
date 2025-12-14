@@ -2,22 +2,22 @@
 
 /* 行内代码 */
 .md-content code {
-  background: #f6f8fa;
+  background: var(--md-code-bg-color, #f6f8fa);
   border-radius: 3px;
   padding: 2px 4px;
   font-size: 0.8em;
-  border: 1px solid #e1e4e8;
-  color: #24292e;
+  border: 1px solid var(--md-default-fg-color--lightest, #e1e4e8);
+  color: var(--md-code-fg-color, #24292e);
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, 'Courier New', monospace;
   white-space: nowrap;
 }
 
 /* 代码块容器 */
 .md-content pre {
-  background: #f6f8fa;
+  background: var(--md-code-bg-color, #f6f8fa);
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e1e4e8;
+  border: 1px solid var(--md-default-fg-color--lightest, #e1e4e8);
   padding: 16px;
   overflow-x: auto;
   position: relative;
@@ -30,7 +30,7 @@
   border: none;
   padding: 0;
   font-size: 0.85em;
-  color: #24292e;
+  color: var(--md-code-fg-color, #24292e);
   white-space: pre;
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, 'Courier New', monospace;
   line-height: 1.45;
@@ -42,8 +42,8 @@
   position: absolute;
   top: 0;
   right: 0;
-  background: #e1e4e8;
-  color: #586069;
+  background: var(--md-default-fg-color--lighter, #e1e4e8);
+  color: var(--md-default-fg-color--light, #586069);
   font-size: 0.75em;
   padding: 4px 8px;
   border-radius: 0 6px 0 4px;
@@ -55,9 +55,9 @@
 
 /* 代码高亮优化 */
 .md-content .highlight {
-  background: #f6f8fa;
+  background: var(--md-code-bg-color, #f6f8fa);
   border-radius: 6px;
-  border: 1px solid #e1e4e8;
+  border: 1px solid var(--md-default-fg-color--lightest, #e1e4e8);
   margin: 16px 0;
   overflow: hidden;
 }
@@ -144,28 +144,24 @@
 
 /* 深色主题适配 */
 [data-md-color-scheme="slate"] .md-content code {
-  background: #2d3748;
-  border-color: #4a5568;
-  color: #e2e8f0;
+  background: var(--md-code-bg-color, #2d3748);
+  border-color: var(--md-default-fg-color--lighter, #4a5568);
+  color: var(--md-code-fg-color, #e2e8f0);
 }
 
-[data-md-color-scheme="slate"] .md-content pre {
-  background: #2d3748;
-  border-color: #4a5568;
+[data-md-color-scheme="slate"] .md-content pre,
+[data-md-color-scheme="slate"] .md-content .highlight {
+  background: var(--md-code-bg-color, #2d3748);
+  border-color: var(--md-default-fg-color--lighter, #4a5568);
 }
 
 [data-md-color-scheme="slate"] .md-content pre code {
-  color: #e2e8f0;
+  color: var(--md-code-fg-color, #e2e8f0);
 }
 
 [data-md-color-scheme="slate"] .md-content pre::before {
-  background: #4a5568;
-  color: #a0aec0;
-}
-
-[data-md-color-scheme="slate"] .md-content .highlight {
-  background: #2d3748;
-  border-color: #4a5568;
+  background: var(--md-default-fg-color--lighter, #4a5568);
+  color: var(--md-default-fg-color--light, #a0aec0);
 }
 
 /* 深色主题语法高亮 */

@@ -91,7 +91,7 @@ docker compose up -d
 curl -H "X-API-KEY: your_secure_api_key" http://localhost:9000/health
 
 # 测试设备命令（请替换为您的设备详情）
-curl -X POST http://localhost:9000/device/execute \
+curl -X POST http://localhost:9000/device/exec \
   -H "X-API-KEY: your_secure_api_key" \
   -H "Content-Type: application/json" \
   -d '{

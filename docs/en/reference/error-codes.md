@@ -218,5 +218,5 @@ def check_job_status(job_id, api_key):
 
 1. **View Logs**: Use `docker compose logs` to view detailed error information
 2. **Verify Configuration**: Confirm configuration file and environment variable settings are correct
-3. **Test Connection**: Use `/device/test-connection` endpoint to test device connection
+3. **Test Connection**: Use `/device/test` endpoint to test device connection
 4. **Check Network**: Confirm network connection and device reachability

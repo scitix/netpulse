@@ -5,10 +5,17 @@ site_url: https://netpulse.readthedocs.io/
 
 use_directory_urls: false
 
-# 文档目录配置
+# Docs directory
 docs_dir: docs
 
-# 主题配置
+# Repository
+repo_name: scitix/netpulse
+repo_url: https://github.com/scitix/netpulse
+
+# Copyright
+copyright: Copyright &copy; 2025 NetPulse Team
+
+# Theme
 theme:
   name: material
   features:
@@ -26,11 +33,10 @@ theme:
     - navigation.indexes
     - navigation.prune
   
-  # 目录配置 - 限制只显示一级和二级标题
   toc:
     depth: 2
   
-  # 自定义样式
+  # Custom styles
   custom_dir: docs/overrides
   palette:
     - media: "(prefers-color-scheme)"
@@ -39,26 +45,40 @@ theme:
       accent: blue
       toggle:
         icon: material/brightness-auto
-        name: 切换主题
+        name: 切换到浅色模式
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: 切换到深色模式
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: blue
       accent: blue
       toggle:
-        icon: material/brightness-7
-        name: 切换主题
+        icon: material/brightness-4
+        name: 跟随系统设置
   logo: assets/images/logo.svg
   favicon: assets/images/favicon.ico
 
-# 插件配置
+# Plugins
 plugins:
   - search
   - i18n:
       docs_structure: folder
       languages:
+        - locale: en
+          name: English
+          build: true
+          default: true
+          link: /
+          site_name: NetPulse Documentation
         - locale: zh
           name: 中文
           build: true
+          link: /zh/
           site_name: NetPulse 文档
           nav_translations:
             Home: 首页
@@ -89,6 +109,7 @@ plugins:
             Scheduler System: 任务调度器
             Webhook System: Webhook系统
             Reference Manual: 参考手册
+            Credential Guide: 凭据配置指南
             Configuration Guide: 配置指南
             Environment Variables: 环境变量
             Error Codes: 错误代码
@@ -96,13 +117,8 @@ plugins:
             Glossary: 术语表
             Troubleshooting: 故障排查
             Development Guide: 开发指南
-        - locale: en
-          name: English
-          default: true
-          build: true
-          site_name: NetPulse Documentation
 
-# Markdown扩展
+# Markdown extensions
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
@@ -123,15 +139,15 @@ markdown_extensions:
   - pymdownx.arithmatex:
       generic: true
   
-  # 目录扩展 - 限制只显示一级和二级标题
+  # Only display 2 levels in the table of contents
   - toc:
       permalink: true
       title: 目录
       baselevel: 1
       toc_depth: 2
 
-# 导航配置 - 基于默认语言（英文）文档结构
-# i18n 插件会自动为其他语言生成对应的导航
+# Navigation
+# i18n plugin will handle pathes
 nav:
   - Home: en/index.md
   - Getting Started:
@@ -161,6 +177,7 @@ nav:
       - Scheduler System: en/architecture/scheduler-system.md
       - Webhook System: en/architecture/webhook-system.md
   - Reference Manual:
+      - Credential Guide: en/reference/credential-guide.md
       - Configuration Guide: en/reference/configuration-guide.md
       - Environment Variables: en/reference/environment-variables.md
       - Error Codes: en/reference/error-codes.md
@@ -169,23 +186,8 @@ nav:
       - Troubleshooting: en/reference/troubleshooting.md
       - Development Guide: en/reference/development-guide.md
 
-# 额外配置
-extra:
-  social:
-    - icon: fontawesome/brands/github
-      link: https://github.com/scitix/netpulse
 
+extra:
   analytics:
     provider: google
     property: !ENV GOOGLE_ANALYTICS_KEY
-  
-  alternate:
-    - name: 中文
-      link: /zh/
-      lang: zh
-    - name: English
-      link: /
-      lang: en
-
-# 版权信息
-copyright: Copyright &copy; 2025 NetPulse Team

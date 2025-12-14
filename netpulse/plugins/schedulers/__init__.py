@@ -15,8 +15,8 @@ class BaseScheduler:
     def __init__(self):
         raise NotImplementedError
 
-    def node_select(self, nodes: List[NodeInfo], host: str) -> NodeInfo:
+    def node_select(self, nodes: List[NodeInfo], host: str) -> NodeInfo | None:
         raise NotImplementedError
 
-    def batch_node_select(self, nodes: List[NodeInfo], hosts: List[str]) -> List[NodeInfo]:
+    def batch_node_select(self, nodes: List[NodeInfo], hosts: List[str]) -> List[NodeInfo | None]:
         raise NotImplementedError

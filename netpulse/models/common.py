@@ -78,15 +78,21 @@ class WebHook(BaseModel):
         DELETE = "DELETE"
         PATCH = "PATCH"
 
-    name: str = Field("basic", description="Name of the WebHookCaller")
-    url: HttpUrl = Field(..., description="Webhook URL")
-    method: WebHookMethod = Field(WebHookMethod.POST, description="HTTP method for webhook")
+    name: str = Field(default="basic", description="Name of the WebHookCaller")
+    url: HttpUrl = Field(default=..., description="Webhook URL")
+    method: WebHookMethod = Field(default=WebHookMethod.POST, description="HTTP method for webhook")
 
-    headers: Optional[Dict[str, str]] = Field(None, description="Custom headers for the request")
-    cookies: Optional[Dict[str, str]] = Field(None, description="Cookies to send with the request")
-    auth: Optional[Tuple[str, str]] = Field(None, description="(Username, Password) for Basic Auth")
+    headers: Optional[Dict[str, str]] = Field(
+        default=None, description="Custom headers for the request"
+    )
+    cookies: Optional[Dict[str, str]] = Field(
+        default=None, description="Cookies to send with the request"
+    )
+    auth: Optional[Tuple[str, str]] = Field(
+        default=None, description="(Username, Password) for Basic Auth"
+    )
     timeout: float = Field(
-        5.0, ge=0.5, le=120.0, description="Request timeout in seconds (default 5s)"
+        default=5.0, ge=0.5, le=120.0, description="Request timeout in seconds (default 5s)"
     )
 
     model_config = ConfigDict(
@@ -102,16 +108,47 @@ class WebHook(BaseModel):
     )
 
 
-class DriverConnectionArgs(BaseModel):
+class CredentialRef(BaseModel):
     """
-    NOTE: We loose the field checking to Optional.
-    Strict checks should be done in derived classes.
+    Reference to a credential entry resolved by credential providers.
     """
 
-    device_type: Optional[str] = Field(None, description="Device type")
-    host: Optional[str] = Field(None, description="Device IP address")
-    username: Optional[str] = Field(None, description="Device username")
-    password: Optional[str] = Field(None, description="Device password")
+    name: str = Field(..., description="Credential provider name")
+    ref: str = Field(..., description="Provider-specific reference (e.g., secret path or ID)")
+
+    mount: Optional[str] = Field(default=None, description="Optional mount point or backend name")
+    version: Optional[int] = Field(
+        default=None, description="Optional version for versioned stores"
+    )
+    field_mapping: Optional[dict[str, str]] = Field(
+        default=None,
+        description="Mapping from provider fields to connection_args keys",
+    )
+    namespace: Optional[str] = Field(default=None, description="Optional namespace or tenant scope")
+
+    model_config = ConfigDict(
+        extra="allow",
+        json_schema_extra={
+            "example": {
+                "name": "vault_kv",
+                "ref": "netpulse/device-a",
+                "mount": "kv",
+                "field_mapping": {"username": "user", "password": "pass"},
+            }
+        },
+    )
+
+
+class DriverConnectionArgs(BaseModel):
+    """ """
+
+    device_type: Optional[str] = Field(default=None, description="Device type")
+
+    # NOTE: We loose checking here, as DriverConnectionArgs could be
+    # auto-filled in Batch APIs. After that, we need to manually check.
+    host: Optional[str] = Field(default=None, description="Device IP/hostname")
+    username: Optional[str] = Field(default=None, description="Device username")
+    password: Optional[str] = Field(default=None, description="Device password")
 
     model_config = ConfigDict(
         extra="allow",
@@ -125,21 +162,20 @@ class DriverConnectionArgs(BaseModel):
         },
     )
 
-    def enforced_field_check(self):
-        """
-        DriverConnectionArgs could be auto-filled in Batch APIs.
-        After that, we need to manually check.
-        """
-        if self.host is None:
-            raise ValueError("host is None")
-
-        return self
-
 
 class DriverArgs(BaseModel):
     """
     This is a generic model for driver arguments.
     Depends on the driver's method, the arguments can be different.
     """
+
+    model_config = ConfigDict(extra="allow")
+
+
+class DeviceTestInfo(BaseModel):
+    """Base model for device connection test results."""
+
+    driver: DriverName = Field(..., description="Driver name used in the test")
+    host: Optional[str] = Field(None, description="Device IP/hostname")
 
     model_config = ConfigDict(extra="allow")

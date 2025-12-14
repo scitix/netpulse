@@ -3,31 +3,28 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Callable, Optional
 
+from redis.client import Pipeline
 from rq import Queue, Worker
 from rq.command import send_shutdown_command
 from rq.exceptions import InvalidJobOperation, NoSuchJobError
 from rq.job import Job
 from rq.registry import FailedJobRegistry, FinishedJobRegistry, StartedJobRegistry
-
-import redis
-import redis.client
+from rq.worker import BaseWorker
 
 from ..models import (
     DriverConnectionArgs,
-    DriverName,
     JobAdditionalData,
     NodeInfo,
     QueueStrategy,
 )
-from ..models.request import PullingRequest, PushingRequest
+from ..models.request import ExecutionRequest
 from ..models.response import JobInResponse, WorkerInResponse
 from ..plugins import schedulers
 from ..utils import g_config
 from ..utils.exceptions import JobOperationError, WorkerUnavailableError
 from .rediz import g_rdb
 from .rpc import (
-    pull,
-    push,
+    execute,
     rpc_callback_factory,
     rpc_exception_callback,
     rpc_webhook_callback,
@@ -74,8 +71,8 @@ class Manager:
         """
         workers = Worker.all(queue=Queue(q_name, connection=self.rdb))
 
-        def is_alive(w: Worker):
-            if w.death_date:
+        def is_alive(w: BaseWorker) -> bool:
+            if w.death_date or w.last_heartbeat is None:
                 return False
 
             interval = w.last_heartbeat.astimezone(timezone.utc) - datetime.now(timezone.utc)
@@ -107,9 +104,9 @@ class Manager:
         is_single = isinstance(hosts, str)
         hosts = [hosts] if isinstance(hosts, str) else hosts
 
-        host_mappings = self.rdb.hmget(self.host_to_node_map, hosts)
+        host_mappings: list = self.rdb.hmget(self.host_to_node_map, hosts)  # type: ignore
         if not any(host_mappings):
-            return None if is_single else [None] * len(hosts)
+            return None if is_single else [None] * len(hosts)  # type: ignore
 
         # Preserve the order
         valid_data = [
@@ -117,9 +114,9 @@ class Manager:
         ]
 
         node_keys = [mapping for _, mapping in valid_data]
-        node_values = self.rdb.hmget(self.node_info_map, node_keys) if node_keys else []
+        node_values: list = self.rdb.hmget(self.node_info_map, node_keys) if node_keys else []  # type: ignore
 
-        final_results = [None] * len(hosts)
+        final_results: list[NodeInfo | None] = [None] * len(hosts)
         for (idx, _), value in zip(valid_data, node_values):
             if value:
                 try:
@@ -193,28 +190,32 @@ class Manager:
         func: Callable,
         kwargs: Optional[dict] = None,
         ttl: Optional[int] = None,
+        result_ttl: Optional[int] = None,
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
-        pipeline: redis.client.Pipeline = None,
+        pipeline: Optional[Pipeline] = None,
     ):
         if not on_failure:
             on_failure = rpc_exception_callback
 
         # Wraps the function with timeout in a Callback object
-        on_success = rpc_callback_factory(on_success, timeout=self.job_timeout)
-        on_failure = rpc_callback_factory(on_failure, timeout=self.job_timeout)
+        on_success_cb = rpc_callback_factory(on_success, timeout=self.job_timeout)
+        on_failure_cb = rpc_callback_factory(on_failure, timeout=self.job_timeout)
+
+        # Use request result_ttl if provided, otherwise use system default
+        effective_result_ttl = result_ttl if result_ttl is not None else self.job_result_ttl
 
         q = Queue(q_name, connection=self.rdb)
         job = q.enqueue_call(
             func=func,
             timeout=self.job_timeout,  # time limit for job execution
             ttl=ttl if ttl else self.job_ttl,  # job ttl in redis
-            result_ttl=self.job_result_ttl,  # result ttl in redis
-            failure_ttl=self.job_result_ttl,  # errors ttl in redis
+            result_ttl=effective_result_ttl,  # result ttl in redis (from request or system default)
+            failure_ttl=effective_result_ttl,  # errors ttl in redis
             kwargs=kwargs,
             meta=JobAdditionalData().model_dump(),
-            on_success=on_success,
-            on_failure=on_failure,
+            on_success=on_success_cb,
+            on_failure=on_failure_cb,
             pipeline=pipeline,
         )
 
@@ -224,8 +225,9 @@ class Manager:
         self,
         q_name: str,
         funcs: list[Callable],
-        kwargses: Optional[list[dict]] = None,
+        kwargses: list[dict],
         ttl: Optional[int] = None,
+        result_ttl: Optional[int] = None,
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
     ):
@@ -239,8 +241,11 @@ class Manager:
             on_failure = rpc_exception_callback
 
         # Wraps the function with timeout in a Callback object
-        on_success = rpc_callback_factory(on_success, timeout=self.job_timeout)
-        on_failure = rpc_callback_factory(on_failure, timeout=self.job_timeout)
+        on_success_cb = rpc_callback_factory(on_success, timeout=self.job_timeout)
+        on_failure_cb = rpc_callback_factory(on_failure, timeout=self.job_timeout)
+
+        # Use request result_ttl if provided, otherwise use system default
+        effective_result_ttl = result_ttl if result_ttl is not None else self.job_result_ttl
 
         jobs = []
         for func, kwargs in zip(funcs, kwargses):
@@ -248,12 +253,12 @@ class Manager:
                 func=func,
                 timeout=self.job_timeout,  # time limit for job execution
                 ttl=ttl if ttl else self.job_ttl,  # job ttl in redis
-                result_ttl=self.job_result_ttl,  # result ttl in redis
-                failure_ttl=self.job_result_ttl,  # errors ttl in redis
+                result_ttl=effective_result_ttl,  # result ttl in redis (from request or system default)
+                failure_ttl=effective_result_ttl,  # errors ttl in redis
                 kwargs=kwargs,
                 meta=JobAdditionalData().model_dump(),
-                on_success=on_success,
-                on_failure=on_failure,
+                on_success=on_success_cb,
+                on_failure=on_failure_cb,
             )
             jobs.append(job)
 
@@ -262,12 +267,12 @@ class Manager:
 
         return jobs
 
-    def get_node(self, node: str) -> NodeInfo:
+    def get_node(self, node: str) -> NodeInfo | None:
         """
         Get the node info from the redis
         """
         # check the map in redis
-        node_info = self.rdb.hget(self.node_info_map, node)
+        node_info: str | None = self.rdb.hget(self.node_info_map, node)  # type: ignore
         if not node_info:
             return None
 
@@ -278,7 +283,7 @@ class Manager:
         Get all nodes from the redis
         """
         # check the map in redis
-        nodes = self.rdb.hgetall(self.node_info_map)
+        nodes: dict[str, str] = self.rdb.hgetall(self.node_info_map)  # type: ignore
         if not nodes:
             return []
 
@@ -291,6 +296,7 @@ class Manager:
         q_strategy: QueueStrategy,
         func: Callable,
         ttl: Optional[int] = None,
+        result_ttl: Optional[int] = None,
         kwargs: Optional[dict] = None,
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
@@ -327,7 +333,7 @@ class Manager:
             MAX_RETRIES = 3
             while cnt <= MAX_RETRIES:
                 cnt += 1
-                node: NodeInfo = self._get_assigned_node_for_host(host)
+                node: Optional[NodeInfo] = self._get_assigned_node_for_host(host)  # type: ignore
                 if node is None:
                     try:
                         log.debug(f"Host {host} is not assigned to any node")
@@ -339,7 +345,7 @@ class Manager:
                 # Check if the assigned node is alive.
                 # NOTE: Only forced exited node will left stale data.
                 # If so, we need to cleanup and reassign
-                if node and not self._check_worker_alive(node.queue):
+                if node is not None and not self._check_worker_alive(node.queue):
                     log.warning(f"Node {node.hostname} is not available, force deleting...")
                     self._force_delete_node(node)
                     node = None
@@ -360,9 +366,12 @@ class Manager:
         else:
             raise ValueError("Invalid queue strategy")
 
+        assert isinstance(q_name, str), "Queue name must be a string"
+
         job = self._send_job(
             q_name=q_name,
             ttl=ttl,
+            result_ttl=result_ttl,
             func=func,
             kwargs=kwargs,
             on_success=on_success,
@@ -370,13 +379,14 @@ class Manager:
         )
         return JobInResponse.from_job(job)
 
-    def dispatch_batch_rpc_jobs(
+    def dispatch_bulk_rpc_jobs(
         self,
         conn_args: list[DriverConnectionArgs],
         q_strategy: QueueStrategy,
         func: Callable,
-        kwargses: Optional[list[dict]] = None,
+        kwargses: list[dict],
         ttl: Optional[int] = None,
+        result_ttl: Optional[int] = None,
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
     ) -> tuple[list[JobInResponse], list[str]]:
@@ -392,69 +402,74 @@ class Manager:
                 funcs=[func] * len(conn_args),
                 kwargses=kwargses,
                 ttl=ttl,
+                result_ttl=result_ttl,
                 on_success=on_success,
                 on_failure=on_failure,
             )
             return [JobInResponse.from_job(job) for job in jobs], []
 
-        if q_strategy != QueueStrategy.PINNED:
-            raise ValueError("Invalid queue strategy")
+        assert q_strategy == QueueStrategy.PINNED, "Invalid queue strategy"
 
-        hosts: list[str] = [conn.host for conn in conn_args]
-        nodes: list[NodeInfo] = self._get_assigned_node_for_host(hosts)
-        assert len(hosts) == len(nodes), "Host and Node mismatch"
+        hosts: list[str] = [conn.host for conn in conn_args]  # type: ignore
+        nodes: list[NodeInfo | None] = self._get_assigned_node_for_host(hosts)  # type: ignore
+        assert len(hosts) == len(nodes), "Host and node number mismatch"
 
         # NOTE: unassigned_hosts MUST be subscriptable
-        assigned_hosts: list[int] = []
-        unassigned_hosts: list[int] = []
-        failed_hosts: set[int] = set()
-        for idx, n in enumerate(nodes):
+        assigned_host_idx: list[int] = []
+        unassigned_host_idx: list[int] = []
+        failed_host_idx: set[int] = set()
+        for idx, n in enumerate(iterable=nodes):
             if not n:
-                unassigned_hosts.append(idx)
+                unassigned_host_idx.append(idx)
             else:
-                assigned_hosts.append(idx)
+                assigned_host_idx.append(idx)
 
         # Schedule unassigned hosts
-        while len(unassigned_hosts) > 0:
+        if len(unassigned_host_idx) > 0:
             # FIXME: Handle the case when duplicated hosts are scheduled
             # For now, duplicated hosts should be filtered by the caller
             try:
                 selected_nodes = self.scheduler.batch_node_select(
-                    self.get_all_nodes(), unassigned_hosts
+                    self.get_all_nodes(), [hosts[i] for i in unassigned_host_idx]
                 )
                 if not selected_nodes:
                     raise WorkerUnavailableError("No available nodes to run the job")
+                assert len(selected_nodes) == len(unassigned_host_idx), (
+                    "Host and node num mismatch after scheduling"
+                )
+
+                # Appending indexes of original list
+                node_group: dict[int, list[int]] = defaultdict(list)
+                for idx, n in enumerate(selected_nodes):
+                    if not n:
+                        failed_host_idx.add(unassigned_host_idx[idx])
+                    else:
+                        node_group[idx].append(unassigned_host_idx[idx])
+
+                for idx, ids in node_group.items():
+                    try:
+                        # Retrieve the original NodeInfo by index
+                        n = selected_nodes[idx]
+                        assert n is not None
+
+                        # If node is not available, all assigned hosts are failed.
+                        if not self._check_worker_alive(n.queue):
+                            log.warning(
+                                msg=f"Node {n.hostname} is not available, force deleting..."
+                            )
+                            self._force_delete_node(n)
+                            failed_host_idx.update(ids)
+                            continue
+
+                        _ = self._try_launch_pinned_worker(hosts=[hosts[i] for i in ids], node=n)
+                    except Exception as e:
+                        # Mark hosts for the whole node as failed but continue for other nodes
+                        log.error(f"Error in launching pinned worker for {ids}: {e}")
+                        failed_host_idx.update(ids)
+
             except Exception as e:
                 log.error(f"Error in selecting nodes for hosts: {e}")
-                failed_hosts.update(unassigned_hosts)
-                break
-
-            assert len(selected_nodes) == len(unassigned_hosts), "Host and Node scheduling mismatch"
-
-            # Appending indexes of original list
-            node_group: dict[int, list[int]] = defaultdict(list)
-            for idx, n in enumerate(selected_nodes):
-                if not n:
-                    failed_hosts.add(unassigned_hosts[idx])
-                else:
-                    node_group[idx].append(unassigned_hosts[idx])
-
-            for idx, ids in node_group.items():
-                n = selected_nodes[idx]
-
-                # If node is not available, all assigned hosts are failed.
-                if not self._check_worker_alive(n.queue):
-                    log.warning(f"Node {n.hostname} is not available, force deleting...")
-                    self._force_delete_node(n)
-                    failed_hosts.update(ids)
-                    continue
-
-                try:
-                    _ = self._try_launch_pinned_worker(hosts=[hosts[i] for i in ids], node=n)
-                except Exception as e:
-                    log.error(f"Error in launching pinned worker for {ids}: {e}")
-                    failed_hosts.update(ids)
-            break
+                failed_host_idx.update(unassigned_host_idx)
 
         # Send out all jobs except failed ones
         def send(host_ids: list[int]) -> tuple[list[Job], list[int]]:
@@ -466,6 +481,7 @@ class Manager:
                         self._send_job(
                             q_name=g_config.get_host_queue_name(hosts[idx]),
                             ttl=ttl,
+                            result_ttl=result_ttl,
                             func=func,
                             kwargs=kwargses[idx],
                             on_success=on_success,
@@ -482,14 +498,16 @@ class Manager:
             finally:
                 return succeeded, failed
 
-        succeeded, failed = send(list(set(unassigned_hosts) - failed_hosts) + assigned_hosts)
-        failed.extend(list(failed_hosts))
+        succeeded, failed = send(
+            list(set(unassigned_host_idx) - failed_host_idx) + assigned_host_idx
+        )
+        failed.extend(list(failed_host_idx))
 
         return [JobInResponse.from_job(job) for job in succeeded], [hosts[i] for i in failed]
 
-    def pull_from_device(self, req: PullingRequest, driver: DriverName = None):
-        if driver is not None:
-            req.driver = driver
+    def execute_on_device(self, req: ExecutionRequest):
+        # q_strategy must be set before calling. Assert for robustness.
+        assert req.queue_strategy, "Queue strategy is required for execution request"
 
         failure_handler, success_handler = None, None
 
@@ -502,7 +520,8 @@ class Manager:
             conn_arg=req.connection_args,
             q_strategy=req.queue_strategy,
             ttl=req.ttl,
-            func=pull,
+            result_ttl=req.result_ttl,
+            func=execute,
             kwargs={"req": req},
             on_success=success_handler,
             on_failure=failure_handler,
@@ -510,67 +529,29 @@ class Manager:
 
         return r
 
-    def pull_from_batch_devices(self, reqs: list[PullingRequest]):
-        if not reqs or len(reqs) == 0:
-            return None
+    def execute_on_bulk_devices(self, reqs: list[ExecutionRequest]):
+        # q_strategy must be set before calling. Assert for robustness.
+        assert reqs and len(reqs) > 0, "Empty execution request list"
+        assert reqs[0].queue_strategy, "Queue strategy is required for execution request"
 
         failure_handler, success_handler = None, None
         if reqs[0].webhook:
             success_handler = failure_handler = rpc_webhook_callback
 
-        return self.dispatch_batch_rpc_jobs(
+        # Use first request's result_ttl for all jobs in batch (they should be the same)
+        return self.dispatch_bulk_rpc_jobs(
             conn_args=[req.connection_args for req in reqs],
             q_strategy=reqs[0].queue_strategy,
             ttl=reqs[0].ttl,
-            func=pull,
-            kwargses=[{"req": req} for req in reqs],
-            on_success=success_handler,
-            on_failure=failure_handler,
-        )
-
-    def push_to_device(self, req: PushingRequest, driver: DriverName = None):
-        if driver is not None:
-            req.driver = driver
-
-        failure_handler, success_handler = None, None
-
-        # Add webhook handler
-        if req.webhook:
-            success_handler = failure_handler = rpc_webhook_callback
-
-        # NOTE: DO NOT change attr "req". It's hardcoded in webhook handler.
-        r = self.dispatch_rpc_job(
-            conn_arg=req.connection_args,
-            q_strategy=req.queue_strategy,
-            ttl=req.ttl,
-            func=push,
-            kwargs={"req": req},
-            on_success=success_handler,
-            on_failure=failure_handler,
-        )
-
-        return r
-
-    def push_to_batch_devices(self, reqs: list[PushingRequest]):
-        if not reqs or len(reqs) == 0:
-            return None
-
-        failure_handler, success_handler = None, None
-        if reqs[0].webhook:
-            success_handler = failure_handler = rpc_webhook_callback
-
-        return self.dispatch_batch_rpc_jobs(
-            conn_args=[req.connection_args for req in reqs],
-            q_strategy=reqs[0].queue_strategy,
-            ttl=reqs[0].ttl,
-            func=push,
+            result_ttl=reqs[0].result_ttl,
+            func=execute,
             kwargses=[{"req": req} for req in reqs],
             on_success=success_handler,
             on_failure=failure_handler,
         )
 
     def _get_all_job_id(self):
-        keys = self.rdb.keys(f"{Job.redis_job_namespace_prefix}*")
+        keys: list[bytes] = self.rdb.keys(f"{Job.redis_job_namespace_prefix}*")  # type: ignore
         return [k.decode().split(":")[-1] for k in keys]
 
     def _get_job_id_by_status(self, state: str, q_name: str):

@@ -1,281 +1,226 @@
 # API Overview
 
-## Introduction
+## Intro
 
-NetPulse provides a unified API interface to manage various network devices. This document introduces all API interfaces supported by NetPulse and their basic usage.
+NetPulse exposes a unified API set to manage network devices. This page lists all available endpoints and how to call them.
 
-## Basic Information
+## Basics
 
-### API Endpoint
-- **Base URL**: `http://localhost:9000`
-- **API Version**: v0.1
-- **Authentication**: API Key (X-API-KEY Header)
+### API endpoint
+- Base URL: `http://localhost:9000`
+- API version: v0.2
+- Auth: API Key via `X-API-KEY`
 
 ### Authentication
-All API requests require API Key authentication, supporting the following three methods:
+Every request requires an API key. Supported placements:
 
-1. **Header method** (recommended):
-   ```
-   X-API-KEY: your-api-key-here
-   ```
+1) Header (recommended)  
+`X-API-KEY: your-api-key-here`
 
-2. **Query parameter method**:
-   ```
-   ?X-API-KEY=your-api-key-here
-   ```
+2) Query param  
+`?X-API-KEY=your-api-key-here`
 
-3. **Cookie method**:
-   ```
-   X-API-KEY=your-api-key-here
-   ```
+3) Cookie  
+`X-API-KEY=your-api-key-here`
 
-### Response Format
-All API responses use a unified JSON format:
+### Response format
 ```json
 {
   "code": 200,
   "message": "success",
-  "data": {
-    // Specific data
-  }
+  "data": {}
 }
 ```
 
-**Response Code Description**:
-- `code: 200` - Request successful
-- `code: -1` - Request failed (error details in `message` and `data`)
+- `code: 200` – success  
+- `code: -1` – business failure (details in `message`/`data`)
 
-## Complete API Endpoint List
+## Full endpoint list
 
-NetPulse provides the following API endpoints, all of which require API Key authentication.
+> **Tip**: prefer the unified `/device/exec` endpoint; it auto-detects query vs. config.
 
-> **⭐Recommended**: Prioritize using the `/device/execute` unified interface, which automatically identifies operation types and is simpler to use.
+| Method | Path | Description | Doc |
+| --- | --- | --- | --- |
+| **Device** ||||
+| POST | `/device/exec` | Device ops (query/config) | [Device Operation API](./device-api.md) |
+| POST | `/device/bulk` | Bulk device ops | [Device Operation API](./device-api.md) |
+| POST | `/device/test` | Connection test | [Device Operation API](./device-api.md) |
+| **Template** ||||
+| POST | `/template/render` | Render (engine auto-detect) | [Template API](./template-api.md) |
+| POST | `/template/render/{name}` | Render with specified engine | [Template API](./template-api.md) |
+| POST | `/template/parse` | Parse output (auto-detect) | [Template API](./template-api.md) |
+| POST | `/template/parse/{name}` | Parse with specified parser | [Template API](./template-api.md) |
+| **Jobs** ||||
+| GET | `/job` | Get job status/result | [Job API](./job-api.md) |
+| DELETE | `/job` | Cancel job | [Job API](./job-api.md) |
+| GET | `/worker` | Worker status | [Job API](./job-api.md) |
+| DELETE | `/worker` | Delete worker | [Job API](./job-api.md) |
+| GET | `/health` | Health check | [Job API](./job-api.md) |
 
-| HTTP Method | Endpoint Path | Description | Detailed Documentation |
-|------------|--------------|-------------|----------------------|
-| **Device Operations** | | | |
-| `POST` | `/device/execute` | Device operations (query/configuration) ⭐Recommended | [Device Operation API](./device-api.md) |
-| `POST` | `/device/bulk` | Batch device operations | [Device Operation API](./device-api.md) |
-| `POST` | `/device/test-connection` | Device connection test | [Device Operation API](./device-api.md) |
-| **Template Operations** | | | |
-| `POST` | `/template/render` | Template rendering (auto-detect engine) | [Template Operation API](./template-api.md) |
-| `POST` | `/template/render/{name}` | Render using specified engine | [Template Operation API](./template-api.md) |
-| `POST` | `/template/parse` | Template parsing (auto-detect parser) | [Template Operation API](./template-api.md) |
-| `POST` | `/template/parse/{name}` | Parse using specified parser | [Template Operation API](./template-api.md) |
-| **Job Management** | | | |
-| `GET` | `/job` | Query job status and results | [Job Management API](./job-api.md) |
-| `DELETE` | `/job` | Cancel job | [Job Management API](./job-api.md) |
-| `GET` | `/worker` | Query Worker status | [Job Management API](./job-api.md) |
-| `DELETE` | `/worker` | Delete Worker | [Job Management API](./job-api.md) |
-| `GET` | `/health` | System health check | [Job Management API](./job-api.md) |
+## API categories
 
-## API Categories
+### 1) Device APIs
+- `POST /device/exec` – unified query/config
+- `POST /device/bulk` – bulk operations
+- `POST /device/test` – connection test
 
-### 1. Device Operation API
-Device Operation API provides device query, configuration, and connection testing functions, supporting all driver types.
+Supported drivers: Netmiko (SSH), NAPALM (multi-vendor), PyEAPI (Arista), Paramiko (Linux).
+See [Device Operation API](./device-api.md).
 
-**Main Endpoints**:
-- `POST /device/execute` - Unified device operations (auto-detect query/configuration)
-- `POST /device/bulk` - Batch device operations
-- `POST /device/test-connection` - Device connection test
+### 2) Template APIs
+- `POST /template/render`
+- `POST /template/parse`
 
-**Supported Drivers**:
-- Netmiko (SSH) - Universal SSH connection
-- NAPALM (multi-vendor) - Standardized interface
-- PyEAPI (Arista-specific) - HTTP/HTTPS API
-- Paramiko (SSH) - Linux server management
+Engines/parsers: Jinja2, TextFSM, TTP. See [Template API](./template-api.md).
 
-For detailed information, see: [Device Operation API](./device-api.md)
+### 3) Job APIs
+- `GET /job`, `DELETE /job`
+- `GET /worker`, `DELETE /worker`
+- `GET /health`
 
-### 2. Template Operation API
-Provides configuration template rendering and command output parsing functions.
+See [Job API](./job-api.md).
 
-**Main Endpoints**:
-- `POST /template/render` - Template rendering
-- `POST /template/parse` - Output parsing
-
-**Supported Engines**:
-- Jinja2 - Configuration template rendering
-- TextFSM - Command output parsing
-- TTP - Configuration parsing
-
-For detailed information, see: [Template Operation API](./template-api.md)
-
-### 3. Job Management API
-Provides job status query, job cancellation, and Worker management functions.
-
-**Main Endpoints**:
-- `GET /job` - Query job status
-- `DELETE /job` - Cancel job
-- `GET /worker` - Query Worker status
-- `DELETE /worker` - Delete Worker
-- `GET /health` - System health check
-
-For detailed information, see: [Job Management API](./job-api.md)
-
-## Supported Driver Types
+## Supported drivers
 
 ### Netmiko (SSH)
-- **Device Types**: cisco_ios, cisco_nxos, juniper_junos, arista_eos, huawei, hp_comware, and more. See the [Netmiko Platform Support](https://github.com/ktbyers/netmiko/blob/develop/PLATFORMS.md) for the complete list of supported device types
-- **Connection Method**: SSH
-- **Features**: Strong universality, supports most mainstream network devices
+- Device types: cisco_ios, cisco_nxos, juniper_junos, arista_eos, huawei, hp_comware, etc. Full list: [Netmiko platforms](https://github.com/ktbyers/netmiko/blob/develop/PLATFORMS.md)
+- Protocol: SSH
+- Strength: broad vendor coverage
 
-### NAPALM (Multi-vendor)
-- **Device Types**: ios, iosxr, junos, eos, nxos
-- **Connection Method**: SSH/API
-- **Features**: Standardized interface, cross-vendor compatibility
+### NAPALM (multi-vendor)
+- Device types: ios, iosxr, junos, eos, nxos, etc.
+- Protocol: SSH/API
+- Strength: standardized interface
 
-### PyEAPI (Arista-specific)
-- **Device Types**: Arista EOS
-- **Connection Method**: HTTP/HTTPS API
-- **Features**: Native API support, excellent performance
+### PyEAPI (Arista)
+- Device type: Arista EOS
+- Protocol: HTTP/HTTPS API
+- Strength: native API performance
 
-### Paramiko (Linux Servers)
-- **Device Types**: Linux servers (Ubuntu, CentOS, Debian, etc.)
-- **Connection Method**: SSH
-- **Features**: Native SSH, supports file transfer, proxy connections, sudo, etc.
+### Paramiko (Linux)
+- Device type: Linux servers
+- Protocol: SSH
+- Strength: native SSH with file transfer, proxy, sudo, etc.
 
-## Queue Strategies
+## Queue strategies
 
-NetPulse supports two queue strategies, and the system will automatically select the appropriate strategy based on driver type:
+NetPulse picks a queue strategy based on driver:
 
-### Device-bound Queue (pinned)
-- **Applicable Drivers**: Netmiko, NAPALM (SSH/Telnet long connections)
-- **Features**: Dedicated Worker per device, connection reuse
-- **Advantages**: Reduces connection establishment overhead, improves performance
-- **Use Cases**: Frequent operations on the same device, need to maintain connection state
+### Pinned (device-bound)
+- For Netmiko, NAPALM (SSH/Telnet long-lived)
+- Dedicated worker per device; reuses connections
+- Best when repeatedly touching the same device
 
-### FIFO Queue (fifo)
-- **Applicable Drivers**: PyEAPI (HTTP/HTTPS stateless connections), Paramiko (Linux servers)
-- **Features**: First-in-first-out, new connection each time
-- **Advantages**: Simple and efficient, suitable for stateless operations
-- **Use Cases**: HTTP API calls, long-running tasks, no need to maintain connection state
+### FIFO
+- For PyEAPI (HTTP/HTTPS stateless), Paramiko
+- New connection per job
+- Good for stateless or long-running tasks
 
-> **Tip**: If `queue_strategy` is not specified, the system will automatically select based on driver type (Netmiko/NAPALM → `pinned`, PyEAPI/Paramiko → `fifo`)
+If you omit `queue_strategy`, defaults are applied (Netmiko/NAPALM → pinned; PyEAPI/Paramiko → fifo).
 
-## Core Parameters Quick Reference
+## Parameter quick reference
 
-### Required Parameters
+### Required
 
-**connection_args (Connection Parameters)** - Required for all operations:
+`connection_args` (for all ops):
 ```json
 {
-  "device_type": "cisco_ios",  // Device type
-  "host": "192.168.1.1",      // Device IP
-  "username": "admin",         // Username
-  "password": "password"        // Password
+  "device_type": "cisco_ios",
+  "host": "192.168.1.1",
+  "username": "admin",
+  "password": "password"
 }
 ```
 
-**Operation Parameters** - Choose one:
-- `command`: Query operation (e.g., `"show version"`)
-- `config`: Configuration operation (e.g., `["interface Gi0/1", "description Test"]`)
+Operation (choose one):
+- `command`: e.g., `"show version"`
+- `config`: e.g., `["interface Gi0/1", "description Test"]`
 
-### Optional Parameters
+### Optional
 
-**driver_args (Driver Parameters)** - Varies by driver type, see driver-specific documentation:
+`driver_args` (driver-specific; see driver docs):
 ```json
 {
-  "read_timeout": 60,      // Netmiko-specific
-  "delay_factor": 2        // Netmiko-specific
+  "read_timeout": 60,
+  "delay_factor": 2
 }
 ```
 
-**options (Global Options)** - Controls task behavior:
+`options` (global):
 ```json
 {
-  "queue_strategy": "pinned",  // Queue strategy (auto-selected, usually no need to specify)
-  "ttl": 300,                  // Timeout (seconds)
-  "parsing": {...},            // Output parsing (optional)
-  "webhook": {...}             // Callback notification (optional)
+  "queue_strategy": "pinned",
+  "ttl": 300,
+  "parsing": {},
+  "webhook": {}
 }
 ```
 
-> **Quick Start**: For most scenarios, just provide `connection_args` and `command`/`config`, other parameters use default values.
+> For most cases, `connection_args` + `command`/`config` is enough; defaults handle the rest.
 
-## Error Handling
+## Error handling
 
-### Error Response Format
-All error responses use a unified format:
+Error response shape:
 ```json
 {
   "code": -1,
-  "message": "Error description",
-  "data": "Specific error information or error detail object"
+  "message": "error description",
+  "data": "details or object"
 }
 ```
 
-**HTTP Status Codes**:
-- `200` - Request successful
-- `201` - Resource created successfully (job submitted)
-- `400` - Request parameter error
-- `403` - Authentication failed (API Key invalid or missing)
-- `404` - Resource not found
-- `422` - Parameter validation failed
-- `500` - Internal server error
+HTTP status codes:
+- 200 – success
+- 201 – created (job submitted)
+- 400 – bad request
+- 403 – auth failed (API key missing/invalid)
+- 404 – not found
+- 422 – validation failed
+- 500 – server error
 
-> **Note**: Even if the HTTP status code is 200, if business logic fails, the `code` field in the response will still be `-1`.
+Note: even with HTTP 200, `code` can be `-1` for business failures.
 
-## Quick Start Recommendations
+## Quick start tips
 
-### Parameter Selection Guide
+Parameter guidance:
+1. Start with `connection_args` + `command`/`config`.
+2. Queue strategy: usually omit; driver picks.
+3. Driver args: defaults are fine unless you need tuning.
+4. Timeouts: raise only for slow devices or large batches.
 
-1. **Required Parameters**: `connection_args` + `command`/`config` is enough to get started
-2. **Queue Strategy**: Usually no need to specify, system will automatically select based on driver
-3. **Driver Parameters**: Use default values for most scenarios, adjust for special needs
-4. **Timeout Settings**: Default values are sufficient, increase for slow devices or batch operations
+Common scenarios:
+- Simple show: `connection_args` + `command`
+- Config push: add `driver_args.save: true`
+- Slow device: raise `timeout`, `read_timeout`, `delay_factor`
+- Bulk: use `/device/bulk`
 
-### Common Scenarios
+See [API Best Practices](./api-best-practices.md) for more.
 
-- **Simple Query**: Just `connection_args` + `command`
-- **Configuration Push**: Add `driver_args.save: true` to save configuration
-- **Slow Devices**: Increase `timeout`, `read_timeout`, `delay_factor`
-- **Batch Operations**: Use `/device/bulk` interface, system automatically optimizes
+## Quick start
 
-> **Detailed Guide**: See [API Best Practices](./api-best-practices.md) for more optimization tips
-
-## Quick Start
-
-### 1. Check System Health
+1) Health check
 ```bash
 curl -H "X-API-KEY: your-key" http://localhost:9000/health
 ```
 
-### 2. Test Device Connection
+2) Connection test
 ```bash
 curl -X POST -H "Content-Type: application/json" \
   -H "X-API-KEY: your-key" \
-  -d '{
-    "driver": "netmiko",
-    "connection_args": {
-      "device_type": "cisco_ios",
-      "host": "192.168.1.1",
-      "username": "admin",
-      "password": "password"
-    }
-  }' \
-  http://localhost:9000/device/test-connection
+  -d '{"driver":"netmiko","connection_args":{"device_type":"cisco_ios","host":"192.168.1.1","username":"admin","password":"password"}}' \
+  http://localhost:9000/device/test
 ```
 
-### 3. Execute Simple Query
+3) Run a show
 ```bash
 curl -X POST -H "Content-Type: application/json" \
   -H "X-API-KEY: your-key" \
-  -d '{
-    "driver": "netmiko",
-    "connection_args": {
-      "device_type": "cisco_ios",
-      "host": "192.168.1.1",
-      "username": "admin",
-      "password": "password"
-    },
-    "command": "show version"
-  }' \
-  http://localhost:9000/device/execute
+  -d '{"driver":"netmiko","connection_args":{"device_type":"cisco_ios","host":"192.168.1.1","username":"admin","password":"password"},"command":"show version"}' \
+  http://localhost:9000/device/exec
 ```
 
-## Next Steps
+## Next steps
 
-- [Device Operation API](./device-api.md) - Core device operation interfaces
-- [Driver Selection](../drivers/index.md) - Choose the right driver
-- [API Best Practices](./api-best-practices.md) - Usage recommendations and optimization tips
+- [Device Operation API](./device-api.md)
+- [Driver Selection](../drivers/index.md)
+- [API Best Practices](./api-best-practices.md)

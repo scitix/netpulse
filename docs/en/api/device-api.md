@@ -2,28 +2,26 @@
 
 ## Overview
 
-Device Operation API (`/device/*`) is the core interface of NetPulse, providing the following features:
+The Device Operation APIs (`/device/*`) are the core of NetPulse. They:
 
-- **Operation Identification** - Automatically identifies operation type (query/configuration) based on request parameters
-- **Unified Interface** - Supports all implemented drivers and device types
-- **Simplified Usage** - Reduces API call complexity through unified interface
-- **Basic Functions** - Supports device operations, connection testing, and batch operations
+- **Auto-detect action** – infer query vs. config from request fields
+- **Unified interface** – works with every implemented driver and device type
+- **Simple to use** – one entry point reduces API complexity
+- **Essentials built-in** – device actions, connection tests, bulk execution
 
-## API Endpoints
+## Endpoints
 
-### POST /device/execute
+### POST /device/exec
 
-Unified device operation endpoint that identifies operation type based on request parameters.
+Unified device operation endpoint. The action is inferred from the payload.
 
-**Function Description**:
-- **Query Operation** - When request contains `command` field
-- **Configuration Operation** - When request contains `config` field
-- **Queue Selection** - Automatically selects queue strategy based on driver type (can be manually specified)
+- **Query** – when the request contains `command`
+- **Configuration** – when the request contains `config`
+- **Queue choice** – queue strategy is auto-selected by driver (can be overridden)
 
-**Request Example**:
-
+**Query example**
 ```bash
-curl -X POST "http://localhost:9000/device/execute" \
+curl -X POST "http://localhost:9000/device/exec" \
   -H "X-API-KEY: your_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -38,10 +36,9 @@ curl -X POST "http://localhost:9000/device/execute" \
   }'
 ```
 
-**Configuration Operation Example**:
-
+**Config example**
 ```bash
-curl -X POST "http://localhost:9000/device/execute" \
+curl -X POST "http://localhost:9000/device/exec" \
   -H "X-API-KEY: your_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -58,9 +55,7 @@ curl -X POST "http://localhost:9000/device/execute" \
 
 ### POST /device/bulk
 
-Batch device operation endpoint that supports executing the same operation on multiple devices.
-
-**Request Example**:
+Run the same action against multiple devices.
 
 ```bash
 curl -X POST "http://localhost:9000/device/bulk" \
@@ -69,16 +64,8 @@ curl -X POST "http://localhost:9000/device/bulk" \
   -d '{
     "driver": "netmiko",
     "devices": [
-      {
-        "host": "192.168.1.1",
-        "username": "admin",
-        "password": "admin123"
-      },
-      {
-        "host": "192.168.1.2",
-        "username": "admin",
-        "password": "admin123"
-      }
+      { "host": "192.168.1.1", "username": "admin", "password": "admin123" },
+      { "host": "192.168.1.2", "username": "admin", "password": "admin123" }
     ],
     "connection_args": {
       "device_type": "cisco_ios",
@@ -88,14 +75,12 @@ curl -X POST "http://localhost:9000/device/bulk" \
   }'
 ```
 
-### POST /device/test-connection
+### POST /device/test
 
-Test device connection status, used to verify device connection and authentication availability. Supports different driver types such as Netmiko, NAPALM, PyEAPI, and Paramiko.
-
-**Request Example**:
+Connection test endpoint to validate reachability and authentication. Works with Netmiko, NAPALM, PyEAPI, Paramiko, etc.
 
 ```bash
-curl -X POST "http://localhost:9000/device/test-connection" \
+curl -X POST "http://localhost:9000/device/test" \
   -H "X-API-KEY: your_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -109,8 +94,7 @@ curl -X POST "http://localhost:9000/device/test-connection" \
   }'
 ```
 
-**Response Example**:
-
+Response example:
 ```json
 {
   "code": 200,
@@ -131,19 +115,15 @@ curl -X POST "http://localhost:9000/device/test-connection" \
 
 ## Quick Start
 
-### Scenario 1: Simple Query (Most Common)
+### Scenario 1: Simple show (most common)
 
-**Requirement**: Query device version information
-
+Query device version:
 ```python
 import requests
 
-response = requests.post(
-    "http://localhost:9000/device/execute",
-    headers={
-        "X-API-KEY": "your_key",
-        "Content-Type": "application/json"
-    },
+resp = requests.post(
+    "http://localhost:9000/device/exec",
+    headers={"X-API-KEY": "your_key", "Content-Type": "application/json"},
     json={
         "driver": "netmiko",
         "connection_args": {
@@ -156,23 +136,18 @@ response = requests.post(
     }
 )
 
-job_id = response.json()["data"]["id"]
+job_id = resp.json()["data"]["id"]
 print(f"Job ID: {job_id}")
 ```
 
-**Note**: Just provide connection parameters and command, other parameters use default values.
+Minimal payload: connection parameters + `command`.
 
-### Scenario 2: Configuration Push (Need to Save)
-
-**Requirement**: Configure interface and save
+### Scenario 2: Push config and save
 
 ```python
-response = requests.post(
-    "http://localhost:9000/device/execute",
-    headers={
-        "X-API-KEY": "your_key",
-        "Content-Type": "application/json"
-    },
+requests.post(
+    "http://localhost:9000/device/exec",
+    headers={"X-API-KEY": "your_key", "Content-Type": "application/json"},
     json={
         "driver": "netmiko",
         "connection_args": {
@@ -187,26 +162,19 @@ response = requests.post(
             " no shutdown"
         ],
         "driver_args": {
-            "save": True,              # Save configuration
-            "exit_config_mode": True   # Exit configuration mode
+            "save": true,              # save config
+            "exit_config_mode": true   # exit config mode
         }
     }
 )
 ```
 
-**Note**: Configuration operations are recommended to set `save: true` to save configuration.
-
-### Scenario 3: Slow Device Optimization
-
-**Requirement**: Operate slow-responding devices, need to increase timeout
+### Scenario 3: Slow device tuning
 
 ```python
-response = requests.post(
-    "http://localhost:9000/device/execute",
-    headers={
-        "X-API-KEY": "your_key",
-        "Content-Type": "application/json"
-    },
+requests.post(
+    "http://localhost:9000/device/exec",
+    headers={"X-API-KEY": "your_key", "Content-Type": "application/json"},
     json={
         "driver": "netmiko",
         "connection_args": {
@@ -214,109 +182,104 @@ response = requests.post(
             "host": "192.168.1.1",
             "username": "admin",
             "password": "admin123",
-            "timeout": 60              # Increase connection timeout to 60 seconds
+            "timeout": 60
         },
         "command": "show running-config",
         "driver_args": {
-            "read_timeout": 120,       # Read timeout 120 seconds
-            "delay_factor": 3          # Delay factor 3 (slow devices)
+            "read_timeout": 120,
+            "delay_factor": 3
         },
-        "options": {
-            "ttl": 600                 # Task timeout 600 seconds
-        }
+        "ttl": 600
     }
 )
 ```
 
-**Note**: Slow devices need to increase various timeout parameters.
+Increase timeouts for sluggish devices.
 
-## Parameter Details
+## Parameters
 
-### connection_args (Connection Parameters)
+### connection_args (required)
 
-Required for all operations, used to establish device connection.
+Basic connection settings for all drivers.
 
-**Required Parameters**:
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
+Required:
+| Field | Type | Description | Example |
+| --- | --- | --- | --- |
 | device_type | string | Device type | `cisco_ios`, `juniper_junos`, `arista_eos` |
-| host | string | Device IP address | `192.168.1.1` |
+| host | string | Device IP | `192.168.1.1` |
 | username | string | Login username | `admin` |
 | password | string | Login password | `password123` |
 
-**Optional Parameters**:
-| Parameter | Type | Default | Use Case |
-|-----------|------|---------|----------|
+Optional:
+| Field | Type | Default | When to use |
+| --- | --- | --- | --- |
 | port | integer | 22 | Non-standard SSH port |
-| timeout | integer | 30 | Connection timeout (seconds), can be increased for slow networks |
-| secret | string | - | Privileged mode password (enable password) |
-| enable_mode | boolean | true | Whether to enter privileged mode for configuration operations |
+| timeout | integer | 30 | Connection timeout (s); raise for slow networks |
+| secret | string | - | Enable/privileged password |
+| enable_mode | boolean | true | Enter enable mode for config ops |
 
-> **Tip**: Different drivers may have additional parameters in `connection_args`, see driver-specific documentation for details.
+> Drivers may accept additional fields. See each driver doc.
 
-### driver_args (Driver Parameters)
+### driver_args (optional)
 
-Driver-specific parameters, vary by driver type and operation type. **Most scenarios don't need to specify**, use default values.
+Driver-specific tuning. Defaults work for most cases.
 
-**When to Specify**:
-- Slow devices: Increase `read_timeout`, `delay_factor`
-- Configuration operations: Set `save`, `exit_config_mode`
-- Special requirements: Refer to driver-specific documentation
+When to set:
+- Slow devices: raise `read_timeout`, `delay_factor`
+- Config push: use `save`, `exit_config_mode`
+- Special needs: see driver docs
 
-**Common Parameters by Driver**:
+Examples:
 
-**Netmiko** (SSH devices):
+**Netmiko (SSH)**
 ```json
 {
-  "read_timeout": 60,        // Read timeout (slow devices)
-  "delay_factor": 2,         // Delay factor (slow devices)
-  "save": true,              // Save after configuration operation
-  "exit_config_mode": true   // Exit configuration mode after configuration operation
+  "read_timeout": 60,
+  "delay_factor": 2,
+  "save": true,
+  "exit_config_mode": true
 }
 ```
 
-**NAPALM** (Multi-vendor):
+**NAPALM**
 ```json
 {
   "optional_args": {
-    "secret": "enable_password"  // Privileged mode password
+    "secret": "enable_password"
   }
 }
 ```
 
-**PyEAPI** (Arista-specific):
+**PyEAPI**
 ```json
 {
-  "transport": "https",      // Transport protocol
-  "port": 443,               // API port
-  "verify": false            // SSL verification
+  "transport": "https",
+  "port": 443,
+  "verify": false
 }
 ```
 
-> **Detailed Parameter Description**: Please refer to driver-specific documentation ([Netmiko](../drivers/netmiko.md), [NAPALM](../drivers/napalm.md), [PyEAPI](../drivers/pyeapi.md), [Paramiko](../drivers/paramiko.md))
+See driver docs for full options: [Netmiko](../drivers/netmiko.md), [NAPALM](../drivers/napalm.md), [PyEAPI](../drivers/pyeapi.md), [Paramiko](../drivers/paramiko.md).
 
-### options
+### options (global)
 
-Global options that control task execution behavior.
+Global execution options at the root of the request body.
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| queue_strategy | string | Auto-select | Queue strategy: `pinned` (SSH long connection, connection reuse) or `fifo` (HTTP short connection). Netmiko/NAPALM default `pinned`, PyEAPI default `fifo` |
-| ttl | integer | 300 (600 for batch) | Task timeout (seconds). Single device operation default 300 seconds, batch operation default 600 seconds |
-| parsing | object | null | Output parsing configuration (TextFSM/TTP, etc.) |
-| rendering | object | null | Template rendering configuration (Jinja2, etc.) |
-| webhook | object | null | Webhook callback configuration |
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| queue_strategy | string | auto | `pinned` (SSH long-lived) or `fifo` (stateless HTTP). Netmiko/NAPALM default `pinned`; PyEAPI default `fifo`. |
+| ttl | integer | 300 (bulk 600) | Job timeout in seconds. |
+| parsing | object | null | Output parsing config (TextFSM, TTP, etc.). |
+| rendering | object | null | Template rendering config (Jinja2, etc.). |
+| webhook | object | null | Webhook callback config. |
 
-**Queue Strategy Selection Recommendations**:
-- **`pinned`**: Suitable for SSH/Telnet long connections (Netmiko, NAPALM), supports connection reuse, improves performance
-- **`fifo`**: Suitable for HTTP/HTTPS stateless connections (PyEAPI), creates new connection each time
+Queue guidance:
+- **pinned** – for SSH/Telnet long connections (Netmiko, NAPALM); enables reuse and better performance.
+- **fifo** – for stateless HTTP/HTTPS (PyEAPI); new connection per job.
 
-## Response Models
+## Response models
 
 ### SubmitJobResponse
-
-Job submission response (single device operation).
-
 ```json
 {
   "code": 200,
@@ -330,9 +293,6 @@ Job submission response (single device operation).
 ```
 
 ### BatchSubmitJobResponse
-
-Batch job submission response.
-
 ```json
 {
   "code": 200,
@@ -354,46 +314,23 @@ Batch job submission response.
 }
 ```
 
-**Description**:
-- `succeeded`: List of successfully submitted tasks (`JobInResponse` objects)
-- `failed`: List of failed device hosts (string array)
+- `succeeded`: list of submitted jobs (`JobInResponse`)
+- `failed`: list of hosts that failed to submit
 
 ### ConnectionTestResponse
+Same structure as the example under `/device/test`.
 
-Connection test response.
+## Bulk operations
 
-```json
-{
-  "code": 200,
-  "message": "Connection test completed",
-  "data": {
-    "success": true,
-    "connection_time": 2.5,
-    "error_message": null,
-    "device_info": {
-      "prompt": "Router#",
-      "device_type": "cisco_ios",
-      "host": "192.168.1.1"
-    },
-    "timestamp": "2024-01-15T10:30:00Z"
-  }
-}
-```
+Run the same request for multiple devices—useful for fleet ops.
 
-## Batch Operations
-
-Batch device operations support executing the same operation on multiple devices, suitable for large-scale network operations scenarios.
-
-### Batch Query Operations
-
+### Bulk show
 ```python
-# Batch query device status
-response = requests.post(
+import requests
+
+resp = requests.post(
     "http://localhost:9000/device/bulk",
-    headers={
-        "X-API-KEY": "your_key",
-        "Content-Type": "application/json"
-    },
+    headers={"X-API-KEY": "your_key", "Content-Type": "application/json"},
     json={
         "driver": "netmiko",
         "devices": [
@@ -401,34 +338,21 @@ response = requests.post(
             {"host": "192.168.1.2", "username": "admin", "password": "admin123"},
             {"host": "192.168.1.3", "username": "admin", "password": "admin123"}
         ],
-        "connection_args": {
-            "device_type": "cisco_ios",
-            "timeout": 30
-        },
+        "connection_args": {"device_type": "cisco_ios", "timeout": 30},
         "command": "show interfaces status"
     }
 )
 
-result = response.json()
-data = result['data']
+data = resp.json()["data"]
 print(f"Success: {len(data['succeeded']) if data['succeeded'] else 0}")
 print(f"Failed: {len(data['failed']) if data['failed'] else 0}")
-
-# Handle failed devices
-if data.get('failed'):
-    print(f"Failed devices: {data['failed']}")
 ```
 
-### Mixed Vendor Batch Operations
-
+### Mixed-vendor bulk
 ```python
-# Mixed vendor device batch query
-response = requests.post(
+requests.post(
     "http://localhost:9000/device/bulk",
-    headers={
-        "X-API-KEY": "your_key",
-        "Content-Type": "application/json"
-    },
+    headers={"X-API-KEY": "your_key", "Content-Type": "application/json"},
     json={
         "driver": "netmiko",
         "devices": [
@@ -446,16 +370,11 @@ response = requests.post(
 )
 ```
 
-### Batch Configuration Operations
-
+### Bulk config push
 ```python
-# Batch push configuration
-response = requests.post(
+requests.post(
     "http://localhost:9000/device/bulk",
-    headers={
-        "X-API-KEY": "your_key",
-        "Content-Type": "application/json"
-    },
+    headers={"X-API-KEY": "your_key", "Content-Type": "application/json"},
     json={
         "driver": "netmiko",
         "devices": [
@@ -477,57 +396,45 @@ response = requests.post(
             "no shutdown"
         ],
         "driver_args": {
-            "exit_config_mode": True,
-            "enter_config_mode": True,
-            "cmd_verify": True
+            "exit_config_mode": true,
+            "enter_config_mode": true,
+            "cmd_verify": true
         },
-        "options": {
-            "queue_strategy": "pinned",
-            "ttl": 600
-        }
+        "queue_strategy": "pinned",
+        "ttl": 600
     }
 )
 ```
 
-### Batch Operation Response Format
-
+### Bulk response shape
 ```json
 {
   "code": 200,
   "message": "success",
   "data": {
     "succeeded": [
-      {
-        "id": "job_123456",
-        "status": "queued",
-        "queue": "pinned_192.168.1.1"
-      }
+      { "id": "job_123456", "status": "queued", "queue": "pinned_192.168.1.1" }
     ],
-    "failed": [
-      "192.168.1.3"
-    ]
+    "failed": ["192.168.1.3"]
   }
 }
 ```
 
-**Description**:
-- `succeeded`: List of successfully submitted task objects, each object contains task ID, status, etc.
-- `failed`: List of failed device host addresses (string array), failure reasons need to be queried through task status
+- `succeeded`: job objects with IDs and status
+- `failed`: host list; inspect job status for root cause
 
-### Batch Operation Best Practices
+### Bulk best practices
 
-1. **Device Grouping Strategy**: Group by vendor or geographic location, recommended batch size 10-50 devices
-2. **Error Handling**: Implement retry mechanism, record detailed error information
-3. **Performance Optimization**: Use device-bound queues, parallel processing of multiple devices
-4. **Monitoring and Alerting**: Real-time monitoring of operation status, set failure rate alerts
+1. Group devices (by vendor/site); batch size 10–50
+2. Add retry logic and detailed error logging
+3. Use pinned queues for better concurrency on SSH drivers
+4. Monitor progress and alert on high failure rates
 
-## Device Connection Testing
+## Connection testing
 
-### Supported Driver Types
+### Supported drivers
 
 #### Netmiko (SSH)
-
-**Basic Connection Test**:
 ```json
 {
   "driver": "netmiko",
@@ -541,7 +448,7 @@ response = requests.post(
 }
 ```
 
-**Complete Parameter Example**:
+Full example with tuning:
 ```json
 {
   "driver": "netmiko",
@@ -561,9 +468,7 @@ response = requests.post(
 }
 ```
 
-#### NAPALM (Multi-vendor)
-
-**Connection Test Example**:
+#### NAPALM (multi-vendor)
 ```json
 {
   "driver": "napalm",
@@ -582,7 +487,7 @@ response = requests.post(
 }
 ```
 
-**Cisco IOS Example**:
+Cisco IOS variant:
 ```json
 {
   "driver": "napalm",
@@ -598,9 +503,7 @@ response = requests.post(
 }
 ```
 
-#### PyEAPI (Arista-specific)
-
-**Connection Test Example**:
+#### PyEAPI (Arista)
 ```json
 {
   "driver": "pyeapi",
@@ -615,9 +518,7 @@ response = requests.post(
 }
 ```
 
-#### Paramiko (Linux Servers)
-
-**Basic Connection Test**:
+#### Paramiko (Linux servers)
 ```json
 {
   "driver": "paramiko",
@@ -631,7 +532,7 @@ response = requests.post(
 }
 ```
 
-**Key Authentication Example**:
+Key-based auth:
 ```json
 {
   "driver": "paramiko",
@@ -645,49 +546,46 @@ response = requests.post(
 }
 ```
 
-### Connection Parameter Description
+### Connection parameters reference
 
-**Netmiko Parameters**:
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
+**Netmiko**
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
 | device_type | string | - | Device type (cisco_ios, cisco_nxos, juniper_junos, arista_eos) |
-| host | string | - | Device IP address |
+| host | string | - | Device IP |
 | username | string | - | Username |
 | password | string | - | Password |
-| secret | string | - | Privileged mode password |
+| secret | string | - | Enable password |
 | port | integer | 22 | SSH port |
-| timeout | integer | 20 | Connection timeout |
-| keepalive | integer | 60 | Keepalive time |
-| global_delay_factor | float | 1 | Global delay factor |
-| fast_cli | boolean | false | Fast CLI mode |
+| timeout | integer | 20 | Connect timeout |
+| keepalive | integer | 60 | Keepalive |
+| global_delay_factor | float | 1 | Delay factor |
+| fast_cli | boolean | false | Fast CLI |
 | verbose | boolean | false | Verbose output |
 
-**NAPALM Parameters**:
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| device_type | string | - | Device type (ios, iosxr, junos, eos, nxos) |
-| hostname | string | - | Device IP address |
+**NAPALM**
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| device_type | string | - | ios, iosxr, junos, eos, nxos |
+| hostname | string | - | Device IP |
 | username | string | - | Username |
 | password | string | - | Password |
-| timeout | integer | 60 | Connection timeout |
-| optional_args | object | {} | Optional parameters |
+| timeout | integer | 60 | Connect timeout |
+| optional_args | object | {} | Optional args |
 
-**PyEAPI Parameters**:
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| host | string | - | Device IP address |
+**PyEAPI**
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| host | string | - | Device IP |
 | username | string | - | Username |
 | password | string | - | Password |
-| transport | string | https | Transport protocol (http/https) |
-| port | integer | 443 | Port number |
-| timeout | integer | 30 | Connection timeout |
+| transport | string | https | http/https |
+| port | integer | 443 | Port |
+| timeout | integer | 30 | Connect timeout |
 
-### Common Errors
+### Common errors
 
-**Connection Timeout**:
+**Connection timeout**
 ```json
 {
   "code": 200,
@@ -699,7 +597,7 @@ response = requests.post(
 }
 ```
 
-**Authentication Failed**:
+**Authentication failed**
 ```json
 {
   "code": 200,
@@ -711,32 +609,30 @@ response = requests.post(
 }
 ```
 
-> **Tip**: Connection test is a synchronous operation that returns results immediately, no need to query task status.
+> Connection tests are synchronous and return immediately; no job polling needed.
 
-## Best Practices
+## Best practices
 
-> **For detailed best practices guide, see**: [API Best Practices](./api-best-practices.md)
+> See [API Best Practices](./api-best-practices.md) for a full guide.
 
-### Quick Tips
-
-- **Driver Selection**: Netmiko (universal SSH), NAPALM (multi-vendor), PyEAPI (Arista-specific), Paramiko (Linux servers)
-- **Queue Strategy**: Usually no need to specify, system will automatically select based on driver
-- **Error Handling**: Implement retry mechanism, record detailed error information
-- **Task Tracking**: Use `/job` interface to query task status, or use webhook callbacks
+- Driver choice: Netmiko (SSH), NAPALM (multi-vendor), PyEAPI (Arista), Paramiko (Linux)
+- Queue strategy: usually leave auto; driver chooses
+- Error handling: retries + detailed logging
+- Job tracking: query `/job` or use webhooks
 
 ## Notes
 
-1. **Authentication Required**: All API requests require API Key authentication (supports Query parameter, Header, or Cookie three methods)
-2. **Asynchronous Processing**: Device operations are asynchronous, need to query task status to get results (connection test is synchronous)
-3. **Connection Parameters**: Ensure device connection parameters are correct, especially username and password
-4. **Timeout Settings**: Adjust connection timeout based on network environment, slow devices need to increase timeout parameters
-5. **Queue Management**: System will automatically select queue strategy, usually no need to manually specify
-6. **Batch Operations**: Recommended batch size 10-50 devices to avoid system overload
+1. All API calls require an API key (query, header, or cookie).
+2. Device operations are async—poll job status for results (connection tests are sync).
+3. Verify connection parameters (host/user/password).
+4. Tune timeouts for slow networks/devices.
+5. Queue strategy is auto-selected; manual override rarely needed.
+6. Bulk: keep batch size around 10–50 to avoid overload.
 
 ---
 
-## Related Documentation
+## Related docs
 
-- [API Overview](./api-overview.md) - Learn about all API interfaces
-- [Driver Selection](../drivers/index.md) - Choose the right driver type
-- [API Best Practices](./api-best-practices.md) - Usage recommendations and optimization tips
+- [API Overview](./api-overview.md)
+- [Driver Selection](../drivers/index.md)
+- [API Best Practices](./api-best-practices.md)

@@ -134,7 +134,7 @@ curl -X POST \
       "device_type": "cisco_ios"
     }
   }' \
-  http://localhost:9000/device/test-connection
+  http://localhost:9000/device/test
 ```
 
 **连接参数说明：**
@@ -187,7 +187,7 @@ response=$(curl -s -X POST \
     },
     "command": "show version"
   }' \
-  http://localhost:9000/device/execute)
+  http://localhost:9000/device/exec)
 
 # 查看响应
 echo "$response" | jq '.'
@@ -208,39 +208,12 @@ echo "$response" | jq '.'
 ```
 
 !!! warning "重要：设备操作是异步的"
-    所有设备操作（`/device/execute`、`/device/bulk`）都是异步的：
+    所有设备操作（`/device/exec`、`/device/bulk`）都是异步的：
     1. API 立即返回任务ID和状态（通常是 `queued`）
     2. 需要通过 `/job?id=xxx` 接口查询执行结果
-    3. 只有 `/device/test-connection` 是同步的，立即返回结果
+    3. 只有 `/device/test` 是同步的，立即返回结果
     
-    **查询任务结果：**
-    ```bash
-    # 提取任务ID
-    task_id=$(echo "$response" | jq -r '.data.id')
-    
-    # 等待几秒后查询任务结果
-    sleep 3
-    curl -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
-         http://localhost:9000/job?id=$task_id | jq '.'
-    ```
-    
-    **任务完成后的响应示例：**
-    ```json
-    {
-      "code": 200,
-      "message": "success",
-      "data": [{
-        "id": "job_12345",
-        "status": "finished",
-        "result": {
-          "type": "success",
-          "retval": {
-            "show version": "Cisco IOS Software, Version 15.2..."
-          }
-        },
-        "duration": 1.45
-      }]
-    }
+    请参考下文的“任务管理”章节，了解如何查询和管理任务。
     ```
 
 ### 配置推送
@@ -266,7 +239,7 @@ curl -X POST \
       "no shutdown"
     ]
   }' \
-  http://localhost:9000/device/execute
+  http://localhost:9000/device/exec
 ```
 
 ## 批量操作体验
@@ -361,42 +334,10 @@ curl -X DELETE \
   http://localhost:9000/job?id=your_job_id
 ```
 
-## 最佳实践
-
-### 错误处理
-
-在实际使用中，建议检查API响应状态并处理错误：
-
-```bash
-# 执行命令并检查响应
-response=$(curl -s -X POST \
-  -H "X-API-KEY: $NETPULSE_SERVER__API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "driver": "netmiko",
-    "connection_args": {
-      "host": "192.168.1.1",
-      "username": "admin",
-      "password": "your_password",
-      "device_type": "cisco_ios"
-    },
-    "command": "show version"
-  }' \
-  http://localhost:9000/device/execute)
-
-# 解析响应
-if echo "$response" | jq -e '.code == 200' > /dev/null; then
-    echo "命令执行成功"
-    echo "$response" | jq -r '.data.output'
-else
-    echo "命令执行失败"
-    echo "$response" | jq -r '.message'
-fi
-```
-
 ## 下一步学习
 
 ### 深入学习
+
 - [基础概念](basic-concepts.md) - 了解系统架构和核心概念
 - [部署指南](deployment-guide.md) - 学习生产环境部署
 - [Postman使用指南](postman-guide.md) - 使用Postman快速体验API
@@ -404,11 +345,7 @@ fi
 
 ## 遇到问题？
 
-!!! failure "常见问题"
-    - **服务启动失败** → 查看 [部署指南](deployment-guide.md)
-    - **API调用错误** → 检查API Key是否正确，查看 [API概览](../api/api-overview.md)
-    - **设备连接问题** → 确认设备网络可达，检查用户名密码是否正确
-    - **任务执行失败** → 使用任务管理API查询详细错误信息
-
-
----
+- **服务启动失败** → 查看 [部署指南](deployment-guide.md)
+- **API调用错误** → 检查API Key是否正确，查看 [API概览](../api/api-overview.md)
+- **设备连接问题** → 确认设备网络可达，检查用户名密码是否正确
+- **任务执行失败** → 使用任务管理API查询详细错误信息

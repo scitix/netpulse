@@ -1,0 +1,47 @@
+server:
+  host: 0.0.0.0
+  port: 8000
+  api_key: E2E_API_KEY
+  api_key_name: X-API-KEY
+  gunicorn_worker: 1
+
+job:
+  ttl: 120
+  timeout: 60
+  result_ttl: 60
+
+worker:
+  scheduler: "load_weighted_random"
+  ttl: 120
+  pinned_per_node: 4
+
+redis:
+  host: 172.20.20.30
+  port: 6379
+  password:
+  timeout: 5
+  keepalive: 5
+  tls:
+    enabled: false
+    ca:
+    cert:
+    key:
+  sentinel:
+    enabled: false
+    host: localhost
+    port: 26379
+    master_name: mymaster
+    password:
+  key:
+    host_to_node_map: netpulse:e2e:host_to_node_map
+    node_info_map: netpulse:e2e:node_info_map
+
+plugin:
+  driver: netpulse/plugins/drivers/
+  webhook: netpulse/plugins/webhooks/
+  template: netpulse/plugins/templates/
+  scheduler: netpulse/plugins/schedulers/
+
+log:
+  config: config/log-config.yaml
+  level: INFO

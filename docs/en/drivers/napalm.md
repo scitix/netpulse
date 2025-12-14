@@ -4,7 +4,7 @@
 
 NAPALM driver is based on [Device Operation API](../api/device-api.md), providing cross-vendor standardized network device operation functions, supporting mainstream vendor devices such as Cisco, Juniper, Arista, HP, etc.
 
-> **Important Note**: This document focuses on NAPALM driver-specific parameters and usage. For general API endpoints (`POST /device/execute`), request format, response format, etc., please refer to [Device Operation API](../api/device-api.md).
+> **Important Note**: This document focuses on NAPALM driver-specific parameters and usage. For general API endpoints (`POST /device/exec`), request format, response format, etc., please refer to [Device Operation API](../api/device-api.md).
 
 ## Driver Features
 
@@ -30,10 +30,8 @@ NAPALM driver is based on [Device Operation API](../api/device-api.md), providin
     "password": "password"
   },
   "command": "get_facts",
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -64,10 +62,8 @@ NAPALM driver is based on [Device Operation API](../api/device-api.md), providin
   "driver_args": {
     "encoding": "text"
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 600
-  }
+  "queue_strategy": "fifo",
+  "ttl": 600
 }
 ```
 
@@ -96,10 +92,8 @@ NAPALM driver is based on [Device Operation API](../api/device-api.md), providin
     "destination": "8.8.8.8",
     "protocol": "ipv4"
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 450
-  }
+  "queue_strategy": "fifo",
+  "ttl": 450
 }
 ```
 
@@ -118,10 +112,8 @@ NAPALM driver is based on [Device Operation API](../api/device-api.md), providin
     "password": "password"
   },
   "command": "get_interfaces",
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -138,10 +130,8 @@ NAPALM driver is based on [Device Operation API](../api/device-api.md), providin
     "password": "password"
   },
   "command": "get_interfaces_ip",
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -160,10 +150,8 @@ NAPALM driver is based on [Device Operation API](../api/device-api.md), providin
     "password": "password"
   },
   "command": "get_bgp_neighbors",
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -180,10 +168,8 @@ NAPALM driver is based on [Device Operation API](../api/device-api.md), providin
     "password": "password"
   },
   "command": "get_ospf_neighbors",
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -207,10 +193,8 @@ NAPALM driver is based on [Device Operation API](../api/device-api.md), providin
     }
   },
   "config": "hostname NAPALM-Test-Device",
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -239,10 +223,8 @@ NAPALM driver is based on [Device Operation API](../api/device-api.md), providin
     "message": "NAPALM interface configuration",
     "revert_in": 60
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 600
-  }
+  "queue_strategy": "fifo",
+  "ttl": 600
 }
 ```
 
@@ -274,14 +256,12 @@ NAPALM driver is based on [Device Operation API](../api/device-api.md), providin
     "message": "NAPALM configuration",
     "revert_in": 120
   },
-  "options": {
-    "rendering": {
-      "name": "jinja2",
-      "template": "snmp community {{ snmp.community }} authorization read-only\nsnmp location {{ snmp.location }}\nsnmp contact {{ snmp.contact }}\n{% for server in ntp.servers %}ntp server {{ server }}\n{% endfor %}"
-    },
-    "queue_strategy": "fifo",
-    "ttl": 600
-  }
+  "rendering": {
+    "name": "jinja2",
+    "template": "snmp community {{ snmp.community }} authorization read-only\nsnmp location {{ snmp.location }}\nsnmp contact {{ snmp.contact }}\n{% for server in ntp.servers %}ntp server {{ server }}\n{% endfor %}"
+  },
+  "queue_strategy": "fifo",
+  "ttl": 600
 }
 ```
 
@@ -307,10 +287,8 @@ NAPALM driver is based on [Device Operation API](../api/device-api.md), providin
     "message": "NAPALM merge configuration",
     "revert_in": 60
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 600
-  }
+  "queue_strategy": "fifo",
+  "ttl": 600
 }
 ```
 
@@ -335,10 +313,8 @@ NAPALM driver is based on [Device Operation API](../api/device-api.md), providin
   "driver_args": {
     "message": "Rollback to previous configuration"
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -355,10 +331,8 @@ NAPALM driver is based on [Device Operation API](../api/device-api.md), providin
     "password": "password"
   },
   "command": "compare_config",
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -380,7 +354,7 @@ curl -X POST -H "Content-Type: application/json" \
     },
     "command": "get_facts"
   }' \
-  http://localhost:9000/device/execute
+  http://localhost:9000/device/exec
 
 # Multi-method combination query
 curl -X POST -H "Content-Type: application/json" \
@@ -399,7 +373,7 @@ curl -X POST -H "Content-Type: application/json" \
       "get_interfaces_ip"
     ]
   }' \
-  http://localhost:9000/device/execute
+  http://localhost:9000/device/exec
 
 # Configuration push
 curl -X POST -H "Content-Type: application/json" \
@@ -417,7 +391,7 @@ curl -X POST -H "Content-Type: application/json" \
       "message": "NAPALM configuration"
     }
   }' \
-  http://localhost:9000/device/execute
+  http://localhost:9000/device/exec
 ```
 
 ### Python Examples
@@ -445,14 +419,12 @@ class NapalmClient:
                 "password": password
             },
             "command": "get_facts",
-            "options": {
-                "queue_strategy": "fifo",
-                "ttl": 300
-            }
+            "queue_strategy": "fifo",
+            "ttl": 300
         }
         
         response = requests.post(
-            f"{self.base_url}/device/execute",
+            f"{self.base_url}/device/exec",
             headers=self.headers,
             json=payload
         )
@@ -469,14 +441,12 @@ class NapalmClient:
                 "password": password
             },
             "command": "get_interfaces",
-            "options": {
-                "queue_strategy": "fifo",
-                "ttl": 300
-            }
+            "queue_strategy": "fifo",
+            "ttl": 300
         }
         
         response = requests.post(
-            f"{self.base_url}/device/execute",
+            f"{self.base_url}/device/exec",
             headers=self.headers,
             json=payload
         )
@@ -493,14 +463,12 @@ class NapalmClient:
                 "password": password
             },
             "command": "get_bgp_neighbors",
-            "options": {
-                "queue_strategy": "fifo",
-                "ttl": 300
-            }
+            "queue_strategy": "fifo",
+            "ttl": 300
         }
         
         response = requests.post(
-            f"{self.base_url}/device/execute",
+            f"{self.base_url}/device/exec",
             headers=self.headers,
             json=payload
         )
@@ -517,10 +485,8 @@ class NapalmClient:
                 "password": password
             },
             "config": config,
-            "options": {
-                "queue_strategy": "fifo",
-                "ttl": 600
-            }
+            "queue_strategy": "fifo",
+            "ttl": 600
         }
         
         # Add driver_args
@@ -528,7 +494,7 @@ class NapalmClient:
             payload["driver_args"] = kwargs["driver_args"]
         
         response = requests.post(
-            f"{self.base_url}/device/execute",
+            f"{self.base_url}/device/exec",
             headers=self.headers,
             json=payload
         )
@@ -548,14 +514,12 @@ class NapalmClient:
             "driver_args": {
                 "encoding": "text"
             },
-            "options": {
-                "queue_strategy": "fifo",
-                "ttl": 600
-            }
+            "queue_strategy": "fifo",
+            "ttl": 600
         }
         
         response = requests.post(
-            f"{self.base_url}/device/execute",
+            f"{self.base_url}/device/exec",
             headers=self.headers,
             json=payload
         )

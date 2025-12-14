@@ -2,33 +2,36 @@ from typing import Dict, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from ....models import DriverArgs, DriverConnectionArgs
-from ....models.common import DriverName
-from ....models.request import PullingRequest, PushingRequest
+from ....models import DeviceTestInfo, DriverArgs, DriverConnectionArgs, DriverName
+from ....models.request import ExecutionRequest
 
 
 class ParamikoConnectionArgs(DriverConnectionArgs):
-    """Paramiko connection arguments, reference paramiko.SSHClient.connect()"""
+    """
+    Paramiko connection arguments.
+
+    Refer to `paramiko.SSHClient.connect()`
+    """
 
     # Required fields
-    host: str = Field(..., description="Server address (IP or domain name)")
-    username: str = Field(..., description="SSH username")
+    host: str = Field(default=..., description="Server address (IP or domain name)")
+    username: str = Field(default=..., description="SSH username")
 
     # Authentication (choose one)
-    password: Optional[str] = Field(None, description="Password authentication")
-    key_filename: Optional[str] = Field(None, description="Private key file path")
-    pkey: Optional[str] = Field(None, description="Private key content (PEM format string)")
+    password: Optional[str] = Field(default=None, description="Password authentication")
+    key_filename: Optional[str] = Field(default=None, description="Private key file path")
+    pkey: Optional[str] = Field(default=None, description="Private key content (PEM format string)")
     passphrase: Optional[str] = Field(
-        None, description="Private key passphrase (if key is encrypted)"
+        default=None, description="Private key passphrase (if key is encrypted)"
     )
 
     # Connection options
-    port: int = Field(22, description="SSH port, default 22")
-    timeout: float = Field(30.0, description="Connection timeout (seconds)")
+    port: int = Field(default=22, description="SSH port, default 22")
+    timeout: float = Field(default=30.0, description="Connection timeout (seconds)")
 
     # Host key verification
     host_key_policy: Literal["auto_add", "reject", "warning"] = Field(
-        "auto_add",
+        default="auto_add",
         description=(
             "Host key verification policy: auto_add (auto accept), "
             "reject (reject), warning (warn but accept)"
@@ -36,30 +39,32 @@ class ParamikoConnectionArgs(DriverConnectionArgs):
     )
 
     # Advanced options
-    look_for_keys: bool = Field(True, description="Whether to auto-discover keys in ~/.ssh/")
+    look_for_keys: bool = Field(
+        default=True, description="Whether to auto-discover keys in ~/.ssh/"
+    )
     allow_agent: bool = Field(
-        False,
+        default=False,
         description="Whether to allow SSH agent (default False, consistent with Netmiko driver)",
     )
-    compress: bool = Field(False, description="Whether to enable compression")
-    banner_timeout: Optional[float] = Field(None, description="Banner timeout")
-    auth_timeout: Optional[float] = Field(None, description="Authentication timeout")
+    compress: bool = Field(default=False, description="Whether to enable compression")
+    banner_timeout: Optional[float] = Field(default=None, description="Banner timeout")
+    auth_timeout: Optional[float] = Field(default=None, description="Authentication timeout")
 
     # SSH Proxy/Jump Host support
     proxy_host: Optional[str] = Field(
-        None, description="Proxy/Jump host address (for SSH tunneling)"
+        default=None, description="Proxy/Jump host address (for SSH tunneling)"
     )
-    proxy_port: int = Field(22, description="Proxy/Jump host SSH port")
-    proxy_username: Optional[str] = Field(None, description="Proxy/Jump host username")
-    proxy_password: Optional[str] = Field(None, description="Proxy/Jump host password")
+    proxy_port: int = Field(default=22, description="Proxy/Jump host SSH port")
+    proxy_username: Optional[str] = Field(default=None, description="Proxy/Jump host username")
+    proxy_password: Optional[str] = Field(default=None, description="Proxy/Jump host password")
     proxy_key_filename: Optional[str] = Field(
-        None, description="Proxy/Jump host private key file path"
+        default=None, description="Proxy/Jump host private key file path"
     )
     proxy_pkey: Optional[str] = Field(
-        None, description="Proxy/Jump host private key content (PEM format)"
+        default=None, description="Proxy/Jump host private key content (PEM format)"
     )
     proxy_passphrase: Optional[str] = Field(
-        None, description="Proxy/Jump host private key passphrase"
+        default=None, description="Proxy/Jump host private key passphrase"
     )
 
     @model_validator(mode="after")
@@ -97,14 +102,29 @@ class ParamikoFileTransferOperation(BaseModel):
     """File transfer operation parameters"""
 
     operation: Literal["upload", "download"] = Field(
-        ..., description="Transfer operation type: upload or download"
+        default=..., description="Transfer operation type: upload or download"
     )
-    local_path: str = Field(..., description="Local file path")
-    remote_path: str = Field(..., description="Remote file path")
-    resume: bool = Field(False, description="Whether to resume interrupted transfer")
-    chunk_size: int = Field(32768, description="Transfer chunk size in bytes (default 32KB)")
+    local_path: str = Field(default=..., description="Local file path")
+    remote_path: str = Field(default=..., description="Remote file path")
+    resume: bool = Field(default=False, description="Whether to resume interrupted transfer")
+    chunk_size: int = Field(
+        default=32768, description="Transfer chunk size in bytes (default 32KB)"
+    )
     timeout: Optional[float] = Field(
-        None, description="Transfer timeout (seconds), None means no timeout"
+        default=None, description="Transfer timeout (seconds), None means no timeout"
+    )
+    # Execute after upload/download
+    execute_after_upload: bool = Field(
+        default=False,
+        description="Whether to execute command after upload (only for upload operation)",
+    )
+    execute_command: Optional[str] = Field(
+        default=None,
+        description="Command to execute after file transfer (e.g., 'bash /tmp/script.sh')",
+    )
+    cleanup_after_exec: bool = Field(
+        default=True,
+        description="Whether to cleanup remote file after execution (only if execute_after_upload is True)",
     )
 
 
@@ -112,32 +132,59 @@ class ParamikoSendCommandArgs(DriverArgs):
     """Command execution arguments, reference paramiko.SSHClient.exec_command()"""
 
     timeout: Optional[float] = Field(
-        None, description="Command execution timeout (seconds), None means no timeout"
+        default=None, description="Command execution timeout (seconds), None means no timeout"
     )
     get_pty: bool = Field(
-        False, description="Whether to use pseudo-terminal (PTY), for interactive commands"
+        default=False, description="Whether to use pseudo-terminal (PTY), for interactive commands"
     )
     environment: Optional[Dict[str, str]] = Field(
-        None, description="Environment variables dictionary"
+        default=None, description="Environment variables dictionary"
     )
-    bufsize: int = Field(-1, description="Buffer size, -1 means use system default")
+    bufsize: int = Field(default=-1, description="Buffer size, -1 means use system default")
     file_transfer: Optional[ParamikoFileTransferOperation] = Field(
-        None,
+        default=None,
         description=(
             "File transfer operation. If set, file transfer will be performed "
             "instead of command execution"
         ),
+    )
+    # Script content execution
+    script_content: Optional[str] = Field(
+        default=None,
+        description="Script content to execute directly via stdin (alternative to command field)",
+    )
+    script_interpreter: str = Field(
+        default="bash", description="Script interpreter (bash, sh, python, etc.)"
+    )
+    working_directory: Optional[str] = Field(
+        default=None, description="Working directory for script execution"
+    )
+    # Background task execution
+    run_in_background: bool = Field(
+        default=False, description="Whether to run command in background (using nohup)"
+    )
+    background_output_file: Optional[str] = Field(
+        default=None,
+        description="Output file for background task (default: /tmp/netpulse_<pid>.log)",
+    )
+    background_pid_file: Optional[str] = Field(
+        default=None,
+        description="PID file path for background task (default: /tmp/netpulse_<pid>.pid)",
     )
 
 
 class ParamikoSendConfigArgs(DriverArgs):
     """Configuration deployment arguments"""
 
-    timeout: Optional[float] = Field(None, description="Configuration execution timeout (seconds)")
-    get_pty: bool = Field(False, description="Whether to use pseudo-terminal")
-    sudo: bool = Field(False, description="Whether to use sudo execution")
-    sudo_password: Optional[str] = Field(None, description="Sudo password (if sudo is enabled)")
-    environment: Optional[Dict[str, str]] = Field(None, description="Environment variables")
+    timeout: Optional[float] = Field(
+        default=None, description="Configuration execution timeout (seconds)"
+    )
+    get_pty: bool = Field(default=False, description="Whether to use pseudo-terminal")
+    sudo: bool = Field(default=False, description="Whether to use sudo execution")
+    sudo_password: Optional[str] = Field(
+        default=None, description="Sudo password (if sudo is enabled)"
+    )
+    environment: Optional[Dict[str, str]] = Field(default=None, description="Environment variables")
 
     @model_validator(mode="after")
     def validate_sudo(self):
@@ -149,7 +196,8 @@ class ParamikoSendConfigArgs(DriverArgs):
         return self
 
 
-class ParamikoPullingRequest(PullingRequest):
+# DEPRECATED: Use ParamikoExecutionRequest instead
+class ParamikoPullingRequest(ExecutionRequest):
     driver: DriverName = DriverName.PARAMIKO
     connection_args: ParamikoConnectionArgs
     args: Optional[ParamikoSendCommandArgs] = None
@@ -185,7 +233,8 @@ class ParamikoPullingRequest(PullingRequest):
     )
 
 
-class ParamikoPushingRequest(PushingRequest):
+# DEPRECATED: Use ParamikoExecutionRequest instead
+class ParamikoPushingRequest(ExecutionRequest):
     driver: DriverName = DriverName.PARAMIKO
     connection_args: ParamikoConnectionArgs
     args: Optional[ParamikoSendConfigArgs] = None
@@ -213,3 +262,38 @@ class ParamikoPushingRequest(PushingRequest):
             }
         }
     )
+
+
+class ParamikoExecutionRequest(ExecutionRequest):
+    driver: DriverName = DriverName.PARAMIKO
+    connection_args: ParamikoConnectionArgs
+    driver_args: Optional[ParamikoSendCommandArgs | ParamikoSendConfigArgs] = None
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "driver": "paramiko",
+                "queue_strategy": "fifo",
+                "connection_args": {
+                    "host": "192.168.1.100",
+                    "username": "admin",
+                    "key_filename": "/path/to/private_key",
+                    "passphrase": "key_password",
+                },
+                "config": [
+                    "echo 'Hello World' > /tmp/test.txt",
+                    "chmod 644 /tmp/test.txt",
+                ],
+                "args": {
+                    "sudo": True,
+                    "sudo_password": "sudo_pass",
+                    "timeout": 30.0,
+                },
+            }
+        }
+    )
+
+
+class ParamikoDeviceTestInfo(DeviceTestInfo):
+    driver: DriverName = DriverName.PARAMIKO
+    remote_version: Optional[str] = None

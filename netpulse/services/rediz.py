@@ -1,7 +1,9 @@
 import logging
+import os
+
+from redis.sentinel import Sentinel
 
 from redis import Redis
-from redis.sentinel import Sentinel
 
 from ..utils import g_config
 from ..utils.config import RedisConfig
@@ -9,9 +11,32 @@ from ..utils.config import RedisConfig
 log = logging.getLogger(__name__)
 
 
+def _fake_redis_enabled() -> bool:
+    """
+    Treat NETPULSE_FAKE_REDIS as a boolean flag; values like "1/true/yes/on"
+    enable fakeredis, anything else is considered disabled.
+    """
+    value = os.getenv("NETPULSE_FAKE_REDIS", "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
 class Rediz:
     def __init__(self, config: RedisConfig):
         self.config = config
+
+        # Use fakeredis for tests when requested
+        if _fake_redis_enabled():
+            try:
+                import fakeredis
+            except ImportError as e:
+                raise ImportError(
+                    "NETPULSE_FAKE_REDIS is set but fakeredis is not installed. "
+                    "Install fakeredis or unset NETPULSE_FAKE_REDIS."
+                ) from e
+
+            log.info("[USING FAKEREDIS MODE]")
+            self.conn = fakeredis.FakeRedis()
+            return
 
         # Using Sentinel for connection
         if config.sentinel.enabled:

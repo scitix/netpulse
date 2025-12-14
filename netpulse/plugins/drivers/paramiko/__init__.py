@@ -7,8 +7,8 @@ import paramiko
 from .. import BaseDriver
 from .model import (
     ParamikoConnectionArgs,
-    ParamikoPullingRequest,
-    ParamikoPushingRequest,
+    ParamikoDeviceTestInfo,
+    ParamikoExecutionRequest,
     ParamikoSendCommandArgs,
     ParamikoSendConfigArgs,
 )
@@ -19,41 +19,33 @@ log = logging.getLogger(__name__)
 class ParamikoDriver(BaseDriver):
     driver_name = "paramiko"
 
-    @classmethod
-    def from_pulling_request(cls, req: ParamikoPullingRequest) -> "ParamikoDriver":
-        if not isinstance(req, ParamikoPullingRequest):
-            # Preserve args if it's already ParamikoSendCommandArgs
-            if hasattr(req, "args") and isinstance(req.args, ParamikoSendCommandArgs):
-                # model_dump() may lose args fields, so we manually preserve it
-                req_dict = req.model_dump(exclude_none=True)
-                req_dict["args"] = req.args.model_dump(exclude_none=True)
-                paramiko_req = ParamikoPullingRequest.model_validate(req_dict)
-                # Ensure args is preserved (in case model_validate doesn't handle it correctly)
-                paramiko_req.args = req.args
-                req = paramiko_req
-            else:
-                # Handle case where args might be DriverArgs base class or dict
-                req_dict = req.model_dump(exclude_none=True)
-                # If args exists but is empty dict, try to get from original req.args
-                if hasattr(req, "args") and req.args:
-                    if isinstance(req.args, dict):
-                        req_dict["args"] = req.args
-                    elif isinstance(req.args, ParamikoSendCommandArgs):
-                        req_dict["args"] = req.args.model_dump(exclude_none=True)
-                    else:
-                        # Try to convert DriverArgs to dict
-                        try:
-                            req_dict["args"] = req.args.model_dump(exclude_none=True)
-                        except Exception:
-                            req_dict["args"] = {}
-                req = ParamikoPullingRequest.model_validate(req_dict)
-        return cls(args=req.args, conn_args=req.connection_args)
+    _HOST_KEY_POLICIES = {
+        "auto_add": paramiko.AutoAddPolicy(),
+        "reject": paramiko.RejectPolicy(),
+        "warning": paramiko.WarningPolicy(),
+    }
 
     @classmethod
-    def from_pushing_request(cls, req: ParamikoPushingRequest) -> "ParamikoDriver":
-        if not isinstance(req, ParamikoPushingRequest):
-            req = ParamikoPushingRequest.model_validate(req.model_dump())
-        return cls(args=req.args, conn_args=req.connection_args)
+    def from_execution_request(cls, req: ParamikoExecutionRequest) -> "ParamikoDriver":
+        if not isinstance(req, ParamikoExecutionRequest):
+            req = ParamikoExecutionRequest.model_validate(req.model_dump())
+        return cls(args=req.driver_args, conn_args=req.connection_args)
+
+    @classmethod
+    def validate(cls, req) -> None:
+        """
+        Validate the request without creating the driver instance.
+
+        Raises:
+            pydantic.ValidationError: If the request model validation fails
+                (e.g., missing required fields, invalid field types).
+            ValueError: If authentication validation fails in the model_validator
+                (e.g., neither password nor key authentication provided).
+        """
+        # Validate the request model using Pydantic
+        # This will automatically trigger the @model_validator for authentication
+        if not isinstance(req, ParamikoExecutionRequest):
+            ParamikoExecutionRequest.model_validate(req.model_dump())
 
     def __init__(
         self,
@@ -74,42 +66,39 @@ class ParamikoDriver(BaseDriver):
             raise e
 
     def _get_auth_kwargs(self, use_proxy: bool = False) -> dict:
+        """Get authentication kwargs for SSH connection."""
         kwargs = {}
         if use_proxy:
-            if self.conn_args.proxy_pkey:
-                kwargs["pkey"] = self._load_pkey(
-                    self.conn_args.proxy_pkey, self.conn_args.proxy_passphrase
-                )
-                kwargs["username"] = self.conn_args.proxy_username or self.conn_args.username
-            elif self.conn_args.proxy_key_filename:
-                kwargs["key_filename"] = self.conn_args.proxy_key_filename
-                kwargs["username"] = self.conn_args.proxy_username or self.conn_args.username
-                if self.conn_args.proxy_passphrase:
-                    kwargs["passphrase"] = self.conn_args.proxy_passphrase
-            else:
-                kwargs["username"] = self.conn_args.proxy_username or self.conn_args.username
-                if self.conn_args.proxy_password:
-                    kwargs["password"] = self.conn_args.proxy_password
+            pkey = self.conn_args.proxy_pkey
+            key_filename = self.conn_args.proxy_key_filename
+            passphrase = self.conn_args.proxy_passphrase
+            password = self.conn_args.proxy_password
+            username = self.conn_args.proxy_username or self.conn_args.username
         else:
-            if self.conn_args.pkey:
-                kwargs["pkey"] = self._load_pkey(self.conn_args.pkey, self.conn_args.passphrase)
-            elif self.conn_args.key_filename:
-                kwargs["key_filename"] = self.conn_args.key_filename
-                if self.conn_args.passphrase:
-                    kwargs["passphrase"] = self.conn_args.passphrase
-            elif self.conn_args.password:
-                kwargs["password"] = self.conn_args.password
+            pkey = self.conn_args.pkey
+            key_filename = self.conn_args.key_filename
+            passphrase = self.conn_args.passphrase
+            password = self.conn_args.password
+            username = None  # Will be set in connect_kwargs
+
+        if pkey:
+            kwargs["pkey"] = self._load_pkey(pkey, passphrase)
+        elif key_filename:
+            kwargs["key_filename"] = key_filename
+            if passphrase:
+                kwargs["passphrase"] = passphrase
+        elif password:
+            kwargs["password"] = password
+
+        if username:
+            kwargs["username"] = username
+
         return kwargs
 
     def _connect_direct(self) -> paramiko.SSHClient:
         client = paramiko.SSHClient()
-        policy_map = {
-            "auto_add": paramiko.AutoAddPolicy(),
-            "reject": paramiko.RejectPolicy(),
-            "warning": paramiko.WarningPolicy(),
-        }
         client.set_missing_host_key_policy(
-            policy_map.get(self.conn_args.host_key_policy, paramiko.AutoAddPolicy())
+            self._HOST_KEY_POLICIES.get(self.conn_args.host_key_policy, paramiko.AutoAddPolicy())
         )
 
         connect_kwargs = {
@@ -148,13 +137,8 @@ class ParamikoDriver(BaseDriver):
         channel = transport.open_channel("direct-tcpip", dest_addr, local_addr)
 
         target_client = paramiko.SSHClient()
-        policy_map = {
-            "auto_add": paramiko.AutoAddPolicy(),
-            "reject": paramiko.RejectPolicy(),
-            "warning": paramiko.WarningPolicy(),
-        }
         target_client.set_missing_host_key_policy(
-            policy_map.get(self.conn_args.host_key_policy, paramiko.AutoAddPolicy())
+            self._HOST_KEY_POLICIES.get(self.conn_args.host_key_policy, paramiko.AutoAddPolicy())
         )
 
         target_kwargs = {
@@ -199,6 +183,15 @@ class ParamikoDriver(BaseDriver):
             log.debug(f"File transfer detected: {self.args.file_transfer}")
             return self._handle_file_transfer(session, self.args.file_transfer)
 
+        # Check if script_content is provided (function 2: direct script execution)
+        if (
+            self.args
+            and isinstance(self.args, ParamikoSendCommandArgs)
+            and self.args.script_content
+        ):
+            log.debug("Script content execution detected")
+            return self._execute_script_content(session, self.args)
+
         if not command:
             log.warning("No command provided")
             return {}
@@ -206,26 +199,18 @@ class ParamikoDriver(BaseDriver):
         try:
             result = {}
             for cmd in command:
-                exec_kwargs = {}
-                if self.args and isinstance(self.args, ParamikoSendCommandArgs):
-                    if self.args.timeout:
-                        exec_kwargs["timeout"] = self.args.timeout
-                    exec_kwargs["get_pty"] = self.args.get_pty
-                    if self.args.environment:
-                        exec_kwargs["environment"] = self.args.environment
-                    if self.args.bufsize != -1:
-                        exec_kwargs["bufsize"] = self.args.bufsize
-
-                _stdin, stdout, stderr = session.exec_command(cmd, **exec_kwargs)
-                output = stdout.read().decode("utf-8", errors="replace")
-                error = stderr.read().decode("utf-8", errors="replace")
-                exit_status = stdout.channel.recv_exit_status()
-
-                result[cmd] = {
-                    "output": output,
-                    "error": error,
-                    "exit_status": exit_status,
-                }
+                # Check if background execution is requested (function 3)
+                if (
+                    self.args
+                    and isinstance(self.args, ParamikoSendCommandArgs)
+                    and self.args.run_in_background
+                ):
+                    log.debug(f"Background execution requested for: {cmd}")
+                    bg_result = self._execute_background_command(session, cmd, self.args)
+                    result.update(bg_result)
+                else:
+                    exec_result = self._execute_command(session, cmd, self.args)
+                    result.update(exec_result)
             return result
         except Exception as e:
             log.error(f"Error in sending command: {e}")
@@ -259,7 +244,8 @@ class ParamikoDriver(BaseDriver):
 
             bytes_transferred = result.get("bytes_transferred", 0)
             total_bytes = result.get("total_bytes", 0)
-            return {
+            
+            transfer_result = {
                 f"file_transfer_{file_transfer_op.operation}": {
                     "output": f"File transfer completed: {bytes_transferred}/{total_bytes} bytes",
                     "error": "",
@@ -267,6 +253,28 @@ class ParamikoDriver(BaseDriver):
                     "transfer_result": result,
                 }
             }
+            
+            # Execute command after upload if requested
+            if (
+                file_transfer_op.operation == "upload"
+                and file_transfer_op.execute_after_upload
+                and file_transfer_op.execute_command
+            ):
+                log.debug(f"Executing command after upload: {file_transfer_op.execute_command}")
+                exec_result = self._execute_command(
+                    session, file_transfer_op.execute_command, self.args
+                )
+                transfer_result.update(exec_result)
+                
+                # Cleanup remote file if requested
+                if file_transfer_op.cleanup_after_exec:
+                    log.debug(f"Cleaning up remote file: {file_transfer_op.remote_path}")
+                    cleanup_result = self._execute_command(
+                        session, f"rm -f {file_transfer_op.remote_path}", self.args
+                    )
+                    transfer_result.update(cleanup_result)
+            
+            return transfer_result
         except Exception as e:
             log.error(f"Error in file transfer: {e}")
             return {
@@ -327,6 +335,120 @@ class ParamikoDriver(BaseDriver):
         except Exception as e:
             log.error(f"Error in sending config: {e}")
             raise e
+
+    def _execute_command(
+        self, session: paramiko.SSHClient, cmd: str, args: Optional[ParamikoSendCommandArgs]
+    ) -> dict:
+        """Execute a single command and return result"""
+        exec_kwargs = {}
+        if args and isinstance(args, ParamikoSendCommandArgs):
+            if args.timeout:
+                exec_kwargs["timeout"] = args.timeout
+            exec_kwargs["get_pty"] = args.get_pty
+            if args.environment:
+                exec_kwargs["environment"] = args.environment
+            if args.bufsize != -1:
+                exec_kwargs["bufsize"] = args.bufsize
+
+        _stdin, stdout, stderr = session.exec_command(cmd, **exec_kwargs)
+        output = stdout.read().decode("utf-8", errors="replace")
+        error = stderr.read().decode("utf-8", errors="replace")
+        exit_status = stdout.channel.recv_exit_status()
+
+        return {
+            cmd: {
+                "output": output,
+                "error": error,
+                "exit_status": exit_status,
+            }
+        }
+
+    def _execute_script_content(
+        self, session: paramiko.SSHClient, args: ParamikoSendCommandArgs
+    ) -> dict:
+        """Execute script content directly via stdin (function 2)"""
+        if not args.script_content:
+            raise ValueError("script_content is required for script execution")
+
+        # Build command with interpreter
+        interpreter = args.script_interpreter or "bash"
+        cmd = interpreter
+
+        # Add working directory if specified
+        if args.working_directory:
+            cmd = f"cd {args.working_directory} && {cmd}"
+
+        exec_kwargs = {}
+        if args.timeout:
+            exec_kwargs["timeout"] = args.timeout
+        exec_kwargs["get_pty"] = args.get_pty
+        if args.environment:
+            exec_kwargs["environment"] = args.environment
+        if args.bufsize != -1:
+            exec_kwargs["bufsize"] = args.bufsize
+
+        stdin, stdout, stderr = session.exec_command(cmd, **exec_kwargs)
+        
+        # Write script content to stdin
+        stdin.write(args.script_content)
+        stdin.close()
+
+        output = stdout.read().decode("utf-8", errors="replace")
+        error = stderr.read().decode("utf-8", errors="replace")
+        exit_status = stdout.channel.recv_exit_status()
+
+        return {
+            f"script_execution_{interpreter}": {
+                "output": output,
+                "error": error,
+                "exit_status": exit_status,
+                "script_content_length": len(args.script_content),
+            }
+        }
+
+    def _execute_background_command(
+        self, session: paramiko.SSHClient, cmd: str, args: ParamikoSendCommandArgs
+    ) -> dict:
+        """Execute command in background and return PID (function 3)"""
+        import uuid
+
+        # Generate unique identifier for this background task
+        task_id = str(uuid.uuid4())[:8]
+
+        # Determine output and PID file paths
+        output_file = args.background_output_file or f"/tmp/netpulse_{task_id}.log"
+        pid_file = args.background_pid_file or f"/tmp/netpulse_{task_id}.pid"
+
+        # Build background command with nohup
+        bg_cmd = f"nohup {cmd} > {output_file} 2>&1 & echo $! > {pid_file}"
+
+        # Execute the background command
+        exec_result = self._execute_command(session, bg_cmd, args)
+
+        # Read PID from remote file
+        pid = None
+        if exec_result[bg_cmd]["exit_status"] == 0:
+            try:
+                # Read PID file
+                read_pid_cmd = f"cat {pid_file}"
+                pid_result = self._execute_command(session, read_pid_cmd, args)
+                if read_pid_cmd in pid_result:
+                    pid_output = pid_result[read_pid_cmd]["output"].strip()
+                    if pid_output:
+                        pid = int(pid_output)
+            except (ValueError, KeyError) as e:
+                log.warning(f"Failed to read PID from {pid_file}: {e}")
+
+        # Update result with background task info
+        result_key = list(exec_result.keys())[0]
+        exec_result[result_key]["background_task"] = {
+            "pid": pid,
+            "pid_file": pid_file,
+            "output_file": output_file,
+            "command": cmd,
+        }
+
+        return exec_result
 
     def disconnect(self, session: paramiko.SSHClient):
         try:
@@ -473,6 +595,31 @@ class ParamikoDriver(BaseDriver):
         except Exception as e:
             log.error(f"Error downloading file: {e}")
             raise
+
+    @classmethod
+    def test(cls, connection_args: ParamikoConnectionArgs) -> ParamikoDeviceTestInfo:
+        conn_args = (
+            connection_args
+            if isinstance(connection_args, ParamikoConnectionArgs)
+            else ParamikoConnectionArgs.model_validate(
+                connection_args.model_dump(exclude_none=True)
+            )
+        )
+
+        driver = cls(args=None, conn_args=conn_args)
+        session = None
+        try:
+            session = driver.connect()
+            result = ParamikoDeviceTestInfo(host=conn_args.host)
+
+            transport = session.get_transport()
+            if transport and transport.remote_version:
+                result.remote_version = transport.remote_version
+
+            return result
+        finally:
+            if session:
+                driver.disconnect(session)
 
 
 __all__ = ["ParamikoDriver"]

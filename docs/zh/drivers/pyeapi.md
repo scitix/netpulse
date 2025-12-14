@@ -4,7 +4,7 @@
 
 PyEAPI 驱动基于[设备操作 API](../api/device-api.md)，提供Arista设备的专用操作功能，通过HTTP/HTTPS API实现设备查询和配置管理。
 
-> **重要提示**：本文档专注于PyEAPI驱动的特定参数和用法。通用API端点（`POST /device/execute`）、请求格式、响应格式等请参考[设备操作 API](../api/device-api.md)。
+> **重要提示**：本文档专注于PyEAPI驱动的特定参数和用法。通用API端点（`POST /device/exec`）、请求格式、响应格式等请参考[设备操作 API](../api/device-api.md)。
 
 ## 驱动特点
 
@@ -35,10 +35,8 @@ PyEAPI 驱动基于[设备操作 API](../api/device-api.md)，提供Arista设备
     "encoding": "json",
     "format": "json"
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -68,10 +66,8 @@ PyEAPI 驱动基于[设备操作 API](../api/device-api.md)，提供Arista设备
     "format": "json",
     "timestamps": true
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 600
-  }
+  "queue_strategy": "fifo",
+  "ttl": 600
 }
 ```
 
@@ -95,19 +91,17 @@ PyEAPI 驱动基于[设备操作 API](../api/device-api.md)，提供Arista设备
     "expand": true,
     "detail": true
   },
-  "options": {
-    "parsing": {
-      "name": "json",
-      "path": "interfaceStatuses"
-    },
-    "queue_strategy": "fifo",
-    "ttl": 300,
-    "webhook": {
-      "url": "https://monitoring.company.com/arista-interfaces",
-      "method": "POST",
-      "headers": {
-        "Authorization": "Bearer {{api_token}}"
-      }
+  "parsing": {
+    "name": "json",
+    "path": "interfaceStatuses"
+  },
+  "queue_strategy": "fifo",
+  "ttl": 300,
+  "webhook": {
+    "url": "https://monitoring.company.com/arista-interfaces",
+    "method": "POST",
+    "headers": {
+      "Authorization": "Bearer {{api_token}}"
     }
   }
 }
@@ -133,10 +127,8 @@ PyEAPI 驱动基于[设备操作 API](../api/device-api.md)，提供Arista设备
     "encoding": "json",
     "format": "json"
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -159,10 +151,8 @@ PyEAPI 驱动基于[设备操作 API](../api/device-api.md)，提供Arista设备
     "format": "json",
     "expand": true
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -186,10 +176,8 @@ PyEAPI 驱动基于[设备操作 API](../api/device-api.md)，提供Arista设备
     "encoding": "json",
     "format": "json"
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -212,10 +200,8 @@ PyEAPI 驱动基于[设备操作 API](../api/device-api.md)，提供Arista设备
     "format": "json",
     "expand": true
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -239,10 +225,8 @@ PyEAPI 驱动基于[设备操作 API](../api/device-api.md)，提供Arista设备
     "encoding": "json",
     "format": "json"
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -264,10 +248,8 @@ PyEAPI 驱动基于[设备操作 API](../api/device-api.md)，提供Arista设备
     "encoding": "json",
     "format": "json"
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -293,10 +275,8 @@ PyEAPI 驱动基于[设备操作 API](../api/device-api.md)，提供Arista设备
     "format": "text",
     "autoComplete": true
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 300
-  }
+  "queue_strategy": "fifo",
+  "ttl": 300
 }
 ```
 
@@ -329,10 +309,8 @@ PyEAPI 驱动基于[设备操作 API](../api/device-api.md)，提供Arista设备
     "autoComplete": true,
     "expandAliases": true
   },
-  "options": {
-    "queue_strategy": "fifo",
-    "ttl": 600
-  }
+  "queue_strategy": "fifo",
+  "ttl": 600
 }
 ```
 
@@ -363,14 +341,12 @@ PyEAPI 驱动基于[设备操作 API](../api/device-api.md)，提供Arista设备
     "format": "text",
     "autoComplete": true
   },
-  "options": {
-    "rendering": {
-      "name": "jinja2",
-      "template": "router bgp {{ local_asn }}\n router-id {{ router_id }}\n{% for neighbor in neighbors %}\n neighbor {{ neighbor.ip }} remote-as {{ neighbor.asn }}\n neighbor {{ neighbor.ip }} description {{ neighbor.description }}\n{% endfor %}"
-    },
-    "queue_strategy": "fifo",
-    "ttl": 600
-  }
+  "rendering": {
+    "name": "jinja2",
+    "template": "router bgp {{ local_asn }}\n router-id {{ router_id }}\n{% for neighbor in neighbors %}\n neighbor {{ neighbor.ip }} remote-as {{ neighbor.asn }}\n neighbor {{ neighbor.ip }} description {{ neighbor.description }}\n{% endfor %}"
+  },
+  "queue_strategy": "fifo",
+  "ttl": 600
 }
 ```
 
@@ -407,14 +383,12 @@ PyEAPI 驱动基于[设备操作 API](../api/device-api.md)，提供Arista设备
     "format": "text",
     "autoComplete": true
   },
-  "options": {
-    "rendering": {
-      "name": "jinja2",
-      "template": "{% for intf in interfaces %}\ninterface {{ intf.name }}\n description {{ intf.description }}\n switchport mode {{ intf.mode }}\n switchport access vlan {{ intf.vlan }}\n{% endfor %}"
-    },
-    "queue_strategy": "fifo",
-    "ttl": 600
-  }
+  "rendering": {
+    "name": "jinja2",
+    "template": "{% for intf in interfaces %}\ninterface {{ intf.name }}\n description {{ intf.description }}\n switchport mode {{ intf.mode }}\n switchport access vlan {{ intf.vlan }}\n{% endfor %}"
+  },
+  "queue_strategy": "fifo",
+  "ttl": 600
 }
 ```
 
@@ -441,7 +415,7 @@ curl -X POST -H "Content-Type: application/json" \
       "format": "json"
     }
   }' \
-  http://localhost:9000/device/execute
+  http://localhost:9000/device/exec
 
 # 多命令查询
 curl -X POST -H "Content-Type: application/json" \
@@ -465,7 +439,7 @@ curl -X POST -H "Content-Type: application/json" \
       "format": "json"
     }
   }' \
-  http://localhost:9000/device/execute
+  http://localhost:9000/device/exec
 
 # 配置推送
 curl -X POST -H "Content-Type: application/json" \
@@ -485,7 +459,7 @@ curl -X POST -H "Content-Type: application/json" \
       "autoComplete": true
     }
   }' \
-  http://localhost:9000/device/execute
+  http://localhost:9000/device/exec
 ```
 
 ### Python 示例
@@ -518,20 +492,20 @@ class PyEapiClient:
                 "encoding": "json",
                 "format": "json"
             },
-            "options": {
-                "queue_strategy": "fifo",
-                "ttl": 300
-            }
+            "queue_strategy": "fifo",
+            "ttl": 300
         }
         
         # 添加可选参数
         if "driver_args" in kwargs:
             payload["driver_args"].update(kwargs["driver_args"])
-        if "options" in kwargs:
-            payload["options"].update(kwargs["options"])
+        if "queue_strategy" in kwargs:
+            payload["queue_strategy"] = kwargs["queue_strategy"]
+        if "ttl" in kwargs:
+            payload["ttl"] = kwargs["ttl"]
         
         response = requests.post(
-            f"{self.base_url}/device/execute",
+            f"{self.base_url}/device/exec",
             headers=self.headers,
             json=payload
         )
@@ -553,20 +527,20 @@ class PyEapiClient:
                 "encoding": "json",
                 "format": "json"
             },
-            "options": {
-                "queue_strategy": "fifo",
-                "ttl": 600
-            }
+            "queue_strategy": "fifo",
+            "ttl": 600
         }
         
         # 添加可选参数
         if "driver_args" in kwargs:
             payload["driver_args"].update(kwargs["driver_args"])
-        if "options" in kwargs:
-            payload["options"].update(kwargs["options"])
+        if "queue_strategy" in kwargs:
+            payload["queue_strategy"] = kwargs["queue_strategy"]
+        if "ttl" in kwargs:
+            payload["ttl"] = kwargs["ttl"]
         
         response = requests.post(
-            f"{self.base_url}/device/execute",
+            f"{self.base_url}/device/exec",
             headers=self.headers,
             json=payload
         )
@@ -588,20 +562,20 @@ class PyEapiClient:
                 "format": "text",
                 "autoComplete": True
             },
-            "options": {
-                "queue_strategy": "fifo",
-                "ttl": 600
-            }
+            "queue_strategy": "fifo",
+            "ttl": 600
         }
         
         # 添加可选参数
         if "driver_args" in kwargs:
             payload["driver_args"].update(kwargs["driver_args"])
-        if "options" in kwargs:
-            payload["options"].update(kwargs["options"])
+        if "queue_strategy" in kwargs:
+            payload["queue_strategy"] = kwargs["queue_strategy"]
+        if "ttl" in kwargs:
+            payload["ttl"] = kwargs["ttl"]
         
         response = requests.post(
-            f"{self.base_url}/device/execute",
+            f"{self.base_url}/device/exec",
             headers=self.headers,
             json=payload
         )
@@ -675,7 +649,7 @@ PyEAPI 驱动的 `driver_args` 支持任意参数（`extra="allow"`），所有�
 - `format`: 输出格式（用于 enable 方法，如 `json`）
 - 其他参数请参考 [pyeapi 官方文档](https://github.com/arista-eosplus/pyeapi)
 
-> **注意**：`options` 参数是全局选项，所有驱动通用。详细说明请参考[设备操作 API](../api/device-api.md)。
+> **注意**：`queue_strategy` 和 `ttl` 等全局选项应直接放在请求的顶级字段中，所有驱动通用。详细说明请参考[设备操作 API](../api/device-api.md)。
 
 **PyEAPI推荐配置**：
 - `queue_strategy`: 推荐使用 `"fifo"`，HTTP无状态连接

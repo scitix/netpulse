@@ -56,7 +56,7 @@ NetPulse 是一个**服务端网络自动化控制器**，通过 RESTful API 提
 - **易于集成**：通过标准 RESTful API 轻松集成到现有系统
 
 !!! info "关于类似框架"
-    在设计过程中，我们借鉴了 [NetPalm](https://github.com/tbotnz/netpalm) 的框架设计思路，体现了开源精神的共享与学习。两者在**产品层面**都使用了相同的开源组件（如 Netmiko、NAPALM、Redis + RQ），但在**代码实现逻辑**上有很大不同，特别是在长连接管理、调度算法、Worker 架构等核心组件上进行了独立的设计和开发。
+    在设计过程中，我们借鉴了 [NetPalm](https://github.com/tbotnz/netpalm) 的框架设计思路，体现了开源精神的共享与学习。两者在**产品层面**都使用了相同的开源组件（如 Netmiko、NAPALM、Redis + RQ），但在**设计和实现**上有很大不同，特别是在长连接管理、调度算法、Worker 架构等核心组件上进行了独立的设计和开发。
 
 ## 主要特性
 
@@ -122,7 +122,7 @@ bash ./scripts/docker_auto_deploy.sh
 ## 常见问题快速解答
 
 **Q: 设备操作是同步还是异步？**  
-A: 设备操作（`/device/execute`、`/device/bulk`）是异步的，需要查询任务状态获取结果。只有 `/device/test-connection` 是同步的。
+A: 设备操作（`/device/exec`、`/device/bulk`）是异步的，需要查询任务状态获取结果。只有 `/device/test` 是同步的。
 
 **Q: 如何选择合适的驱动？**  
 A: Linux服务器用Paramiko，Arista设备用PyEAPI，需要配置回滚用NAPALM，其他场景用Netmiko（推荐）。

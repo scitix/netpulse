@@ -3,7 +3,15 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseModel, DirectoryPath, Field, FilePath, ValidationError, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    DirectoryPath,
+    Field,
+    FilePath,
+    ValidationError,
+    model_validator,
+)
 from pydantic_settings import (
     BaseSettings,
     SettingsConfigDict,
@@ -19,7 +27,7 @@ class ServerConfig(BaseModel):
     port: int = 9000
     api_key: str = Field(..., description="API key")
     api_key_name: str = "X-API-KEY"
-    gunicorn_worker: int = Field(default_factory=lambda: 2 * os.cpu_count() + 1)
+    gunicorn_worker: int = Field(default_factory=lambda: 2 * os.cpu_count() + 1)  # type: ignore
 
 
 class JobConfig(BaseModel):
@@ -32,6 +40,13 @@ class WorkerConfig(BaseModel):
     scheduler: str = "least_load"
     ttl: int = 300
     pinned_per_node: int = 32
+
+
+class CredentialConfig(BaseModel):
+    enabled: bool = False
+    name: str | None = None
+
+    model_config = ConfigDict(extra="allow")
 
 
 class RedisConfig(BaseModel):
@@ -77,6 +92,7 @@ class PluginConfig(BaseModel):
     webhook: DirectoryPath = Path("netpulse/plugins/webhooks/")
     template: DirectoryPath = Path("netpulse/plugins/templates/")
     scheduler: DirectoryPath = Path("netpulse/plugins/schedulers/")
+    credential: DirectoryPath = Path("netpulse/plugins/credentials/")
 
 
 class LogConfig(BaseModel):
@@ -85,13 +101,16 @@ class LogConfig(BaseModel):
 
 
 class AppConfig(BaseSettings):
+    # Must be provided fields
     server: ServerConfig
     worker: WorkerConfig
     redis: RedisConfig
     plugin: PluginConfig
+
     # With default values
     job: JobConfig = JobConfig()
     log: LogConfig = LogConfig()
+    credential: CredentialConfig = CredentialConfig()
 
     model_config = SettingsConfigDict(
         env_prefix="NETPULSE_",
@@ -131,7 +150,7 @@ class AppConfig(BaseSettings):
 
 def initialize_config() -> AppConfig:
     try:
-        return AppConfig()
+        return AppConfig()  # type: ignore
     except ValidationError as e:
         log.error(f"Error in reading config: {e}")
         raise e

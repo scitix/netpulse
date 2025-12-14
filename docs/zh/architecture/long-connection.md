@@ -239,121 +239,6 @@ class NetmikoDriver(BaseDriver):
     _monitor_lock = threading.Lock()
 ```
 
-### 连接持久化
-
-#### 会话获取与设置
-
-```python
-@classmethod
-def _get_persisted_session(cls, conn_args: NetmikoConnectionArgs) -> Optional[BaseConnection]:
-    """检查持久化会话是否仍然有效"""
-    if cls.persisted_session and cls.persisted_conn_args != conn_args:
-        # 连接参数变化，断开旧连接
-        with cls._monitor_lock:  # 使用锁保护
-            try:
-                cls.persisted_session.disconnect()
-            except Exception as e:
-                log.error(f"Error in disconnecting old session: {e}")
-            finally:
-                cls._set_persisted_session(None, None)
-    
-    return cls.persisted_session
-
-@classmethod
-def _set_persisted_session(cls, session: BaseConnection, conn_args: NetmikoConnectionArgs):
-    """持久化会话并启动监控线程"""
-    # 清除连接
-    if session is None:
-        if cls.persisted_conn_args and cls.persisted_conn_args.keepalive:
-            cls._stop_monitor_thread()
-        cls.persisted_session = None
-        cls.persisted_conn_args = None
-        return None
-    
-    # 设置连接
-    cls.persisted_session = session
-    cls.persisted_conn_args = conn_args
-    cls._start_monitor_thread(cls.persisted_session)
-```
-
-#### 连接复用逻辑
-
-```python
-def connect(self) -> BaseConnection:
-    # 尝试获取已存在的连接
-    session = self._get_persisted_session(self.conn_args)
-    if session:
-        log.info("Reusing existing connection")
-    else:
-        # 创建新连接
-        log.info(f"Creating new connection to {self.conn_args.host}...")
-        session = ConnectHandler(**self.conn_args.model_dump())
-        if self.conn_args.keepalive:
-            self._set_persisted_session(session, self.conn_args)
-    return session
-```
-
-### 监控线程实现
-
-监控线程是长连接技术的核心，负责连接的健康检查和保活：
-
-```python
-@classmethod
-def _start_monitor_thread(cls, session: BaseConnection):
-    """启动监控线程"""
-    if cls._monitor_thread and cls._monitor_thread.is_alive():
-        return
-    
-    cls._monitor_stop_event = threading.Event()
-    host = cls.persisted_conn_args.host
-    timeout = cls.persisted_conn_args.keepalive  # 保活间隔
-    
-    def monitor():
-        suicide = False
-        log.info(f"Monitoring thread started ({host})")
-        
-        while not cls._monitor_stop_event.is_set():
-            # 等待保活间隔
-            if cls._monitor_stop_event.wait(timeout=timeout):
-                break
-            
-            with cls._monitor_lock:  # 并发安全控制
-                # 双重检查
-                if cls._monitor_stop_event.is_set():
-                    break
-                
-                # 健康检查
-                if not session.is_alive():
-                    log.warning(f"Connection to {host} is unhealthy")
-                    suicide = True
-                    cls._monitor_stop_event.set()
-                    break
-                
-                # 应用层保活
-                try:
-                    if junk := session.clear_buffer():  # 清理缓冲区
-                        log.debug(f"Detected junk data in keepalive: {junk}")
-                    session.write_channel(session.RETURN)  # 发送回车符
-                except Exception as e:
-                    log.warning(f"Error in sending keepalive to {host}: {e}")
-                    suicide = True
-                    cls._monitor_stop_event.set()
-                    break
-        
-        log.debug(f"Monitoring thread quitting with `suicide={suicide}`.")
-        
-        # 连接断开时，Worker 主动退出
-        if suicide:
-            log.info(f"Pinned worker for {host} suicides.")
-            os.kill(os.getpid(), signal.SIGTERM)
-        
-        # 只退出当前线程
-        sys.exit(0)
-    
-    cls._monitor_thread = threading.Thread(target=monitor, daemon=True)
-    cls._monitor_thread.start()
-```
-
 **关键设计点**：
 
 1. **并发安全**：使用 `_monitor_lock` 确保监控线程和任务执行线程不会同时操作连接
@@ -363,29 +248,7 @@ def _start_monitor_thread(cls, session: BaseConnection):
 
 ### 并发安全控制
 
-由于 Netmiko 的 `BaseConnection` 不是线程安全的，必须使用锁机制保证并发安全：
-
-```python
-def send(self, session: BaseConnection = None, command: Optional[list[str]] = None):
-    """发送命令时使用锁保护"""
-    try:
-        with self._monitor_lock:  # 获取锁
-            if self.enabled:
-                session.enable()
-            
-            result = {}
-            for cmd in command:
-                response = session.send_command(cmd, **self.args.model_dump())
-                result[cmd] = response
-            
-            if self.enabled:
-                session.exit_enable_mode()
-        
-        return result
-    except Exception as e:
-        log.error(f"Error in sending command: {e}")
-        raise e
-```
+由于 Netmiko 的 `BaseConnection` 不是线程安全的，必须使用锁机制保证并发安全。
 
 **锁的使用场景**：
 - 任务执行时：获取锁，执行命令
@@ -479,10 +342,8 @@ connection_args = {
 #### 2. 队列策略选择
 
 ```python
-options = {
-    "queue_strategy": "pinned",  # 使用 Pinned Worker 启用长连接
-    "ttl": 600,  # Worker 空闲超时时间（秒）
-}
+"queue_strategy": "pinned",  # 使用 Pinned Worker 启用长连接
+"ttl": 600,  # Worker 空闲超时时间（秒）
 ```
 
 **配置说明**：

@@ -7,9 +7,9 @@ services:
     environment:
       - TZ=Asia/Shanghai
     volumes:
-      - ./redis/redis.conf:/etc/redis/redis.conf
-      - ./redis/tls:/etc/redis/tls
-      - ./redis/data:/data
+      - ./redis/redis.conf:/etc/redis/redis.conf:z
+      - ./redis/tls:/etc/redis/tls:z
+      - ./redis/data:/data:z
     command:
       - redis-server
       - /etc/redis/redis.conf
@@ -19,6 +19,31 @@ services:
     networks:
       - "netpulse-network-dev"
     restart: always
+
+  vault:
+    image: hashicorp/vault:1.21
+    env_file:
+      - .env
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=${NETPULSE_VAULT_TOKEN:-dev-root-token}
+      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8200
+      - VAULT_API_ADDR=http://0.0.0.0:8200
+    cap_add:
+      - IPC_LOCK
+    ports:
+      - 8200:8200
+    volumes:
+      - vault_data:/vault/data:z
+      - vault_logs:/vault/logs:z
+    networks:
+      - "netpulse-network-dev"
+    restart: always
+    healthcheck:
+      test: ["CMD", "vault", "status", "-address=http://127.0.0.1:8200"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   cisgo:
     image: apcela/cisshgo:v0.1.0
@@ -31,3 +56,9 @@ networks:
 
   netpulse-network-dev:
     name: "netpulse-network-dev"
+
+volumes:
+  vault_data:
+    name: "netpulse-vault-data"
+  vault_logs:
+    name: "netpulse-vault-logs"

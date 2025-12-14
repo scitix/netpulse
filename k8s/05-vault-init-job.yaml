@@ -1,0 +1,91 @@
+# 05-vault/vault-init-job.yaml
+# One-time job to initialize Vault and store root token in secret
+# 
+# IMPORTANT: This job should be run ONCE after Vault StatefulSet is ready
+# 
+# Usage:
+#   1. Wait for Vault to be ready: kubectl wait --for=condition=ready pod -l app=vault -n netpulse --timeout=300s
+#   2. Run this job: kubectl apply -f k8s/05-vault-init-job.yaml
+#   3. Check job logs: kubectl logs -f job/vault-init -n netpulse
+#   4. After initialization, manually unseal Vault if needed
+#   5. Update netpulse-secrets with the root token
+#
+# Note: For production, consider using Vault Auto-unseal or manual unseal process
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-init
+  namespace: netpulse
+spec:
+  template:
+    spec:
+      serviceAccountName: vault-init
+      containers:
+      - name: vault-init
+        image: hashicorp/vault:1.15
+        command:
+        - sh
+        - -c
+        - |
+          echo "Waiting for Vault to be ready..."
+          until vault status -address=http://vault:8200 2>/dev/null | grep -q "Sealed.*false"; do
+            echo "Vault is not ready yet, waiting..."
+            sleep 5
+          done
+          
+          if vault status -address=http://vault:8200 | grep -q "Initialized.*true"; then
+            echo "Vault is already initialized, skipping..."
+            exit 0
+          fi
+          
+          echo "Initializing Vault..."
+          vault operator init -address=http://vault:8200 -key-shares=1 -key-threshold=1 -format=json > /tmp/vault-init.json
+          
+          UNSEAL_KEY=$(cat /tmp/vault-init.json | jq -r '.unseal_keys_b64[0]')
+          ROOT_TOKEN=$(cat /tmp/vault-init.json | jq -r '.root_token')
+          
+          echo "Unseal Key: $UNSEAL_KEY"
+          echo "Root Token: $ROOT_TOKEN"
+          
+          echo "Unsealing Vault..."
+          vault operator unseal -address=http://vault:8200 $UNSEAL_KEY
+          
+          echo "Vault initialization complete!"
+          echo "Please save the Root Token and Unseal Key securely"
+          echo "Update netpulse-secrets with: kubectl create secret generic netpulse-secrets --from-literal=vault-token=$ROOT_TOKEN --dry-run=client -o yaml | kubectl apply -f -"
+        env:
+        - name: VAULT_ADDR
+          value: "http://vault:8200"
+      restartPolicy: OnFailure
+---
+# ServiceAccount and RBAC for vault-init job
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-init
+  namespace: netpulse
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vault-init
+  namespace: netpulse
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vault-init
+  namespace: netpulse
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vault-init
+subjects:
+- kind: ServiceAccount
+  name: vault-init
+  namespace: netpulse
+
