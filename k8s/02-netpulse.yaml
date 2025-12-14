@@ -21,6 +21,13 @@ data:
   NETPULSE_REDIS__SENTINEL__HOST: "redis-sentinel"
   NETPULSE_REDIS__SENTINEL__PORT: "26379"
   NETPULSE_REDIS__SENTINEL__MASTER_NAME: "mymaster"
+  # Vault Credential Provider Configuration
+  NETPULSE_CREDENTIAL__ENABLED: "true"
+  NETPULSE_CREDENTIAL__NAME: "vault_kv"
+  NETPULSE_CREDENTIAL__ADDR: "http://vault:8200"
+  NETPULSE_CREDENTIAL__ALLOWED_PATHS: "kv/netpulse"
+  NETPULSE_CREDENTIAL__VERIFY: "false"
+  NETPULSE_CREDENTIAL__CACHE_TTL: "30"
 ---
 # 02-netpulse/controller.deploy.yaml
 apiVersion: apps/v1
@@ -70,6 +77,11 @@ spec:
             secretKeyRef:
               name: netpulse-secrets
               key: password
+        - name: NETPULSE_VAULT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: netpulse-secrets
+              key: vault-token
         ports:
         - containerPort: 9000
 ---
@@ -121,6 +133,11 @@ spec:
             secretKeyRef:
               name: netpulse-secrets
               key: password
+        - name: NETPULSE_VAULT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: netpulse-secrets
+              key: vault-token
 ---
 # 02-netpulse/fifo-worker.deploy.yaml
 apiVersion: apps/v1
@@ -170,6 +187,11 @@ spec:
             secretKeyRef:
               name: netpulse-secrets
               key: password
+        - name: NETPULSE_VAULT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: netpulse-secrets
+              key: vault-token
 ---
 # 02-netpulse/service.yaml
 apiVersion: v1
