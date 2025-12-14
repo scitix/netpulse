@@ -153,7 +153,7 @@ def test_device_bulk_returns_success_when_no_devices(monkeypatch, app_config):
 
     assert resp.status_code == 201
     body = resp.json()
-    assert body["code"] == 200
+    assert body["code"] == 201
     assert body["message"] == "success"
     assert body["data"] is None
 

@@ -32,6 +32,9 @@ services:
       - IPC_LOCK
     ports:
       - 8200:8200
+    volumes:
+      - vault_data:/vault/data:z
+      - vault_logs:/vault/logs:z
     networks:
       - "netpulse-network-dev"
     restart: always
@@ -53,3 +56,9 @@ networks:
 
   netpulse-network-dev:
     name: "netpulse-network-dev"
+
+volumes:
+  vault_data:
+    name: "netpulse-vault-data"
+  vault_logs:
+    name: "netpulse-vault-logs"

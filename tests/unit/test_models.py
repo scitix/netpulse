@@ -65,7 +65,7 @@ def test_execution_request_ttl_bounds(app_config):
         ExecutionRequest(**_base_request(command="show version", ttl=0))
 
     with pytest.raises(ValidationError):
-        ExecutionRequest(**_base_request(command="show version", ttl=4000))
+        ExecutionRequest(**_base_request(command="show version", ttl=90000))  # Exceeds max 86400
 
 
 def test_job_in_response_serialization(monkeypatch):

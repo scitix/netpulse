@@ -9,8 +9,6 @@ from .model import (
     ParamikoConnectionArgs,
     ParamikoDeviceTestInfo,
     ParamikoExecutionRequest,
-    ParamikoPullingRequest,
-    ParamikoPushingRequest,
     ParamikoSendCommandArgs,
     ParamikoSendConfigArgs,
 )
@@ -21,41 +19,11 @@ log = logging.getLogger(__name__)
 class ParamikoDriver(BaseDriver):
     driver_name = "paramiko"
 
-    @classmethod
-    def from_pulling_request(cls, req: ParamikoPullingRequest) -> "ParamikoDriver":
-        if not isinstance(req, ParamikoPullingRequest):
-            # Preserve args if it's already ParamikoSendCommandArgs
-            if hasattr(req, "args") and isinstance(req.args, ParamikoSendCommandArgs):
-                # model_dump() may lose args fields, so we manually preserve it
-                req_dict = req.model_dump(exclude_none=True)
-                req_dict["args"] = req.args.model_dump(exclude_none=True)
-                paramiko_req = ParamikoPullingRequest.model_validate(req_dict)
-                # Ensure args is preserved (in case model_validate doesn't handle it correctly)
-                paramiko_req.args = req.args
-                req = paramiko_req
-            else:
-                # Handle case where args might be DriverArgs base class or dict
-                req_dict = req.model_dump(exclude_none=True)
-                # If args exists but is empty dict, try to get from original req.args
-                if hasattr(req, "args") and req.args:
-                    if isinstance(req.args, dict):
-                        req_dict["args"] = req.args
-                    elif isinstance(req.args, ParamikoSendCommandArgs):
-                        req_dict["args"] = req.args.model_dump(exclude_none=True)
-                    else:
-                        # Try to convert DriverArgs to dict
-                        try:
-                            req_dict["args"] = req.args.model_dump(exclude_none=True)
-                        except Exception:
-                            req_dict["args"] = {}
-                req = ParamikoPullingRequest.model_validate(req_dict)
-        return cls(args=req.args, conn_args=req.connection_args)
-
-    @classmethod
-    def from_pushing_request(cls, req: ParamikoPushingRequest) -> "ParamikoDriver":
-        if not isinstance(req, ParamikoPushingRequest):
-            req = ParamikoPushingRequest.model_validate(req.model_dump())
-        return cls(args=req.args, conn_args=req.connection_args)
+    _HOST_KEY_POLICIES = {
+        "auto_add": paramiko.AutoAddPolicy(),
+        "reject": paramiko.RejectPolicy(),
+        "warning": paramiko.WarningPolicy(),
+    }
 
     @classmethod
     def from_execution_request(cls, req: ParamikoExecutionRequest) -> "ParamikoDriver":
@@ -98,42 +66,39 @@ class ParamikoDriver(BaseDriver):
             raise e
 
     def _get_auth_kwargs(self, use_proxy: bool = False) -> dict:
+        """Get authentication kwargs for SSH connection."""
         kwargs = {}
         if use_proxy:
-            if self.conn_args.proxy_pkey:
-                kwargs["pkey"] = self._load_pkey(
-                    self.conn_args.proxy_pkey, self.conn_args.proxy_passphrase
-                )
-                kwargs["username"] = self.conn_args.proxy_username or self.conn_args.username
-            elif self.conn_args.proxy_key_filename:
-                kwargs["key_filename"] = self.conn_args.proxy_key_filename
-                kwargs["username"] = self.conn_args.proxy_username or self.conn_args.username
-                if self.conn_args.proxy_passphrase:
-                    kwargs["passphrase"] = self.conn_args.proxy_passphrase
-            else:
-                kwargs["username"] = self.conn_args.proxy_username or self.conn_args.username
-                if self.conn_args.proxy_password:
-                    kwargs["password"] = self.conn_args.proxy_password
+            pkey = self.conn_args.proxy_pkey
+            key_filename = self.conn_args.proxy_key_filename
+            passphrase = self.conn_args.proxy_passphrase
+            password = self.conn_args.proxy_password
+            username = self.conn_args.proxy_username or self.conn_args.username
         else:
-            if self.conn_args.pkey:
-                kwargs["pkey"] = self._load_pkey(self.conn_args.pkey, self.conn_args.passphrase)
-            elif self.conn_args.key_filename:
-                kwargs["key_filename"] = self.conn_args.key_filename
-                if self.conn_args.passphrase:
-                    kwargs["passphrase"] = self.conn_args.passphrase
-            elif self.conn_args.password:
-                kwargs["password"] = self.conn_args.password
+            pkey = self.conn_args.pkey
+            key_filename = self.conn_args.key_filename
+            passphrase = self.conn_args.passphrase
+            password = self.conn_args.password
+            username = None  # Will be set in connect_kwargs
+
+        if pkey:
+            kwargs["pkey"] = self._load_pkey(pkey, passphrase)
+        elif key_filename:
+            kwargs["key_filename"] = key_filename
+            if passphrase:
+                kwargs["passphrase"] = passphrase
+        elif password:
+            kwargs["password"] = password
+
+        if username:
+            kwargs["username"] = username
+
         return kwargs
 
     def _connect_direct(self) -> paramiko.SSHClient:
         client = paramiko.SSHClient()
-        policy_map = {
-            "auto_add": paramiko.AutoAddPolicy(),
-            "reject": paramiko.RejectPolicy(),
-            "warning": paramiko.WarningPolicy(),
-        }
         client.set_missing_host_key_policy(
-            policy_map.get(self.conn_args.host_key_policy, paramiko.AutoAddPolicy())
+            self._HOST_KEY_POLICIES.get(self.conn_args.host_key_policy, paramiko.AutoAddPolicy())
         )
 
         connect_kwargs = {
@@ -172,13 +137,8 @@ class ParamikoDriver(BaseDriver):
         channel = transport.open_channel("direct-tcpip", dest_addr, local_addr)
 
         target_client = paramiko.SSHClient()
-        policy_map = {
-            "auto_add": paramiko.AutoAddPolicy(),
-            "reject": paramiko.RejectPolicy(),
-            "warning": paramiko.WarningPolicy(),
-        }
         target_client.set_missing_host_key_policy(
-            policy_map.get(self.conn_args.host_key_policy, paramiko.AutoAddPolicy())
+            self._HOST_KEY_POLICIES.get(self.conn_args.host_key_policy, paramiko.AutoAddPolicy())
         )
 
         target_kwargs = {

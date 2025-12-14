@@ -141,6 +141,15 @@ class VaultKvCredentialProvider(BaseCredentialProvider):
         if plugin_cfg is not None:
             dumped = plugin_cfg.model_dump(exclude={"enabled", "name"}, exclude_none=True)
 
+        # Load token from environment variable if not in config
+        import os
+        if "token" not in dumped and (token := os.getenv("NETPULSE_VAULT_TOKEN")):
+            dumped["token"] = token
+        if "role_id" not in dumped and (role_id := os.getenv("NETPULSE_VAULT_ROLE_ID")):
+            dumped["role_id"] = role_id
+        if "secret_id" not in dumped and (secret_id := os.getenv("NETPULSE_VAULT_SECRET_ID")):
+            dumped["secret_id"] = secret_id
+
         return VaultKvConfig.model_validate(dumped)
 
     def resolve(self, req: Any, conn_args: DriverConnectionArgs) -> DriverConnectionArgs:

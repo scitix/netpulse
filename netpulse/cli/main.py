@@ -167,7 +167,7 @@ class ExecSettings(BaseSettings):
         default=None,
         description="Job timeout in seconds",
         ge=1,
-        le=3600,
+        le=86400,
     )
     enable: bool = Field(
         default=True,

@@ -283,7 +283,7 @@ def test_vault_provider_missing_required_field(runtime_loader, monkeypatch):
         device_module._resolve_request_credentials(req)
 
 
-def test_vault_provider_rejects_invalid_field_mapping(runtime_loader):
+def test_vault_provider_rejects_invalid_field_mapping(runtime_loader, monkeypatch):
     runtime_loader(
         {
             "NETPULSE_CREDENTIAL__ENABLED": "true",
@@ -295,6 +295,10 @@ def test_vault_provider_rejects_invalid_field_mapping(runtime_loader):
     )
 
     device_module = _load_device_module()
+    from netpulse.plugins.credentials import vault_kv
+
+    # Ensure provider does not try to use a real hvac client
+    monkeypatch.setattr(vault_kv, "hvac", SimpleNamespace(Client=lambda *_, **__: None))
 
     req = ExecutionRequest(
         driver=DriverName.NETMIKO,

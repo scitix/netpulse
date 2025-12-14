@@ -106,7 +106,7 @@ def execute_on_bulk_devices(req: BulkExecutionRequest):
 
     # Early return if no devices
     if len(expanded) == 0:
-        return BatchSubmitJobResponse(code=200, message="success", data=None)
+        return BatchSubmitJobResponse(code=201, message="success", data=None)
 
     # Enforce driver-level validation, only need to check the first one
     dobj = drivers.get(req.driver, None)
@@ -116,13 +116,13 @@ def execute_on_bulk_devices(req: BulkExecutionRequest):
 
     result = g_mgr.execute_on_bulk_devices(expanded)
     if result is None:
-        return BatchSubmitJobResponse(code=200, message="success", data=None)
+        return BatchSubmitJobResponse(code=201, message="success", data=None)
 
     data = BatchSubmitJobResponse.BatchSubmitJobData(
         succeeded=result[0],
         failed=result[1],
     )
-    return BatchSubmitJobResponse(code=200, message="success", data=data)
+    return BatchSubmitJobResponse(code=201, message="success", data=data)
 
 
 @router.post("/test", response_model=ConnectionTestResponse, status_code=200)

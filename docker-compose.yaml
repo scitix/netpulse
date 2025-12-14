@@ -66,6 +66,9 @@ services:
       - IPC_LOCK
     ports:
       - "8200:8200"
+    volumes:
+      - vault_data:/vault/data:z
+      - vault_logs:/vault/logs:z
     networks:
       - "netpulse-network"
     restart: unless-stopped
@@ -102,3 +105,7 @@ networks:
 volumes:
   redis_data:
     name: "netpulse-redis-data"
+  vault_data:
+    name: "netpulse-vault-data"
+  vault_logs:
+    name: "netpulse-vault-logs"

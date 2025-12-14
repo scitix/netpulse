@@ -41,35 +41,40 @@ class BasicWebHookCaller(BaseWebHookCaller):
         }
 
         # Add device information
-        if req and hasattr(req, "connection_args") and req.connection_args:
-            device_info = {}
-            if hasattr(req.connection_args, "host") and req.connection_args.host:
-                device_info["host"] = req.connection_args.host
-            if hasattr(req.connection_args, "device_type") and req.connection_args.device_type:
-                device_info["device_type"] = req.connection_args.device_type
-            if device_info:
-                data["device"] = device_info
-
-        # Add driver information
-        if req and hasattr(req, "driver"):
-            data["driver"] = req.driver.value if hasattr(req.driver, "value") else str(req.driver)
-
-        # Add command or config information
         if req:
-            if hasattr(req, "command") and req.command is not None:
-                # Convert command to string if it's a list
-                if isinstance(req.command, list):
-                    data["command"] = "\n".join(req.command) if req.command else None
+            conn_args = getattr(req, "connection_args", None)
+            if conn_args:
+                device_info = {}
+                host = getattr(conn_args, "host", None)
+                if host:
+                    device_info["host"] = host
+                device_type = getattr(conn_args, "device_type", None)
+                if device_type:
+                    device_info["device_type"] = device_type
+                if device_info:
+                    data["device"] = device_info
+
+            # Add driver information
+            driver = getattr(req, "driver", None)
+            if driver:
+                data["driver"] = driver.value if hasattr(driver, "value") else str(driver)
+
+            # Add command or config information
+            command = getattr(req, "command", None)
+            if command is not None:
+                if isinstance(command, list):
+                    data["command"] = "\n".join(command) if command else None
                 else:
-                    data["command"] = str(req.command)
-            elif hasattr(req, "config") and req.config is not None:
-                # Convert config to string if it's a list or dict
-                if isinstance(req.config, list):
-                    data["config"] = "\n".join(req.config) if req.config else None
-                elif isinstance(req.config, dict):
-                    data["config"] = str(req.config)
-                else:
-                    data["config"] = str(req.config)
+                    data["command"] = str(command)
+            else:
+                config = getattr(req, "config", None)
+                if config is not None:
+                    if isinstance(config, list):
+                        data["config"] = "\n".join(config) if config else None
+                    elif isinstance(config, dict):
+                        data["config"] = str(config)
+                    else:
+                        data["config"] = str(config)
 
         try:
             resp = requests.request(
