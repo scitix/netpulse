@@ -1,9 +1,22 @@
 # Changelog
 
-## [0.3.0] - 2025-12-15
+## [0.3.0] - 2025-12-14
 
 ### Added 
 
+- **凭据插件架构**: 新增可扩展的凭据插件系统，支持从外部凭据管理系统动态获取设备认证信息
+  - 插件化设计，支持多种凭据提供器
+  - 自动解析凭据并注入到连接参数中
+  - 支持在 API 请求中通过 `credential` 字段引用凭据，避免在请求中传递明文密码
+- **Vault KV 凭据插件**: 集成 HashiCorp Vault KV v2 引擎，实现安全的凭据管理
+  - 支持从 Vault KV v2 读取设备凭据（用户名、密码等）
+  - 支持 Token 和 AppRole 两种认证方式
+  - 支持路径白名单（`allowed_paths`）限制访问范围，提升安全性
+  - 支持命名空间（namespace）隔离
+  - 支持凭据缓存（`cache_ttl`）提升性能，减少 Vault API 调用
+  - 支持自定义字段映射（`field_mapping`），灵活适配不同的 Vault 数据结构
+  - 支持版本化密钥读取
+  - 完整的单元测试覆盖
 - 支持在任意命令之前执行 template rendering，在命令执行之后进行 template parsing
 - 添加单元测试、端到端测试、CI/CD 集成
 - **增强 Webhook 上报数据**: Webhook 通知现在包含完整的任务上下文信息
@@ -36,6 +49,13 @@
 - 修复测试配置读取问题
 - 修复 Postman collection：将测试响应字段从 `connection_time` 更新为 `latency`
 - 修复多个测试用例中的 bug
+
+### Documentation
+
+- 新增凭据配置指南文档（中英文），详细介绍 Vault KV 凭据插件的配置和使用方法
+- 更新 API 文档，补充凭据相关字段说明
+- 修复 Postman collection 示例
+- 修复文档中的选项说明
 
 ## [0.2.0] - 2025-11-09
 
