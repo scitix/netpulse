@@ -3,13 +3,14 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Callable, Optional
 
-from redis.client import Pipeline
 from rq import Queue, Worker
 from rq.command import send_shutdown_command
 from rq.exceptions import InvalidJobOperation, NoSuchJobError
 from rq.job import Job
 from rq.registry import FailedJobRegistry, FinishedJobRegistry, StartedJobRegistry
 from rq.worker import BaseWorker
+
+from redis.client import Pipeline
 
 from ..models import (
     DriverConnectionArgs,
@@ -253,7 +254,7 @@ class Manager:
                 func=func,
                 timeout=self.job_timeout,  # time limit for job execution
                 ttl=ttl if ttl else self.job_ttl,  # job ttl in redis
-                result_ttl=effective_result_ttl,  # result ttl in redis (from request or system default)
+                result_ttl=effective_result_ttl,  # result ttl (from request or default)
                 failure_ttl=effective_result_ttl,  # errors ttl in redis
                 kwargs=kwargs,
                 meta=JobAdditionalData().model_dump(),

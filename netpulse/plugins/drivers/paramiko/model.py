@@ -124,7 +124,10 @@ class ParamikoFileTransferOperation(BaseModel):
     )
     cleanup_after_exec: bool = Field(
         default=True,
-        description="Whether to cleanup remote file after execution (only if execute_after_upload is True)",
+        description=(
+            "Whether to cleanup remote file after execution "
+            "(only if execute_after_upload is True)"
+        ),
     )
 
 

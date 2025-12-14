@@ -1,6 +1,6 @@
 import logging
 from io import StringIO
-from typing import Optional
+from typing import ClassVar, Optional
 
 import paramiko
 
@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 class ParamikoDriver(BaseDriver):
     driver_name = "paramiko"
 
-    _HOST_KEY_POLICIES = {
+    _HOST_KEY_POLICIES: ClassVar[dict[str, paramiko.MissingHostKeyPolicy]] = {
         "auto_add": paramiko.AutoAddPolicy(),
         "reject": paramiko.RejectPolicy(),
         "warning": paramiko.WarningPolicy(),
@@ -244,7 +244,7 @@ class ParamikoDriver(BaseDriver):
 
             bytes_transferred = result.get("bytes_transferred", 0)
             total_bytes = result.get("total_bytes", 0)
-            
+
             transfer_result = {
                 f"file_transfer_{file_transfer_op.operation}": {
                     "output": f"File transfer completed: {bytes_transferred}/{total_bytes} bytes",
@@ -253,7 +253,7 @@ class ParamikoDriver(BaseDriver):
                     "transfer_result": result,
                 }
             }
-            
+
             # Execute command after upload if requested
             if (
                 file_transfer_op.operation == "upload"
@@ -265,7 +265,7 @@ class ParamikoDriver(BaseDriver):
                     session, file_transfer_op.execute_command, self.args
                 )
                 transfer_result.update(exec_result)
-                
+
                 # Cleanup remote file if requested
                 if file_transfer_op.cleanup_after_exec:
                     log.debug(f"Cleaning up remote file: {file_transfer_op.remote_path}")
@@ -273,7 +273,7 @@ class ParamikoDriver(BaseDriver):
                         session, f"rm -f {file_transfer_op.remote_path}", self.args
                     )
                     transfer_result.update(cleanup_result)
-            
+
             return transfer_result
         except Exception as e:
             log.error(f"Error in file transfer: {e}")
@@ -388,7 +388,7 @@ class ParamikoDriver(BaseDriver):
             exec_kwargs["bufsize"] = args.bufsize
 
         stdin, stdout, stderr = session.exec_command(cmd, **exec_kwargs)
-        
+
         # Write script content to stdin
         stdin.write(args.script_content)
         stdin.close()
@@ -440,7 +440,7 @@ class ParamikoDriver(BaseDriver):
                 log.warning(f"Failed to read PID from {pid_file}: {e}")
 
         # Update result with background task info
-        result_key = list(exec_result.keys())[0]
+        result_key = next(iter(exec_result.keys()))
         exec_result[result_key]["background_task"] = {
             "pid": pid,
             "pid_file": pid_file,
