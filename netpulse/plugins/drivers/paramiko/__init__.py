@@ -223,6 +223,15 @@ class ParamikoDriver(BaseDriver):
             log.debug(f"File transfer detected: {self.args.file_transfer}")
             return self._handle_file_transfer(session, self.args.file_transfer)
 
+        # Check if script_content is provided (function 2: direct script execution)
+        if (
+            self.args
+            and isinstance(self.args, ParamikoSendCommandArgs)
+            and self.args.script_content
+        ):
+            log.debug("Script content execution detected")
+            return self._execute_script_content(session, self.args)
+
         if not command:
             log.warning("No command provided")
             return {}
@@ -230,26 +239,18 @@ class ParamikoDriver(BaseDriver):
         try:
             result = {}
             for cmd in command:
-                exec_kwargs = {}
-                if self.args and isinstance(self.args, ParamikoSendCommandArgs):
-                    if self.args.timeout:
-                        exec_kwargs["timeout"] = self.args.timeout
-                    exec_kwargs["get_pty"] = self.args.get_pty
-                    if self.args.environment:
-                        exec_kwargs["environment"] = self.args.environment
-                    if self.args.bufsize != -1:
-                        exec_kwargs["bufsize"] = self.args.bufsize
-
-                _stdin, stdout, stderr = session.exec_command(cmd, **exec_kwargs)
-                output = stdout.read().decode("utf-8", errors="replace")
-                error = stderr.read().decode("utf-8", errors="replace")
-                exit_status = stdout.channel.recv_exit_status()
-
-                result[cmd] = {
-                    "output": output,
-                    "error": error,
-                    "exit_status": exit_status,
-                }
+                # Check if background execution is requested (function 3)
+                if (
+                    self.args
+                    and isinstance(self.args, ParamikoSendCommandArgs)
+                    and self.args.run_in_background
+                ):
+                    log.debug(f"Background execution requested for: {cmd}")
+                    bg_result = self._execute_background_command(session, cmd, self.args)
+                    result.update(bg_result)
+                else:
+                    exec_result = self._execute_command(session, cmd, self.args)
+                    result.update(exec_result)
             return result
         except Exception as e:
             log.error(f"Error in sending command: {e}")
@@ -283,7 +284,8 @@ class ParamikoDriver(BaseDriver):
 
             bytes_transferred = result.get("bytes_transferred", 0)
             total_bytes = result.get("total_bytes", 0)
-            return {
+            
+            transfer_result = {
                 f"file_transfer_{file_transfer_op.operation}": {
                     "output": f"File transfer completed: {bytes_transferred}/{total_bytes} bytes",
                     "error": "",
@@ -291,6 +293,28 @@ class ParamikoDriver(BaseDriver):
                     "transfer_result": result,
                 }
             }
+            
+            # Execute command after upload if requested
+            if (
+                file_transfer_op.operation == "upload"
+                and file_transfer_op.execute_after_upload
+                and file_transfer_op.execute_command
+            ):
+                log.debug(f"Executing command after upload: {file_transfer_op.execute_command}")
+                exec_result = self._execute_command(
+                    session, file_transfer_op.execute_command, self.args
+                )
+                transfer_result.update(exec_result)
+                
+                # Cleanup remote file if requested
+                if file_transfer_op.cleanup_after_exec:
+                    log.debug(f"Cleaning up remote file: {file_transfer_op.remote_path}")
+                    cleanup_result = self._execute_command(
+                        session, f"rm -f {file_transfer_op.remote_path}", self.args
+                    )
+                    transfer_result.update(cleanup_result)
+            
+            return transfer_result
         except Exception as e:
             log.error(f"Error in file transfer: {e}")
             return {
@@ -351,6 +375,120 @@ class ParamikoDriver(BaseDriver):
         except Exception as e:
             log.error(f"Error in sending config: {e}")
             raise e
+
+    def _execute_command(
+        self, session: paramiko.SSHClient, cmd: str, args: Optional[ParamikoSendCommandArgs]
+    ) -> dict:
+        """Execute a single command and return result"""
+        exec_kwargs = {}
+        if args and isinstance(args, ParamikoSendCommandArgs):
+            if args.timeout:
+                exec_kwargs["timeout"] = args.timeout
+            exec_kwargs["get_pty"] = args.get_pty
+            if args.environment:
+                exec_kwargs["environment"] = args.environment
+            if args.bufsize != -1:
+                exec_kwargs["bufsize"] = args.bufsize
+
+        _stdin, stdout, stderr = session.exec_command(cmd, **exec_kwargs)
+        output = stdout.read().decode("utf-8", errors="replace")
+        error = stderr.read().decode("utf-8", errors="replace")
+        exit_status = stdout.channel.recv_exit_status()
+
+        return {
+            cmd: {
+                "output": output,
+                "error": error,
+                "exit_status": exit_status,
+            }
+        }
+
+    def _execute_script_content(
+        self, session: paramiko.SSHClient, args: ParamikoSendCommandArgs
+    ) -> dict:
+        """Execute script content directly via stdin (function 2)"""
+        if not args.script_content:
+            raise ValueError("script_content is required for script execution")
+
+        # Build command with interpreter
+        interpreter = args.script_interpreter or "bash"
+        cmd = interpreter
+
+        # Add working directory if specified
+        if args.working_directory:
+            cmd = f"cd {args.working_directory} && {cmd}"
+
+        exec_kwargs = {}
+        if args.timeout:
+            exec_kwargs["timeout"] = args.timeout
+        exec_kwargs["get_pty"] = args.get_pty
+        if args.environment:
+            exec_kwargs["environment"] = args.environment
+        if args.bufsize != -1:
+            exec_kwargs["bufsize"] = args.bufsize
+
+        stdin, stdout, stderr = session.exec_command(cmd, **exec_kwargs)
+        
+        # Write script content to stdin
+        stdin.write(args.script_content)
+        stdin.close()
+
+        output = stdout.read().decode("utf-8", errors="replace")
+        error = stderr.read().decode("utf-8", errors="replace")
+        exit_status = stdout.channel.recv_exit_status()
+
+        return {
+            f"script_execution_{interpreter}": {
+                "output": output,
+                "error": error,
+                "exit_status": exit_status,
+                "script_content_length": len(args.script_content),
+            }
+        }
+
+    def _execute_background_command(
+        self, session: paramiko.SSHClient, cmd: str, args: ParamikoSendCommandArgs
+    ) -> dict:
+        """Execute command in background and return PID (function 3)"""
+        import uuid
+
+        # Generate unique identifier for this background task
+        task_id = str(uuid.uuid4())[:8]
+
+        # Determine output and PID file paths
+        output_file = args.background_output_file or f"/tmp/netpulse_{task_id}.log"
+        pid_file = args.background_pid_file or f"/tmp/netpulse_{task_id}.pid"
+
+        # Build background command with nohup
+        bg_cmd = f"nohup {cmd} > {output_file} 2>&1 & echo $! > {pid_file}"
+
+        # Execute the background command
+        exec_result = self._execute_command(session, bg_cmd, args)
+
+        # Read PID from remote file
+        pid = None
+        if exec_result[bg_cmd]["exit_status"] == 0:
+            try:
+                # Read PID file
+                read_pid_cmd = f"cat {pid_file}"
+                pid_result = self._execute_command(session, read_pid_cmd, args)
+                if read_pid_cmd in pid_result:
+                    pid_output = pid_result[read_pid_cmd]["output"].strip()
+                    if pid_output:
+                        pid = int(pid_output)
+            except (ValueError, KeyError) as e:
+                log.warning(f"Failed to read PID from {pid_file}: {e}")
+
+        # Update result with background task info
+        result_key = list(exec_result.keys())[0]
+        exec_result[result_key]["background_task"] = {
+            "pid": pid,
+            "pid_file": pid_file,
+            "output_file": output_file,
+            "command": cmd,
+        }
+
+        return exec_result
 
     def disconnect(self, session: paramiko.SSHClient):
         try:

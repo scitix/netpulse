@@ -88,7 +88,17 @@ class ExecutionRequest(BaseModel):
         default=None,
         description="Queue strategy (fifo/pinned). Auto-selected by driver if not specified",
     )
-    ttl: Optional[int] = Field(default=300, description="Job timeout in seconds", ge=1, le=3600)
+    ttl: Optional[int] = Field(default=300, description="Job timeout in seconds", ge=1, le=86400)
+    result_ttl: Optional[int] = Field(
+        default=None,
+        description=(
+            "Result retention time in seconds. "
+            "If not set, uses system default. "
+            "Useful for long-running tasks that need result retention (e.g., 48-hour stress tests)"
+        ),
+        ge=60,
+        le=604800,  # Max 7 days
+    )
 
     # Webhook callback
     webhook: Optional[WebHook] = Field(

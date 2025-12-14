@@ -190,6 +190,7 @@ class Manager:
         func: Callable,
         kwargs: Optional[dict] = None,
         ttl: Optional[int] = None,
+        result_ttl: Optional[int] = None,
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
         pipeline: Optional[Pipeline] = None,
@@ -201,13 +202,16 @@ class Manager:
         on_success_cb = rpc_callback_factory(on_success, timeout=self.job_timeout)
         on_failure_cb = rpc_callback_factory(on_failure, timeout=self.job_timeout)
 
+        # Use request result_ttl if provided, otherwise use system default
+        effective_result_ttl = result_ttl if result_ttl is not None else self.job_result_ttl
+
         q = Queue(q_name, connection=self.rdb)
         job = q.enqueue_call(
             func=func,
             timeout=self.job_timeout,  # time limit for job execution
             ttl=ttl if ttl else self.job_ttl,  # job ttl in redis
-            result_ttl=self.job_result_ttl,  # result ttl in redis
-            failure_ttl=self.job_result_ttl,  # errors ttl in redis
+            result_ttl=effective_result_ttl,  # result ttl in redis (from request or system default)
+            failure_ttl=effective_result_ttl,  # errors ttl in redis
             kwargs=kwargs,
             meta=JobAdditionalData().model_dump(),
             on_success=on_success_cb,
@@ -223,6 +227,7 @@ class Manager:
         funcs: list[Callable],
         kwargses: list[dict],
         ttl: Optional[int] = None,
+        result_ttl: Optional[int] = None,
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
     ):
@@ -239,14 +244,17 @@ class Manager:
         on_success_cb = rpc_callback_factory(on_success, timeout=self.job_timeout)
         on_failure_cb = rpc_callback_factory(on_failure, timeout=self.job_timeout)
 
+        # Use request result_ttl if provided, otherwise use system default
+        effective_result_ttl = result_ttl if result_ttl is not None else self.job_result_ttl
+
         jobs = []
         for func, kwargs in zip(funcs, kwargses):
             job = Queue.prepare_data(
                 func=func,
                 timeout=self.job_timeout,  # time limit for job execution
                 ttl=ttl if ttl else self.job_ttl,  # job ttl in redis
-                result_ttl=self.job_result_ttl,  # result ttl in redis
-                failure_ttl=self.job_result_ttl,  # errors ttl in redis
+                result_ttl=effective_result_ttl,  # result ttl in redis (from request or system default)
+                failure_ttl=effective_result_ttl,  # errors ttl in redis
                 kwargs=kwargs,
                 meta=JobAdditionalData().model_dump(),
                 on_success=on_success_cb,
@@ -288,6 +296,7 @@ class Manager:
         q_strategy: QueueStrategy,
         func: Callable,
         ttl: Optional[int] = None,
+        result_ttl: Optional[int] = None,
         kwargs: Optional[dict] = None,
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
@@ -362,6 +371,7 @@ class Manager:
         job = self._send_job(
             q_name=q_name,
             ttl=ttl,
+            result_ttl=result_ttl,
             func=func,
             kwargs=kwargs,
             on_success=on_success,
@@ -376,6 +386,7 @@ class Manager:
         func: Callable,
         kwargses: list[dict],
         ttl: Optional[int] = None,
+        result_ttl: Optional[int] = None,
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
     ) -> tuple[list[JobInResponse], list[str]]:
@@ -391,6 +402,7 @@ class Manager:
                 funcs=[func] * len(conn_args),
                 kwargses=kwargses,
                 ttl=ttl,
+                result_ttl=result_ttl,
                 on_success=on_success,
                 on_failure=on_failure,
             )
@@ -469,6 +481,7 @@ class Manager:
                         self._send_job(
                             q_name=g_config.get_host_queue_name(hosts[idx]),
                             ttl=ttl,
+                            result_ttl=result_ttl,
                             func=func,
                             kwargs=kwargses[idx],
                             on_success=on_success,
@@ -507,6 +520,7 @@ class Manager:
             conn_arg=req.connection_args,
             q_strategy=req.queue_strategy,
             ttl=req.ttl,
+            result_ttl=req.result_ttl,
             func=execute,
             kwargs={"req": req},
             on_success=success_handler,
@@ -524,10 +538,12 @@ class Manager:
         if reqs[0].webhook:
             success_handler = failure_handler = rpc_webhook_callback
 
+        # Use first request's result_ttl for all jobs in batch (they should be the same)
         return self.dispatch_bulk_rpc_jobs(
             conn_args=[req.connection_args for req in reqs],
             q_strategy=reqs[0].queue_strategy,
             ttl=reqs[0].ttl,
+            result_ttl=reqs[0].result_ttl,
             func=execute,
             kwargses=[{"req": req} for req in reqs],
             on_success=success_handler,

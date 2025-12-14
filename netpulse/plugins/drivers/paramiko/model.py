@@ -113,6 +113,19 @@ class ParamikoFileTransferOperation(BaseModel):
     timeout: Optional[float] = Field(
         default=None, description="Transfer timeout (seconds), None means no timeout"
     )
+    # Execute after upload/download
+    execute_after_upload: bool = Field(
+        default=False,
+        description="Whether to execute command after upload (only for upload operation)",
+    )
+    execute_command: Optional[str] = Field(
+        default=None,
+        description="Command to execute after file transfer (e.g., 'bash /tmp/script.sh')",
+    )
+    cleanup_after_exec: bool = Field(
+        default=True,
+        description="Whether to cleanup remote file after execution (only if execute_after_upload is True)",
+    )
 
 
 class ParamikoSendCommandArgs(DriverArgs):
@@ -134,6 +147,29 @@ class ParamikoSendCommandArgs(DriverArgs):
             "File transfer operation. If set, file transfer will be performed "
             "instead of command execution"
         ),
+    )
+    # Script content execution
+    script_content: Optional[str] = Field(
+        default=None,
+        description="Script content to execute directly via stdin (alternative to command field)",
+    )
+    script_interpreter: str = Field(
+        default="bash", description="Script interpreter (bash, sh, python, etc.)"
+    )
+    working_directory: Optional[str] = Field(
+        default=None, description="Working directory for script execution"
+    )
+    # Background task execution
+    run_in_background: bool = Field(
+        default=False, description="Whether to run command in background (using nohup)"
+    )
+    background_output_file: Optional[str] = Field(
+        default=None,
+        description="Output file for background task (default: /tmp/netpulse_<pid>.log)",
+    )
+    background_pid_file: Optional[str] = Field(
+        default=None,
+        description="PID file path for background task (default: /tmp/netpulse_<pid>.pid)",
     )
 
 
