@@ -20,6 +20,7 @@ prd/
 
 redis/tls
 redis/data
+.cursor/
 
 # Kubernetes deployment files
 k8s/00-secrets-deploy.yaml
