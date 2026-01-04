@@ -3,6 +3,7 @@ from typing import List, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .common import (
+    BulkDeviceRequest,
     CredentialRef,
     DriverArgs,
     DriverConnectionArgs,
@@ -149,9 +150,12 @@ class ExecutionRequest(BaseModel):
 
 
 class BulkExecutionRequest(ExecutionRequest):
-    devices: List[DriverConnectionArgs] = Field(
+    devices: List[BulkDeviceRequest] = Field(
         ...,
-        description="Device list for batch operation. Overrides fields in connection_args",
+        description=(
+            "Device list for batch operation. Each device can override connection_args "
+            "and optionally override command/config from base request"
+        ),
     )
 
     # Allow more time for bulk operations

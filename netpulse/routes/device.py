@@ -91,17 +91,44 @@ def execute_on_bulk_devices(req: BulkExecutionRequest):
 
     expanded: list[ExecutionRequest] = []
     for device in req.devices:
+        # Validate command/config exclusivity at device level first
+        if device.command is not None and device.config is not None:
+            raise ValueError(
+                f"Device {device.host}: cannot specify both 'command' and 'config', choose one"
+            )
+
+        # Extract device-level command/config overrides
+        device_dict = device.model_dump(
+            exclude_defaults=True, exclude_none=True, exclude_unset=True
+        )
+        device_command = device_dict.pop("command", None)
+        device_config = device_dict.pop("config", None)
+
         # Generate connection_args with device-specific overrides
         connection_args = base_req.connection_args.model_copy(
-            update=device.model_dump(exclude_defaults=True, exclude_none=True, exclude_unset=True),
+            update=device_dict,
             deep=True,
         )
 
         if connection_args.host is None:
             raise ValueError("'host' is required for each device")
 
-        # Create device-specific request with updated connection
-        per_device_req = base_req.model_copy(update={"connection_args": connection_args}, deep=True)
+        # Determine effective command/config for this device
+        # Device-level override takes precedence over base request
+        effective_updates = {"connection_args": connection_args}
+
+        if device_command is not None:
+            # Device specifies command, override base
+            effective_updates["command"] = device_command
+            effective_updates["config"] = None
+        elif device_config is not None:
+            # Device specifies config, override base
+            effective_updates["config"] = device_config
+            effective_updates["command"] = None
+        # else: use base request's command/config (no changes needed)
+
+        # Create device-specific request with updated connection and command/config
+        per_device_req = base_req.model_copy(update=effective_updates, deep=True)
         expanded.append(per_device_req)
 
     # Early return if no devices

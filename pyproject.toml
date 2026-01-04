@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "netpulse"
-version = "0.3.0"
+version = "0.3.1"
 description = "API Server for Network Devices"
 authors = [
     { name = "Yongkun Li", email = "44155313+Nativu5@users.noreply.github.com" },

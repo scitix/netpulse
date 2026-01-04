@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, Dict, Optional, Tuple
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 
 class QueueStrategy(str, Enum):
@@ -158,6 +158,43 @@ class DriverConnectionArgs(BaseModel):
                 "host": "172.17.0.1",
                 "username": "admin",
                 "password": "admin",
+            }
+        },
+    )
+
+
+class BulkDeviceRequest(DriverConnectionArgs):
+    """
+    Extended device request for bulk operations.
+    Allows per-device command/config override.
+    """
+
+    command: Optional[Any] = Field(
+        default=None,
+        description="Device-specific command override (exclusive with config)",
+    )
+    config: Optional[Any] = Field(
+        default=None,
+        description="Device-specific config override (exclusive with command)",
+    )
+
+    @model_validator(mode="after")
+    def check_command_config_exclusivity(self):
+        if self.command is not None and self.config is not None:
+            raise ValueError(
+                f"Device {self.host}: cannot specify both 'command' and 'config', choose one"
+            )
+        return self
+
+    model_config = ConfigDict(
+        extra="allow",
+        json_schema_extra={
+            "example": {
+                "device_type": "cisco_ios",
+                "host": "192.168.1.1",
+                "username": "admin",
+                "password": "admin",
+                "command": "show version",
             }
         },
     )

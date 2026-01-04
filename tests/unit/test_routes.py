@@ -208,6 +208,101 @@ def test_device_bulk_expands_devices(monkeypatch, app_config):
     assert ValidatingDriver.called == 1
 
 
+def test_device_bulk_per_device_command_override(monkeypatch, app_config):
+    """POST /device/bulk should allow per-device command/config override."""
+    calls: dict[str, object] = {}
+
+    class CaptureManager:
+        def execute_on_bulk_devices(self, reqs: Iterable[ExecutionRequest]):
+            calls["reqs"] = list(reqs)
+            jobs = [
+                JobInResponse(id=f"job-{req.connection_args.host}", status="queued", queue="q1")
+                for req in calls["reqs"]
+            ]
+            return jobs, []
+
+    monkeypatch.setattr(device_module, "drivers", {"netmiko": _StubDriver})
+    monkeypatch.setattr(device_module, "g_mgr", CaptureManager())
+    client = TestClient(controller.app)
+
+    # Test 1: Device-level command override
+    payload = {
+        "driver": "netmiko",
+        "connection_args": {"username": "admin", "password": "admin"},
+        "command": "show version",  # Base command
+        "devices": [
+            {"host": "10.0.0.1"},  # Uses base command
+            {"host": "10.0.0.2", "command": "show interfaces"},  # Override command
+            {"host": "10.0.0.3", "command": "display version"},  # Override command
+        ],
+    }
+    resp = client.post(
+        "/device/bulk",
+        json=payload,
+        headers={"X-API-KEY": app_config.server.api_key},
+    )
+
+    assert resp.status_code == 201
+    reqs = calls["reqs"]
+    assert len(reqs) == 3  # type: ignore
+    assert reqs[0].command == "show version"  # type: ignore
+    assert reqs[0].config is None  # type: ignore
+    assert reqs[1].command == "show interfaces"  # type: ignore
+    assert reqs[1].config is None  # type: ignore
+    assert reqs[2].command == "display version"  # type: ignore
+    assert reqs[2].config is None  # type: ignore
+
+    # Test 2: Device-level config override
+    payload = {
+        "driver": "netmiko",
+        "connection_args": {"username": "admin", "password": "admin"},
+        "config": "hostname base-router",  # Base config
+        "devices": [
+            {"host": "10.0.0.1"},  # Uses base config
+            {"host": "10.0.0.2", "config": "hostname router-2"},  # Override config
+        ],
+    }
+    resp = client.post(
+        "/device/bulk",
+        json=payload,
+        headers={"X-API-KEY": app_config.server.api_key},
+    )
+
+    assert resp.status_code == 201
+    reqs = calls["reqs"]
+    assert len(reqs) == 2  # type: ignore
+    assert reqs[0].config == "hostname base-router"  # type: ignore
+    assert reqs[0].command is None  # type: ignore
+    assert reqs[1].config == "hostname router-2"  # type: ignore
+    assert reqs[1].command is None  # type: ignore
+
+
+def test_device_bulk_per_device_command_config_conflict(monkeypatch, app_config):
+    """POST /device/bulk should reject devices with both command and config."""
+    monkeypatch.setattr(device_module, "drivers", {"netmiko": _StubDriver})
+    client = TestClient(controller.app)
+
+    payload = {
+        "driver": "netmiko",
+        "connection_args": {"username": "admin", "password": "admin"},
+        "command": "show version",
+        "devices": [
+            {"host": "10.0.0.1", "command": "show clock", "config": "hostname test"},  # Conflict
+        ],
+    }
+    resp = client.post(
+        "/device/bulk",
+        json=payload,
+        headers={"X-API-KEY": app_config.server.api_key},
+    )
+
+    assert resp.status_code == 422
+    detail = resp.json()["detail"]
+    assert isinstance(detail, list)
+    assert len(detail) > 0
+    assert "cannot specify both" in detail[0]["msg"].lower()
+
+
 def test_template_render_missing_name(monkeypatch, app_config):
     """POST /template/render should 400 when name missing."""
     client = _client_with_stubs(monkeypatch)
