@@ -33,13 +33,16 @@ def execute(req: ExecutionRequest):
             if not isinstance(payload, dict):
                 raise ValueError("Config/command must be a dict for rendering.")
 
-            if req.rendering.context:
-                req.rendering.context = None
-                log.warning("Context in request is overridden by config/command.")
+            if req.rendering.context is None:
+                req.rendering.context = {}
+
+            # Merge payload into context (payload takes precedence)
+            if payload:
+                req.rendering.context.update(payload)
 
             # Do the rendering
             render = renderers[req.rendering.name].from_rendering_request(req.rendering)
-            payload = render.render(payload)
+            payload = render.render(req.rendering.context)
 
             # Persist rendered payload back to request so downstream validation sees a concrete
             # command/config instead of the original dict + rendering metadata.
