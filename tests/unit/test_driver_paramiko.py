@@ -9,6 +9,7 @@ from netpulse.plugins.drivers.paramiko.model import (
 
 def test_paramiko_send_uses_exec_args(monkeypatch):
     """Ensure exec args are passed through to session.exec_command."""
+
     class FakeStdout:
         def __init__(self, text: str):
             self._text = text
@@ -47,6 +48,7 @@ def test_paramiko_send_uses_exec_args(monkeypatch):
 
 def test_paramiko_send_returns_empty_when_no_commands():
     """Return empty dict and avoid exec when no commands are provided."""
+
     class FakeSession:
         def __init__(self):
             self.called = False
@@ -92,6 +94,7 @@ def test_paramiko_send_runs_file_transfer(monkeypatch):
 
 def test_paramiko_config_with_sudo(monkeypatch):
     """Prefix commands with sudo and request PTY when sudo_password is set."""
+
     class FakeChannel:
         def recv_exit_status(self):
             return 0
@@ -135,6 +138,7 @@ def test_paramiko_config_with_sudo(monkeypatch):
 
 def test_paramiko_config_returns_empty_when_no_config():
     """Return empty dict and skip exec when no config lines are provided."""
+
     class FakeSession:
         def __init__(self):
             self.called = False
@@ -155,6 +159,7 @@ def test_paramiko_config_returns_empty_when_no_config():
 
 def test_paramiko_test_returns_remote_version(monkeypatch):
     """ParamikoDriver.test should populate host and remote_version and close session."""
+
     class FakeTransport:
         remote_version = "SSH-2.0-fake"
 

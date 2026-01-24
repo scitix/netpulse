@@ -1,4 +1,3 @@
-
 from netpulse.plugins import PluginLoader
 from netpulse.plugins.drivers import BaseDriver
 

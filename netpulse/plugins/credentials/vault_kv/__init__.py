@@ -143,6 +143,7 @@ class VaultKvCredentialProvider(BaseCredentialProvider):
 
         # Load token from environment variable if not in config
         import os
+
         if "token" not in dumped and (token := os.getenv("NETPULSE_VAULT_TOKEN")):
             dumped["token"] = token
         if "role_id" not in dumped and (role_id := os.getenv("NETPULSE_VAULT_ROLE_ID")):

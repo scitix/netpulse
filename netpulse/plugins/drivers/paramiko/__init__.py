@@ -727,7 +727,11 @@ class ParamikoDriver(BaseDriver):
 
                     # Kill if requested
                     if query.kill:
-                        kill_cmd = f"kill -15 {pid} 2>/dev/null; sleep 0.5; kill -9 {pid} 2>/dev/null"
+                        kill_cmd = (
+                            f"kill -15 {pid} 2>/dev/null; "
+                            f"sleep 0.5; "
+                            f"kill -9 {pid} 2>/dev/null"
+                        )
                         self._execute_command(session, kill_cmd, None)
                         result["stream_result"]["killed"] = True
                         result["stream_result"]["completed"] = True
@@ -739,7 +743,10 @@ class ParamikoDriver(BaseDriver):
             # Read output (tail or from offset)
             if query.offset > 0:
                 # Read from offset using dd
-                read_cmd = f"dd if={output_file} bs=1 skip={query.offset} 2>/dev/null | tail -n {query.lines}"
+                read_cmd = (
+                    f"dd if={output_file} bs=1 skip={query.offset} 2>/dev/null "
+                    f"| tail -n {query.lines}"
+                )
             else:
                 read_cmd = f"tail -n {query.lines} {output_file} 2>/dev/null"
 
@@ -751,7 +758,9 @@ class ParamikoDriver(BaseDriver):
             size_cmd = f"stat -c%s {output_file} 2>/dev/null || echo 0"
             size_result = self._execute_command(session, size_cmd, None)
             try:
-                result["stream_result"]["output_bytes"] = int(size_result[size_cmd]["output"].strip())
+                result["stream_result"]["output_bytes"] = int(
+                    size_result[size_cmd]["output"].strip()
+                )
             except ValueError:
                 pass
 
@@ -808,7 +817,12 @@ class ParamikoDriver(BaseDriver):
 
                 # Kill if requested
                 if query.kill_if_running:
-                    kill_cmd = f"kill -15 {pid} 2>/dev/null; sleep 1; kill -9 {pid} 2>/dev/null; echo done"
+                    kill_cmd = (
+                        f"kill -15 {pid} 2>/dev/null; "
+                        f"sleep 1; "
+                        f"kill -9 {pid} 2>/dev/null; "
+                        "echo done"
+                    )
                     self._execute_command(session, kill_cmd, None)
                     result["task_query"]["killed"] = True
                     result["task_query"]["running"] = False
