@@ -49,6 +49,13 @@ class ParamikoConnectionArgs(DriverConnectionArgs):
     compress: bool = Field(default=False, description="Whether to enable compression")
     banner_timeout: Optional[float] = Field(default=None, description="Banner timeout")
     auth_timeout: Optional[float] = Field(default=None, description="Authentication timeout")
+    keepalive: Optional[int] = Field(
+        default=None,
+        description=(
+            "Keepalive interval in seconds. When set, enables persistent connection mode. "
+            "The connection will be kept alive and reused across multiple commands."
+        ),
+    )
 
     # SSH Proxy/Jump Host support
     proxy_host: Optional[str] = Field(
@@ -173,6 +180,73 @@ class ParamikoSendCommandArgs(DriverArgs):
     background_pid_file: Optional[str] = Field(
         default=None,
         description="PID file path for background task (default: /tmp/netpulse_<pid>.pid)",
+    )
+    # Background task query
+    check_task: Optional["BackgroundTaskQuery"] = Field(
+        default=None,
+        description="Query status of a previously started background task",
+    )
+    # Streaming execution
+    stream: bool = Field(
+        default=False,
+        description="Enable streaming mode: command runs in background with session tracking",
+    )
+    stream_query: Optional["StreamQuery"] = Field(
+        default=None,
+        description="Query streaming command output by session_id",
+    )
+
+
+class BackgroundTaskQuery(BaseModel):
+    """Query parameters for checking background task status"""
+
+    pid: int = Field(..., description="Process ID of the background task to check")
+    output_file: Optional[str] = Field(
+        default=None,
+        description="Path to the task's output file (for reading logs)",
+    )
+    tail_lines: int = Field(
+        default=100,
+        ge=1,
+        le=10000,
+        description="Number of lines to return from output file tail",
+    )
+    kill_if_running: bool = Field(
+        default=False,
+        description="If True, terminate the task if it's still running",
+    )
+    cleanup_files: bool = Field(
+        default=False,
+        description="If True, remove pid/output files after query (only if task completed)",
+    )
+
+
+class StreamQuery(BaseModel):
+    """Query parameters for streaming command output"""
+
+    session_id: str = Field(..., description="Stream session ID returned from stream command")
+    offset: int = Field(
+        default=0,
+        ge=0,
+        description="Byte offset to read from (for incremental output)",
+    )
+    lines: int = Field(
+        default=100,
+        ge=1,
+        le=10000,
+        description="Number of lines to return from tail",
+    )
+    wait_complete: bool = Field(
+        default=False,
+        description="If True, wait for command to complete before returning",
+    )
+    kill: bool = Field(
+        default=False,
+        description="If True, terminate the command",
+    )
+    cleanup: bool = Field(
+        default=False,
+        description="If True, cleanup session files after command completes",
     )
 
 

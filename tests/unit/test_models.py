@@ -27,7 +27,7 @@ def test_execution_request_requires_one_payload(app_config):
 
 
 def test_execution_request_queue_strategy_defaults(app_config):
-    """Queue strategy defaults differ by driver (netmiko=pinned, paramiko=fifo)."""
+    """Queue strategy defaults: netmiko=pinned, paramiko=fifo (can manually select pinned)."""
     req_netmiko = ExecutionRequest(
         driver=DriverName.NETMIKO,
         connection_args=DriverConnectionArgs(host="10.0.0.1"),
@@ -42,7 +42,7 @@ def test_execution_request_queue_strategy_defaults(app_config):
         command="uname -a",
     )
     assert req_paramiko.queue_strategy is not None
-    assert req_paramiko.queue_strategy.value == "fifo"
+    assert req_paramiko.queue_strategy.value == "fifo"  # Default fifo, can manually select pinned
 
 
 def test_execution_request_dict_payload_requires_rendering(app_config):

@@ -124,10 +124,11 @@ class ExecutionRequest(BaseModel):
         """Auto-select default values based on other fields"""
         if self.queue_strategy is None:
             if self.driver in [DriverName.NETMIKO]:
-                # SSH/long connection drivers use pinned strategy
+                # Netmiko uses pinned strategy by default for persistent connections
                 self.queue_strategy = QueueStrategy.PINNED
             else:
-                # HTTP/stateless drivers use fifo strategy
+                # Other drivers (including Paramiko) use fifo by default
+                # User can manually select pinned when persistent connection is desired
                 self.queue_strategy = QueueStrategy.FIFO
 
         return self

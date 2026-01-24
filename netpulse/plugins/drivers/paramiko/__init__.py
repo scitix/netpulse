@@ -1,4 +1,8 @@
 import logging
+import os
+import signal
+import sys
+import threading
 from io import StringIO
 from typing import ClassVar, Optional
 
@@ -6,24 +10,160 @@ import paramiko
 
 from .. import BaseDriver
 from .model import (
+    BackgroundTaskQuery,
     ParamikoConnectionArgs,
     ParamikoDeviceTestInfo,
     ParamikoExecutionRequest,
     ParamikoSendCommandArgs,
     ParamikoSendConfigArgs,
+    StreamQuery,
 )
 
 log = logging.getLogger(__name__)
 
 
 class ParamikoDriver(BaseDriver):
+    """
+    Paramiko driver with persistent connection support.
+
+    When keepalive is set in connection_args, the driver will maintain
+    a persistent SSH connection that is reused across multiple commands.
+    """
+
     driver_name = "paramiko"
+
+    # Persistent connection state (class-level for worker reuse)
+    persisted_session: ClassVar[Optional[paramiko.SSHClient]] = None
+    persisted_conn_args: ClassVar[Optional[ParamikoConnectionArgs]] = None
+
+    # Monitor thread for keepalive
+    _monitor_stop_event: ClassVar[Optional[threading.Event]] = None
+    _monitor_thread: ClassVar[Optional[threading.Thread]] = None
+    _monitor_lock: ClassVar[threading.Lock] = threading.Lock()
 
     _HOST_KEY_POLICIES: ClassVar[dict[str, paramiko.MissingHostKeyPolicy]] = {
         "auto_add": paramiko.AutoAddPolicy(),
         "reject": paramiko.RejectPolicy(),
         "warning": paramiko.WarningPolicy(),
     }
+
+    @classmethod
+    def _get_persisted_session(
+        cls, conn_args: ParamikoConnectionArgs
+    ) -> Optional[paramiko.SSHClient]:
+        """
+        Check if persisted session is still alive, otherwise disconnect it.
+        """
+        if cls.persisted_session and cls.persisted_conn_args:
+            # Check if connection args changed
+            if cls.persisted_conn_args.host != conn_args.host:
+                log.warning("New connection args detected, disconnecting old session")
+                with cls._monitor_lock:
+                    try:
+                        cls.persisted_session.close()
+                    except Exception as e:
+                        log.error(f"Error in disconnecting old session: {e}")
+                    finally:
+                        cls._set_persisted_session(None, None)
+                return None
+
+            # Check if session is still alive
+            transport = cls.persisted_session.get_transport()
+            if transport is None or not transport.is_active():
+                log.warning("Persisted session is no longer active, clearing")
+                cls._set_persisted_session(None, None)
+                return None
+
+        return cls.persisted_session
+
+    @classmethod
+    def _set_persisted_session(
+        cls, session: Optional[paramiko.SSHClient], conn_args: Optional[ParamikoConnectionArgs]
+    ) -> Optional[paramiko.SSHClient]:
+        """
+        Persist session and connection args. Start monitor thread if keepalive is enabled.
+        """
+        # Clear
+        if session is None:
+            if cls.persisted_conn_args and cls.persisted_conn_args.keepalive:
+                cls._stop_monitor_thread()
+            cls.persisted_session = None
+            cls.persisted_conn_args = None
+            return None
+
+        # Setup
+        cls.persisted_session = session
+        cls.persisted_conn_args = conn_args
+        if conn_args and conn_args.keepalive:
+            cls._start_monitor_thread(session)
+
+        return cls.persisted_session
+
+    @classmethod
+    def _start_monitor_thread(cls, session: paramiko.SSHClient):
+        """
+        Start a keepalive monitor thread for the SSH connection.
+        """
+        if cls._monitor_thread and cls._monitor_thread.is_alive():
+            log.debug("Monitoring thread already running")
+            return
+
+        assert cls.persisted_conn_args is not None
+        cls._monitor_stop_event = threading.Event()
+        host = cls.persisted_conn_args.host
+        timeout = cls.persisted_conn_args.keepalive
+
+        def monitor():
+            suicide = False
+            log.info(f"Paramiko monitoring thread started ({host})")
+            assert cls._monitor_stop_event is not None
+
+            while not cls._monitor_stop_event.is_set():
+                if cls._monitor_stop_event.wait(timeout=timeout):
+                    break
+
+                with cls._monitor_lock:
+                    # Double checking
+                    if cls._monitor_stop_event.is_set():
+                        break
+
+                    # Health checking
+                    transport = session.get_transport()
+                    if transport is None or not transport.is_active():
+                        log.warning(f"Connection to {host} is unhealthy")
+                        suicide = True
+                        cls._monitor_stop_event.set()
+                        break
+
+                    # Keepalive - send a null request
+                    try:
+                        transport.send_ignore()
+                    except Exception as e:
+                        log.warning(f"Error in sending keepalive to {host}: {e}")
+                        suicide = True
+                        cls._monitor_stop_event.set()
+
+            log.debug(f"Paramiko monitoring thread quitting with `suicide={suicide}`.")
+
+            # When connection is disconnected, the worker should suicide.
+            if suicide:
+                log.info(f"Pinned worker for {host} suicides.")
+                os.kill(os.getpid(), signal.SIGTERM)
+
+            sys.exit(0)
+
+        cls._monitor_thread = threading.Thread(target=monitor, daemon=True)
+        cls._monitor_thread.start()
+
+    @classmethod
+    def _stop_monitor_thread(cls):
+        """Stop the monitor thread."""
+        if cls._monitor_stop_event:
+            cls._monitor_stop_event.set()
+        if cls._monitor_thread and cls._monitor_thread.is_alive():
+            cls._monitor_thread.join(timeout=5)
+        cls._monitor_thread = None
+        cls._monitor_stop_event = None
 
     @classmethod
     def from_execution_request(cls, req: ParamikoExecutionRequest) -> "ParamikoDriver":
@@ -58,12 +198,28 @@ class ParamikoDriver(BaseDriver):
 
     def connect(self) -> paramiko.SSHClient:
         try:
+            # Check for persisted session if keepalive is enabled
+            if self.conn_args.keepalive:
+                session = self._get_persisted_session(self.conn_args)
+                if session:
+                    log.info("Reusing existing Paramiko connection")
+                    return session
+
+            # Create new connection
+            log.info(f"Creating new Paramiko connection to {self.conn_args.host}...")
             if self.conn_args.proxy_host:
-                return self._connect_via_proxy()
-            return self._connect_direct()
+                session = self._connect_via_proxy()
+            else:
+                session = self._connect_direct()
+
+            # Persist session if keepalive is enabled
+            if self.conn_args.keepalive:
+                self._set_persisted_session(session, self.conn_args)
+
+            return session
         except Exception as e:
             log.error(f"Error in connecting: {e}")
-            raise e
+            raise
 
     def _get_auth_kwargs(self, use_proxy: bool = False) -> dict:
         """Get authentication kwargs for SSH connection."""
@@ -175,6 +331,24 @@ class ParamikoDriver(BaseDriver):
         raise ValueError("Unsupported key format")
 
     def send(self, session: paramiko.SSHClient, command: list[str]) -> dict:
+        # Check if stream query is requested (highest priority)
+        if (
+            self.args
+            and isinstance(self.args, ParamikoSendCommandArgs)
+            and self.args.stream_query is not None
+        ):
+            log.debug(f"Stream query detected: {self.args.stream_query}")
+            return self._query_stream(session, self.args.stream_query)
+
+        # Check if task query is requested
+        if (
+            self.args
+            and isinstance(self.args, ParamikoSendCommandArgs)
+            and self.args.check_task is not None
+        ):
+            log.debug(f"Background task query detected: {self.args.check_task}")
+            return self._check_background_task(session, self.args.check_task)
+
         if (
             self.args
             and isinstance(self.args, ParamikoSendCommandArgs)
@@ -199,8 +373,17 @@ class ParamikoDriver(BaseDriver):
         try:
             result = {}
             for cmd in command:
-                # Check if background execution is requested (function 3)
+                # Check if streaming execution is requested
                 if (
+                    self.args
+                    and isinstance(self.args, ParamikoSendCommandArgs)
+                    and self.args.stream
+                ):
+                    log.debug(f"Stream execution requested for: {cmd}")
+                    stream_result = self._execute_stream_command(session, cmd, self.args)
+                    result.update(stream_result)
+                # Check if background execution is requested (function 3)
+                elif (
                     self.args
                     and isinstance(self.args, ParamikoSendCommandArgs)
                     and self.args.run_in_background
@@ -450,17 +633,269 @@ class ParamikoDriver(BaseDriver):
 
         return exec_result
 
-    def disconnect(self, session: paramiko.SSHClient):
+    def _execute_stream_command(
+        self, session: paramiko.SSHClient, cmd: str, args: ParamikoSendCommandArgs
+    ) -> dict:
+        """Execute command in streaming mode (returns session_id for polling output)"""
+        import uuid
+
+        # Generate unique session ID
+        session_id = str(uuid.uuid4())[:12]
+
+        # Determine output and PID file paths
+        output_file = f"/tmp/netpulse_stream_{session_id}.log"
+        pid_file = f"/tmp/netpulse_stream_{session_id}.pid"
+
+        # Build background command with nohup
+        bg_cmd = f"nohup {cmd} > {output_file} 2>&1 & echo $! > {pid_file}"
+
+        # Execute the background command
+        exec_result = self._execute_command(session, bg_cmd, args)
+
+        # Read PID from remote file
+        pid = None
+        if exec_result[bg_cmd]["exit_status"] == 0:
+            try:
+                read_pid_cmd = f"cat {pid_file}"
+                pid_result = self._execute_command(session, read_pid_cmd, args)
+                if read_pid_cmd in pid_result:
+                    pid_output = pid_result[read_pid_cmd]["output"].strip()
+                    if pid_output:
+                        pid = int(pid_output)
+            except (ValueError, KeyError) as e:
+                log.warning(f"Failed to read PID from {pid_file}: {e}")
+
+        return {
+            "stream": {
+                "session_id": session_id,
+                "pid": pid,
+                "output_file": output_file,
+                "command": cmd,
+            }
+        }
+
+    def _query_stream(self, session: paramiko.SSHClient, query: StreamQuery) -> dict:
+        """Query streaming command output by session_id"""
+        import time
+
+        session_id = query.session_id
+        output_file = f"/tmp/netpulse_stream_{session_id}.log"
+        pid_file = f"/tmp/netpulse_stream_{session_id}.pid"
+
+        result = {
+            "stream_result": {
+                "session_id": session_id,
+                "completed": False,
+                "exit_code": None,
+                "output": None,
+                "output_bytes": 0,
+                "runtime_seconds": None,
+                "killed": False,
+                "cleaned": False,
+            }
+        }
+
         try:
-            if session:
-                session.close()
-                if hasattr(session, "_proxy_client"):
+            # Read PID
+            pid = None
+            read_pid_cmd = f"cat {pid_file} 2>/dev/null"
+            pid_result = self._execute_command(session, read_pid_cmd, None)
+            pid_output = pid_result[read_pid_cmd]["output"].strip()
+            if pid_output:
+                try:
+                    pid = int(pid_output)
+                except ValueError:
+                    pass
+
+            # Check if process is running
+            if pid:
+                check_cmd = f"ps -p {pid} -o pid,etime --no-headers 2>/dev/null"
+                check_result = self._execute_command(session, check_cmd, None)
+                check_output = check_result[check_cmd]["output"].strip()
+
+                if check_output and str(pid) in check_output:
+                    # Still running
+                    result["stream_result"]["completed"] = False
+
+                    # Parse runtime
                     try:
-                        session._proxy_client.close()
-                    except Exception as e:
-                        log.warning(f"Error closing proxy connection: {e}")
+                        parts = check_output.split()
+                        if len(parts) >= 2:
+                            result["stream_result"]["runtime_seconds"] = self._parse_etime(parts[1])
+                    except (IndexError, ValueError):
+                        pass
+
+                    # Kill if requested
+                    if query.kill:
+                        kill_cmd = f"kill -15 {pid} 2>/dev/null; sleep 0.5; kill -9 {pid} 2>/dev/null"
+                        self._execute_command(session, kill_cmd, None)
+                        result["stream_result"]["killed"] = True
+                        result["stream_result"]["completed"] = True
+                        time.sleep(0.5)
+                else:
+                    result["stream_result"]["completed"] = True
+                    result["stream_result"]["exit_code"] = 0  # Assume success
+
+            # Read output (tail or from offset)
+            if query.offset > 0:
+                # Read from offset using dd
+                read_cmd = f"dd if={output_file} bs=1 skip={query.offset} 2>/dev/null | tail -n {query.lines}"
+            else:
+                read_cmd = f"tail -n {query.lines} {output_file} 2>/dev/null"
+
+            output_result = self._execute_command(session, read_cmd, None)
+            output = output_result[read_cmd]["output"]
+            result["stream_result"]["output"] = output
+
+            # Get file size for next offset
+            size_cmd = f"stat -c%s {output_file} 2>/dev/null || echo 0"
+            size_result = self._execute_command(session, size_cmd, None)
+            try:
+                result["stream_result"]["output_bytes"] = int(size_result[size_cmd]["output"].strip())
+            except ValueError:
+                pass
+
+            # Cleanup if requested and completed
+            if query.cleanup and result["stream_result"]["completed"]:
+                cleanup_cmd = f"rm -f {output_file} {pid_file} 2>/dev/null"
+                self._execute_command(session, cleanup_cmd, None)
+                result["stream_result"]["cleaned"] = True
+
         except Exception as e:
-            log.warning(f"Error closing SSH connection: {e}")
+            log.error(f"Error querying stream: {e}")
+            result["stream_result"]["error"] = str(e)
+
+        return result
+
+    def _check_background_task(
+        self, session: paramiko.SSHClient, query: BackgroundTaskQuery
+    ) -> dict:
+        """Check status of a background task by PID"""
+        import time
+
+        pid = query.pid
+        result = {
+            "task_query": {
+                "pid": pid,
+                "running": False,
+                "exit_code": None,
+                "output_tail": None,
+                "runtime_seconds": None,
+                "killed": False,
+                "cleaned": False,
+            }
+        }
+
+        try:
+            # Check if process is running
+            check_cmd = f"ps -p {pid} -o pid,etime --no-headers 2>/dev/null"
+            check_result = self._execute_command(session, check_cmd, None)
+            check_output = check_result[check_cmd]["output"].strip()
+
+            if check_output and str(pid) in check_output:
+                result["task_query"]["running"] = True
+
+                # Parse elapsed time (format: [[DD-]HH:]MM:SS)
+                try:
+                    parts = check_output.split()
+                    if len(parts) >= 2:
+                        etime = parts[1]
+                        # Parse elapsed time to seconds
+                        runtime = self._parse_etime(etime)
+                        result["task_query"]["runtime_seconds"] = runtime
+                except (IndexError, ValueError):
+                    pass
+
+                # Kill if requested
+                if query.kill_if_running:
+                    kill_cmd = f"kill -15 {pid} 2>/dev/null; sleep 1; kill -9 {pid} 2>/dev/null; echo done"
+                    self._execute_command(session, kill_cmd, None)
+                    result["task_query"]["killed"] = True
+                    result["task_query"]["running"] = False
+                    time.sleep(0.5)  # Give it time to die
+
+            # Get output tail if output file is specified
+            if query.output_file:
+                tail_cmd = f"tail -n {query.tail_lines} {query.output_file} 2>/dev/null"
+                tail_result = self._execute_command(session, tail_cmd, None)
+                output_tail = tail_result[tail_cmd]["output"]
+                if output_tail:
+                    result["task_query"]["output_tail"] = output_tail
+
+            # Try to get exit code if task is not running
+            if not result["task_query"]["running"]:
+                # Check via /proc if available
+                exit_cmd = f"cat /proc/{pid}/stat 2>/dev/null || echo 'not_found'"
+                exit_result = self._execute_command(session, exit_cmd, None)
+                if "not_found" in exit_result[exit_cmd]["output"]:
+                    # Process exited, exit code not directly available
+                    result["task_query"]["exit_code"] = 0  # Assume success if no error in output
+
+            # Cleanup files if requested and task is complete
+            if query.cleanup_files and not result["task_query"]["running"]:
+                cleanup_files = []
+                if query.output_file:
+                    cleanup_files.append(query.output_file)
+                    # Also try to cleanup related pid file
+                    pid_file = query.output_file.replace(".log", ".pid")
+                    cleanup_files.append(pid_file)
+
+                if cleanup_files:
+                    cleanup_cmd = f"rm -f {' '.join(cleanup_files)} 2>/dev/null"
+                    self._execute_command(session, cleanup_cmd, None)
+                    result["task_query"]["cleaned"] = True
+
+        except Exception as e:
+            log.error(f"Error checking background task: {e}")
+            result["task_query"]["error"] = str(e)
+
+        return result
+
+    def _parse_etime(self, etime: str) -> int:
+        """Parse ps etime format to seconds"""
+        # Format: [[DD-]HH:]MM:SS
+        total_seconds = 0
+
+        # Handle days
+        if "-" in etime:
+            days_part, etime = etime.split("-")
+            total_seconds += int(days_part) * 86400
+
+        parts = etime.split(":")
+        if len(parts) == 3:  # HH:MM:SS
+            total_seconds += int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+        elif len(parts) == 2:  # MM:SS
+            total_seconds += int(parts[0]) * 60 + int(parts[1])
+        else:  # SS
+            total_seconds += int(parts[0])
+
+        return total_seconds
+
+    def disconnect(self, session: paramiko.SSHClient, reset: bool = False):
+        """
+        Disconnect the session.
+
+        When keepalive is enabled, the connection is kept alive for reuse
+        unless reset=True is specified.
+        """
+        # If keepalive is enabled and not resetting, keep the connection
+        if self.conn_args.keepalive and not reset:
+            return
+
+        with self._monitor_lock:
+            try:
+                if session:
+                    session.close()
+                    if hasattr(session, "_proxy_client"):
+                        try:
+                            session._proxy_client.close()
+                        except Exception as e:
+                            log.warning(f"Error closing proxy connection: {e}")
+            except Exception as e:
+                log.warning(f"Error closing SSH connection: {e}")
+            finally:
+                if self.conn_args.keepalive:
+                    self._set_persisted_session(None, None)
 
     def _upload_file(
         self,

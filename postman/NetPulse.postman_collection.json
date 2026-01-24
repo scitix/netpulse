@@ -1991,6 +1991,186 @@
 						}
 					],
 					"description": "Paramiko驱动的SSH代理/跳板机连接示例"
+				},
+				{
+					"name": "Paramiko后台任务管理",
+					"item": [
+						{
+							"name": "启动后台任务",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"bash -c 'for i in $(seq 1 60); do echo Step $i; sleep 1; done'\",\n  \"driver_args\": {\n    \"run_in_background\": true\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "启动后台任务 - 返回 PID 和输出文件路径，用于后续查询"
+							},
+							"response": []
+						},
+						{
+							"name": "查询后台任务状态",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"check_task\": {\n      \"pid\": 12345,\n      \"output_file\": \"/tmp/netpulse_xxx.log\",\n      \"tail_lines\": 50,\n      \"kill_if_running\": false,\n      \"cleanup_files\": false\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "查询后台任务状态 - 返回运行状态、运行时长、输出日志等"
+							},
+							"response": []
+						},
+						{
+							"name": "终止并清理后台任务",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"check_task\": {\n      \"pid\": 12345,\n      \"output_file\": \"/tmp/netpulse_xxx.log\",\n      \"tail_lines\": 10,\n      \"kill_if_running\": true,\n      \"cleanup_files\": true\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "终止后台任务并清理临时文件"
+							},
+							"response": []
+						}
+					],
+					"description": "Paramiko后台任务管理 - 启动长时运行任务、查询状态、终止和清理"
+				},
+				{
+					"name": "Paramiko流式输出",
+					"item": [
+						{
+							"name": "启动流式命令",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"apt upgrade -y\",\n  \"driver_args\": {\n    \"stream\": true\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "启动流式命令 - 返回 session_id，用于轮询获取输出"
+							},
+							"response": []
+						},
+						{
+							"name": "轮询流式输出",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"stream_query\": {\n      \"session_id\": \"abc123def456\",\n      \"lines\": 50,\n      \"cleanup\": false\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "轮询获取流式输出 - 返回当前输出、完成状态、运行时长"
+							},
+							"response": []
+						},
+						{
+							"name": "终止流式命令并清理",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"stream_query\": {\n      \"session_id\": \"abc123def456\",\n      \"lines\": 10,\n      \"kill\": true,\n      \"cleanup\": true\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "终止流式命令并清理临时文件"
+							},
+							"response": []
+						}
+					],
+					"description": "Paramiko流式输出 - 启动命令、轮询获取增量输出、终止和清理"
 				}
 			],
 			"description": "Paramiko驱动的Linux服务器管理操作"
