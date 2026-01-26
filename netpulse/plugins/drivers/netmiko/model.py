@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, model_validator
 
 from ....models import DeviceTestInfo, DriverArgs, DriverConnectionArgs, DriverName
 from ....models.request import ExecutionRequest
@@ -113,6 +113,59 @@ class NetmikoExecutionRequest(ExecutionRequest):
 
     save: bool = Field(default=False, description="Save configuration after execution")
     enable_mode: bool = Field(default=False, description="Enter privileged mode for execution")
+
+    @model_validator(mode="after")
+    def validate_driver_args_type(self):
+        """
+        Automatically select the correct driver_args type based on operation type.
+        If driver_args is a dict (e.g., empty dict {}), convert it to the appropriate type.
+        """
+        if self.driver_args is None:
+            return self
+
+        # If driver_args is already the correct type, no conversion needed
+        is_command = self.command is not None
+        is_config = self.config is not None
+
+        # If driver_args is a dict (from JSON parsing), convert to appropriate type
+        if isinstance(self.driver_args, dict):
+            if is_command:
+                # For command operations, use NetmikoSendCommandArgs
+                self.driver_args = NetmikoSendCommandArgs(**self.driver_args)
+            elif is_config:
+                # For config operations, use NetmikoSendConfigSetArgs
+                self.driver_args = NetmikoSendConfigSetArgs(**self.driver_args)
+        # If driver_args is already an instance, verify it matches the operation type
+        elif is_command and isinstance(self.driver_args, NetmikoSendConfigSetArgs):
+            # Convert NetmikoSendConfigSetArgs to NetmikoSendCommandArgs for command operations
+            # Only keep common parameters
+            cmd_args_dict = {}
+            if self.driver_args.read_timeout is not None:
+                cmd_args_dict["read_timeout"] = self.driver_args.read_timeout
+            if self.driver_args.delay_factor is not None:
+                cmd_args_dict["delay_factor"] = self.driver_args.delay_factor
+            if self.driver_args.max_loops is not None:
+                cmd_args_dict["max_loops"] = self.driver_args.max_loops
+            cmd_args_dict["strip_prompt"] = self.driver_args.strip_prompt
+            cmd_args_dict["strip_command"] = self.driver_args.strip_command
+            cmd_args_dict["cmd_verify"] = self.driver_args.cmd_verify
+            self.driver_args = NetmikoSendCommandArgs(**cmd_args_dict)
+        elif is_config and isinstance(self.driver_args, NetmikoSendCommandArgs):
+            # Convert NetmikoSendCommandArgs to NetmikoSendConfigSetArgs for config operations
+            # Only keep common parameters
+            config_args_dict = {}
+            if self.driver_args.read_timeout is not None:
+                config_args_dict["read_timeout"] = self.driver_args.read_timeout
+            if self.driver_args.delay_factor is not None:
+                config_args_dict["delay_factor"] = self.driver_args.delay_factor
+            if self.driver_args.max_loops is not None:
+                config_args_dict["max_loops"] = self.driver_args.max_loops
+            config_args_dict["strip_prompt"] = self.driver_args.strip_prompt
+            config_args_dict["strip_command"] = self.driver_args.strip_command
+            config_args_dict["cmd_verify"] = self.driver_args.cmd_verify
+            self.driver_args = NetmikoSendConfigSetArgs(**config_args_dict)
+
+        return self
 
     model_config = ConfigDict(
         json_schema_extra={

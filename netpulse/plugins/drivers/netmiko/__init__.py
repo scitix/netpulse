@@ -207,7 +207,27 @@ class NetmikoDriver(BaseDriver):
                 result = {}
                 for cmd in command:
                     if self.args:
-                        response = session.send_command(cmd, **self.args.model_dump())
+                        # Only use NetmikoSendCommandArgs for send_command
+                        # Filter out NetmikoSendConfigSetArgs-specific parameters
+                        if isinstance(self.args, NetmikoSendCommandArgs):
+                            response = session.send_command(cmd, **self.args.model_dump())
+                        else:
+                            # If it's NetmikoSendConfigSetArgs, only extract common parameters
+                            # that are valid for send_command
+                            cmd_args = {}
+                            if hasattr(self.args, "read_timeout") and self.args.read_timeout is not None:
+                                cmd_args["read_timeout"] = self.args.read_timeout
+                            if hasattr(self.args, "delay_factor") and self.args.delay_factor is not None:
+                                cmd_args["delay_factor"] = self.args.delay_factor
+                            if hasattr(self.args, "max_loops") and self.args.max_loops is not None:
+                                cmd_args["max_loops"] = self.args.max_loops
+                            if hasattr(self.args, "strip_prompt"):
+                                cmd_args["strip_prompt"] = self.args.strip_prompt
+                            if hasattr(self.args, "strip_command"):
+                                cmd_args["strip_command"] = self.args.strip_command
+                            if hasattr(self.args, "cmd_verify"):
+                                cmd_args["cmd_verify"] = self.args.cmd_verify
+                            response = session.send_command(cmd, **cmd_args)
                     else:
                         response = session.send_command(cmd)
                     result[cmd] = response
@@ -235,7 +255,27 @@ class NetmikoDriver(BaseDriver):
                     session.enable()
 
                 if self.args:
-                    response = [session.send_config_set(config, **self.args.model_dump())]
+                    # Only use NetmikoSendConfigSetArgs for send_config_set
+                    # Filter out NetmikoSendCommandArgs-specific parameters
+                    if isinstance(self.args, NetmikoSendConfigSetArgs):
+                        response = [session.send_config_set(config, **self.args.model_dump())]
+                    else:
+                        # If it's NetmikoSendCommandArgs, only extract common parameters
+                        # that are valid for send_config_set
+                        config_args = {}
+                        if hasattr(self.args, "read_timeout") and self.args.read_timeout is not None:
+                            config_args["read_timeout"] = self.args.read_timeout
+                        if hasattr(self.args, "delay_factor") and self.args.delay_factor is not None:
+                            config_args["delay_factor"] = self.args.delay_factor
+                        if hasattr(self.args, "max_loops") and self.args.max_loops is not None:
+                            config_args["max_loops"] = self.args.max_loops
+                        if hasattr(self.args, "strip_prompt"):
+                            config_args["strip_prompt"] = self.args.strip_prompt
+                        if hasattr(self.args, "strip_command"):
+                            config_args["strip_command"] = self.args.strip_command
+                        if hasattr(self.args, "cmd_verify"):
+                            config_args["cmd_verify"] = self.args.cmd_verify
+                        response = [session.send_config_set(config, **config_args)]
                 else:
                     response = [session.send_config_set(config)]
 
