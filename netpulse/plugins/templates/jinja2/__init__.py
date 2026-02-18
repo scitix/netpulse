@@ -19,7 +19,9 @@ class Jinja2Renderer(BaseTemplateRenderer):
         return cls(source=req.template, options=req.args)
 
     def __init__(self, source: str, options: Jinja2Args | None = None):
-        options_dict = options.model_dump() if options else {}
+        options_dict = (
+            options.model_dump(exclude_none=True) if options else {}
+        )
 
         try:
             s = TemplateSource(source)

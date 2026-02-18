@@ -215,9 +215,15 @@ class NetmikoDriver(BaseDriver):
                             # If it's NetmikoSendConfigSetArgs, only extract common parameters
                             # that are valid for send_command
                             cmd_args = {}
-                            if hasattr(self.args, "read_timeout") and self.args.read_timeout is not None:
+                            if (
+                                hasattr(self.args, "read_timeout")
+                                and self.args.read_timeout is not None
+                            ):
                                 cmd_args["read_timeout"] = self.args.read_timeout
-                            if hasattr(self.args, "delay_factor") and self.args.delay_factor is not None:
+                            if (
+                                hasattr(self.args, "delay_factor")
+                                and self.args.delay_factor is not None
+                            ):
                                 cmd_args["delay_factor"] = self.args.delay_factor
                             if hasattr(self.args, "max_loops") and self.args.max_loops is not None:
                                 cmd_args["max_loops"] = self.args.max_loops
@@ -263,9 +269,15 @@ class NetmikoDriver(BaseDriver):
                         # If it's NetmikoSendCommandArgs, only extract common parameters
                         # that are valid for send_config_set
                         config_args = {}
-                        if hasattr(self.args, "read_timeout") and self.args.read_timeout is not None:
+                        if (
+                            hasattr(self.args, "read_timeout")
+                            and self.args.read_timeout is not None
+                        ):
                             config_args["read_timeout"] = self.args.read_timeout
-                        if hasattr(self.args, "delay_factor") and self.args.delay_factor is not None:
+                        if (
+                            hasattr(self.args, "delay_factor")
+                            and self.args.delay_factor is not None
+                        ):
                             config_args["delay_factor"] = self.args.delay_factor
                         if hasattr(self.args, "max_loops") and self.args.max_loops is not None:
                             config_args["max_loops"] = self.args.max_loops

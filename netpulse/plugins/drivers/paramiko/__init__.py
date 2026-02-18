@@ -1,13 +1,16 @@
+import hashlib
 import logging
 import os
 import signal
 import sys
 import threading
 from io import StringIO
+from stat import S_ISDIR
 from typing import ClassVar, Optional
 
 import paramiko
 
+from ... import renderers
 from .. import BaseDriver
 from .model import (
     BackgroundTaskQuery,
@@ -303,8 +306,8 @@ class ParamikoDriver(BaseDriver):
             "username": self.conn_args.username,
             "sock": channel,
             "timeout": self.conn_args.timeout,
-            "look_for_keys": False,
-            "allow_agent": False,
+            "look_for_keys": self.conn_args.look_for_keys,
+            "allow_agent": self.conn_args.allow_agent,
         }
         if self.conn_args.banner_timeout is not None:
             target_kwargs["banner_timeout"] = self.conn_args.banner_timeout
@@ -370,6 +373,15 @@ class ParamikoDriver(BaseDriver):
             log.warning("No command provided")
             return {}
 
+        # Render commands if context is provided
+        context = (
+            (self.args.get("context") if isinstance(self.args, dict) else getattr(self.args, "context", None))
+            if self.args
+            else None
+        )
+        if context:
+            command = [self._render(cmd, context) for cmd in command]
+
         try:
             result = {}
             for cmd in command:
@@ -399,6 +411,14 @@ class ParamikoDriver(BaseDriver):
             log.error(f"Error in sending command: {e}")
             raise e
 
+    def _apply_env_to_command(self, command: str, env: Optional[Dict[str, str]]) -> str:
+        """Helper to prepend environment variables to a command string"""
+        if not env:
+            return command
+        # Build export commands
+        env_exports = [f"export {k}='{v}'" for k, v in env.items()]
+        return f"{' && '.join(env_exports)} && {command}"
+
     def _handle_file_transfer(self, session: paramiko.SSHClient, file_transfer_op) -> dict:
         from .model import ParamikoFileTransferOperation
 
@@ -412,7 +432,10 @@ class ParamikoDriver(BaseDriver):
                     file_transfer_op.local_path,
                     file_transfer_op.remote_path,
                     file_transfer_op.resume,
+                    file_transfer_op.recursive,
+                    file_transfer_op.sync_mode,
                     file_transfer_op.chunk_size,
+                    file_transfer_op.chmod,
                 )
             elif file_transfer_op.operation == "download":
                 result = self._download_file(
@@ -420,6 +443,8 @@ class ParamikoDriver(BaseDriver):
                     file_transfer_op.remote_path,
                     file_transfer_op.local_path,
                     file_transfer_op.resume,
+                    file_transfer_op.recursive,
+                    file_transfer_op.sync_mode,
                     file_transfer_op.chunk_size,
                 )
             else:
@@ -443,10 +468,12 @@ class ParamikoDriver(BaseDriver):
                 and file_transfer_op.execute_after_upload
                 and file_transfer_op.execute_command
             ):
-                log.debug(f"Executing command after upload: {file_transfer_op.execute_command}")
-                exec_result = self._execute_command(
-                    session, file_transfer_op.execute_command, self.args
-                )
+                cmd_after = file_transfer_op.execute_command
+                if self.args and getattr(self.args, "context", None):
+                    cmd_after = self._render(cmd_after, self.args.context)
+
+                log.debug(f"Executing command after upload: {cmd_after}")
+                exec_result = self._execute_command(session, cmd_after, self.args)
                 transfer_result.update(exec_result)
 
                 # Cleanup remote file if requested
@@ -473,6 +500,15 @@ class ParamikoDriver(BaseDriver):
             log.warning("No configuration provided")
             return {}
 
+        # Render config if context is provided
+        context = (
+            (self.args.get("context") if isinstance(self.args, dict) else getattr(self.args, "context", None))
+            if self.args
+            else None
+        )
+        if context:
+            config = [self._render(cfg, context) for cfg in config]
+
         try:
             result = {}
             for cfg_line in config:
@@ -491,8 +527,8 @@ class ParamikoDriver(BaseDriver):
                         )
                     else:
                         exec_kwargs["get_pty"] = False
-                    if self.args.environment:
-                        exec_kwargs["environment"] = self.args.environment
+                if self.args and self.args.environment:
+                    cmd = self._apply_env_to_command(cmd, self.args.environment)
 
                 stdin, stdout, stderr = session.exec_command(cmd, **exec_kwargs)
 
@@ -519,6 +555,45 @@ class ParamikoDriver(BaseDriver):
             log.error(f"Error in sending config: {e}")
             raise e
 
+    def _get_local_md5(self, path: str) -> Optional[str]:
+        """Calculate MD5 hash of a local file."""
+        if not os.path.exists(path) or os.path.isdir(path):
+            return None
+        hash_md5 = hashlib.md5()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_md5.update(chunk)
+        return hash_md5.hexdigest()
+
+    def _get_remote_md5(self, session: paramiko.SSHClient, path: str) -> Optional[str]:
+        """Calculate MD5 hash of a remote file using md5sum."""
+        cmd = f"md5sum '{path}'"
+        # We use a simplified execute logic here to avoid recursion or overhead
+        _stdin, stdout, _stderr = session.exec_command(cmd)
+        output = stdout.read().decode().strip()
+        if output and " " in output:
+            return output.split()[0]
+        return None
+
+    def _render(self, template: str, context: dict) -> str:
+        """Render a string using Jinja2 renderer."""
+        try:
+            # Use the existing Jinja2 plugin
+            renderer_cls = renderers.get("jinja2")
+            if not renderer_cls:
+                log.warning("Jinja2 renderer not found, returning raw template")
+                return template
+
+            # Case: renderer_cls is a class, we need to instantiate it
+            # The Jinja2Renderer.__init__ expects (source, options)
+            renderer = renderer_cls(source=template)
+            return renderer.render(context)
+        except Exception as e:
+            log.error(f"Error in Jinja2 rendering: {e}")
+            # If rendering fails, we might want to return the original template
+            # or raise. Since this is an explicit feature, raising is safer.
+            raise e
+
     def _execute_command(
         self, session: paramiko.SSHClient, cmd: str, args: Optional[ParamikoSendCommandArgs]
     ) -> dict:
@@ -528,19 +603,29 @@ class ParamikoDriver(BaseDriver):
             if args.timeout:
                 exec_kwargs["timeout"] = args.timeout
             exec_kwargs["get_pty"] = args.get_pty
-            if args.environment:
-                exec_kwargs["environment"] = args.environment
             if args.bufsize != -1:
                 exec_kwargs["bufsize"] = args.bufsize
+        if args and args.environment:
+            cmd = self._apply_env_to_command(cmd, args.environment)
 
         _stdin, stdout, stderr = session.exec_command(cmd, **exec_kwargs)
         output = stdout.read().decode("utf-8", errors="replace")
         error = stderr.read().decode("utf-8", errors="replace")
         exit_status = stdout.channel.recv_exit_status()
 
+        # Try to parse JSON for a better experience
+        output_json = None
+        if output.strip().startswith(("{", "[")):
+            try:
+                import json
+                output_json = json.loads(output)
+            except Exception:
+                pass
+
         return {
             cmd: {
                 "output": output,
+                "output_json": output_json,
                 "error": error,
                 "exit_status": exit_status,
             }
@@ -573,7 +658,11 @@ class ParamikoDriver(BaseDriver):
         stdin, stdout, stderr = session.exec_command(cmd, **exec_kwargs)
 
         # Write script content to stdin
-        stdin.write(args.script_content)
+        script_content = args.script_content
+        if args.context:
+            script_content = self._render(script_content, args.context)
+
+        stdin.write(script_content)
         stdin.close()
 
         output = stdout.read().decode("utf-8", errors="replace")
@@ -917,31 +1006,104 @@ class ParamikoDriver(BaseDriver):
         local_path: str,
         remote_path: str,
         resume: bool = False,
+        recursive: bool = False,
+        sync_mode: str = "full",
         chunk_size: int = 32768,
+        chmod: Optional[str] = None,
     ) -> dict:
-        import os
-
         try:
             sftp = session.open_sftp()
             try:
+                # Handle recursive upload
+                if recursive and os.path.isdir(local_path):
+                    total_bytes = 0
+                    files_transferred = 0
+                    files_skipped = 0
+
+                    for root, dirs, files in os.walk(local_path):
+                        # Create remote directories
+                        rel_path = os.path.relpath(root, local_path)
+                        if rel_path == ".":
+                            dest_dir = remote_path
+                        else:
+                            dest_dir = os.path.join(remote_path, rel_path).replace("\\", "/")
+
+                        try:
+                            sftp.mkdir(dest_dir)
+                        except IOError:
+                            pass  # Directory might already exist
+
+                        for file in files:
+                            local_file = os.path.join(root, file)
+                            remote_file = os.path.join(dest_dir, file).replace("\\", "/")
+
+                            res = self._upload_file(
+                                session,
+                                local_file,
+                                remote_file,
+                                resume=resume,
+                                recursive=False,
+                                sync_mode=sync_mode,
+                                chunk_size=chunk_size,
+                                chmod=chmod,
+                            )
+                            if res.get("success"):
+                                total_bytes += res.get("bytes_transferred", 0)
+                                if res.get("skipped"):
+                                    files_skipped += 1
+                                else:
+                                    files_transferred += 1
+
+                    return {
+                        "success": True,
+                        "local_path": local_path,
+                        "remote_path": remote_path,
+                        "bytes_transferred": total_bytes,
+                        "files_transferred": files_transferred,
+                        "files_skipped": files_skipped,
+                        "recursive": True,
+                    }
+
+                # Single file upload logic
+                if not os.path.exists(local_path):
+                    raise FileNotFoundError(f"Local file not found: {local_path}")
+
                 local_size = os.path.getsize(local_path)
                 remote_size = 0
+                remote_exists = False
 
-                if resume:
-                    try:
-                        remote_attrs = sftp.stat(remote_path)
-                        remote_size = remote_attrs.st_size
-                        if remote_size >= local_size:
-                            return {
-                                "success": True,
-                                "local_path": local_path,
-                                "remote_path": remote_path,
-                                "bytes_transferred": local_size,
-                                "total_bytes": local_size,
-                                "resumed": False,
-                            }
-                    except (FileNotFoundError, Exception):
-                        remote_size = 0
+                try:
+                    remote_attrs = sftp.stat(remote_path)
+                    remote_size = remote_attrs.st_size
+                    remote_exists = True
+                except (FileNotFoundError, IOError):
+                    pass
+
+                # Hash-based sync check
+                if sync_mode == "hash" and remote_exists:
+                    local_md5 = self._get_local_md5(local_path)
+                    remote_md5 = self._get_remote_md5(session, remote_path)
+                    if local_md5 == remote_md5:
+                        return {
+                            "success": True,
+                            "local_path": local_path,
+                            "remote_path": remote_path,
+                            "bytes_transferred": 0,
+                            "total_bytes": local_size,
+                            "skipped": True,
+                            "sync_mode": "hash",
+                        }
+
+                if resume and remote_exists:
+                    if remote_size >= local_size:
+                        return {
+                            "success": True,
+                            "local_path": local_path,
+                            "remote_path": remote_path,
+                            "bytes_transferred": local_size,
+                            "total_bytes": local_size,
+                            "resumed": False,
+                        }
 
                 with open(local_path, "rb") as local_file:
                     if resume and remote_size > 0:
@@ -952,8 +1114,6 @@ class ParamikoDriver(BaseDriver):
 
                     try:
                         bytes_transferred = remote_size
-                        total_bytes = local_size
-
                         while True:
                             chunk = local_file.read(chunk_size)
                             if not chunk:
@@ -963,12 +1123,21 @@ class ParamikoDriver(BaseDriver):
 
                         remote_file.close()
 
+                        # Set permissions if requested
+                        if chmod:
+                            try:
+                                # Convert octal string '0755' to int
+                                mode = int(chmod, 8)
+                                sftp.chmod(remote_path, mode)
+                            except Exception as e:
+                                log.warning(f"Failed to set chmod {chmod} on {remote_path}: {e}")
+
                         return {
                             "success": True,
                             "local_path": local_path,
                             "remote_path": remote_path,
                             "bytes_transferred": bytes_transferred,
-                            "total_bytes": total_bytes,
+                            "total_bytes": local_size,
                             "resumed": resume and remote_size > 0,
                         }
                     except Exception:
@@ -977,7 +1146,7 @@ class ParamikoDriver(BaseDriver):
             finally:
                 sftp.close()
         except Exception as e:
-            log.error(f"Error uploading file: {e}")
+            log.error(f"Error uploading file {local_path}: {e}")
             raise
 
     def _download_file(
@@ -986,18 +1155,91 @@ class ParamikoDriver(BaseDriver):
         remote_path: str,
         local_path: str,
         resume: bool = False,
+        recursive: bool = False,
+        sync_mode: str = "full",
         chunk_size: int = 32768,
     ) -> dict:
-        import os
-
         try:
             sftp = session.open_sftp()
             try:
-                remote_attrs = sftp.stat(remote_path)
+                # Handle recursive download
+                try:
+                    remote_attrs = sftp.stat(remote_path)
+                    if recursive and S_ISDIR(remote_attrs.st_mode):
+                        total_bytes = 0
+                        files_transferred = 0
+                        files_skipped = 0
+
+                        if not os.path.exists(local_path):
+                            os.makedirs(local_path)
+
+                        for entry in sftp.listdir_attr(remote_path):
+                            remote_entry = os.path.join(remote_path, entry.filename).replace(
+                                "\\", "/"
+                            )
+                            local_entry = os.path.join(local_path, entry.filename)
+
+                            if S_ISDIR(entry.st_mode):
+                                res = self._download_file(
+                                    session,
+                                    remote_entry,
+                                    local_entry,
+                                    resume=resume,
+                                    recursive=True,
+                                    sync_mode=sync_mode,
+                                    chunk_size=chunk_size,
+                                )
+                            else:
+                                res = self._download_file(
+                                    session,
+                                    remote_entry,
+                                    local_entry,
+                                    resume=resume,
+                                    recursive=False,
+                                    sync_mode=sync_mode,
+                                    chunk_size=chunk_size,
+                                )
+
+                            if res.get("success"):
+                                total_bytes += res.get("bytes_transferred", 0)
+                                if res.get("skipped"):
+                                    files_skipped += 1
+                                else:
+                                    files_transferred += 1
+
+                        return {
+                            "success": True,
+                            "local_path": local_path,
+                            "remote_path": remote_path,
+                            "bytes_transferred": total_bytes,
+                            "files_transferred": files_transferred,
+                            "files_skipped": files_skipped,
+                            "recursive": True,
+                        }
+                except (FileNotFoundError, IOError):
+                    raise FileNotFoundError(f"Remote path not found: {remote_path}")
+
+                # Single file download logic
                 remote_size = remote_attrs.st_size
                 local_size = 0
+                local_exists = os.path.exists(local_path)
 
-                if resume and os.path.exists(local_path):
+                # Hash-based sync check
+                if sync_mode == "hash" and local_exists:
+                    local_md5 = self._get_local_md5(local_path)
+                    remote_md5 = self._get_remote_md5(session, remote_path)
+                    if local_md5 == remote_md5:
+                        return {
+                            "success": True,
+                            "local_path": local_path,
+                            "remote_path": remote_path,
+                            "bytes_transferred": 0,
+                            "total_bytes": remote_size,
+                            "skipped": True,
+                            "sync_mode": "hash",
+                        }
+
+                if resume and local_exists:
                     local_size = os.path.getsize(local_path)
                     if local_size >= remote_size:
                         return {
@@ -1016,8 +1258,6 @@ class ParamikoDriver(BaseDriver):
                 mode = "ab" if (resume and local_size > 0) else "wb"
                 with open(local_path, mode) as local_file:
                     bytes_transferred = local_size
-                    total_bytes = remote_size
-
                     try:
                         while True:
                             chunk = remote_file.read(chunk_size)
@@ -1033,7 +1273,7 @@ class ParamikoDriver(BaseDriver):
                             "local_path": local_path,
                             "remote_path": remote_path,
                             "bytes_transferred": bytes_transferred,
-                            "total_bytes": total_bytes,
+                            "total_bytes": remote_size,
                             "resumed": resume and local_size > 0,
                         }
                     except Exception:
@@ -1042,7 +1282,7 @@ class ParamikoDriver(BaseDriver):
             finally:
                 sftp.close()
         except Exception as e:
-            log.error(f"Error downloading file: {e}")
+            log.error(f"Error downloading file {remote_path}: {e}")
             raise
 
     @classmethod

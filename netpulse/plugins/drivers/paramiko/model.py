@@ -114,6 +114,11 @@ class ParamikoFileTransferOperation(BaseModel):
     local_path: str = Field(default=..., description="Local file path")
     remote_path: str = Field(default=..., description="Remote file path")
     resume: bool = Field(default=False, description="Whether to resume interrupted transfer")
+    recursive: bool = Field(default=False, description="Whether to transfer directory recursively")
+    sync_mode: Literal["full", "hash"] = Field(
+        default="full",
+        description="Sync mode: full (always transfer) or hash (skip if MD5 matches)",
+    )
     chunk_size: int = Field(
         default=32768, description="Transfer chunk size in bytes (default 32KB)"
     )
@@ -134,6 +139,10 @@ class ParamikoFileTransferOperation(BaseModel):
         description=(
             "Whether to cleanup remote file after execution (only if execute_after_upload is True)"
         ),
+    )
+    chmod: Optional[str] = Field(
+        default=None,
+        description="Optional permissions (octal string like '0755') to set on remote file after transfer",
     )
 
 
@@ -193,6 +202,11 @@ class ParamikoSendCommandArgs(DriverArgs):
     stream_query: Optional["StreamQuery"] = Field(
         default=None,
         description="Query streaming command output by session_id",
+    )
+    # Rendering context
+    context: Optional[dict] = Field(
+        default=None,
+        description="Jinja2 rendering context for commands or script content",
     )
 
 
@@ -261,6 +275,11 @@ class ParamikoSendConfigArgs(DriverArgs):
         default=None, description="Sudo password (if sudo is enabled)"
     )
     environment: Optional[Dict[str, str]] = Field(default=None, description="Environment variables")
+    # Rendering context
+    context: Optional[dict] = Field(
+        default=None,
+        description="Jinja2 rendering context for config commands",
+    )
 
     @model_validator(mode="after")
     def validate_sudo(self):
