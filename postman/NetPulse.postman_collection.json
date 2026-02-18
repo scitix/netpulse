@@ -7,6 +7,26 @@
 		"_exporter_id": "15361380",
 		"_collection_link": "https://naivfun.postman.co/workspace/My-Workspace~3a1a7d62-3432-4e76-805a-2d9e450075ee/collection/15361380-7eaf315a-de6e-447d-ae13-957d5cb97748?action=share&source=collection_link&creator=15361380"
 	},
+	"event": [
+		{
+			"listen": "test",
+			"script": {
+				"exec": [
+					"var jsonData = pm.response.json();",
+					"if (jsonData && jsonData.data && jsonData.data.id) {",
+					"    pm.collectionVariables.set('job_id', jsonData.data.id);",
+					"    console.log('任务ID已自动捕获: ' + jsonData.data.id);",
+					"    ",
+					"    // 仅在使用 Postman Runner 时自动跳转到查询接口，且避免在查询接口自身发生循环",
+					"    if (pm.info.requestName !== \"按ID查询任务\") {",
+					"        postman.setNextRequest(\"按ID查询任务\");",
+					"    }",
+					"}"
+				],
+				"type": "text/javascript"
+			}
+		}
+	],
 	"item": [
 		{
 			"name": "System Health",
@@ -1664,6 +1684,62 @@
 					"name": "Paramiko查询操作",
 					"item": [
 						{
+							"name": "Jinja2 模板渲染查询",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"echo \\\"Current server time is {{ current_time }}\\\"\",\n  \"driver_args\": {\n    \"context\": {\n      \"current_time\": \"2026-02-17 15:30:00\"\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "Paramiko Jinja2 模板渲染示例 - 支持在 driver_args 中传入 context 动态渲染命令"
+							},
+							"response": []
+						},
+						{
+							"name": "全局 Jinja2 模板渲染",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"echo \\\"Hello {{ name }}\\\"\",\n  \"rendering\": {\n    \"name\": \"jinja2\",\n    \"context\": {\n      \"name\": \"NetPulse\"\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "全局 Jinja2 渲染示例 - 使用 ExecutionRequest 的 rendering 字段进行渲染"
+							},
+							"response": []
+						},
+						{
 							"name": "基础查询 - 单命令",
 							"request": {
 								"method": "POST",
@@ -1774,6 +1850,34 @@
 								"description": "Paramiko网络诊断 - 网络配置和连接状态"
 							},
 							"response": []
+						},
+						{
+							"name": "查询 - 环境注入 (Environment)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"echo $APP_VERSION; ls -l $TOOL_PATH\",\n  \"driver_args\": {\n    \"environment\": {\n      \"APP_VERSION\": \"v2.4.0\",\n      \"TOOL_PATH\": \"/opt/rdma/bin\"\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "通过 API 注入远程服务器的环境变量，避免在命令字符串中手动写 export。"
+							},
+							"response": []
 						}
 					],
 					"description": "Paramiko驱动的查询操作示例"
@@ -1869,10 +1973,156 @@
 					"description": "Paramiko驱动的配置操作示例"
 				},
 				{
+					"name": "Paramiko脚本直接执行",
+					"item": [
+						{
+							"name": "直接执行 Bash 脚本",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"script_content\": \"#!/bin/bash\\necho 'Starting diagnostics...'\\nlsblk\\nifconfig -a\\necho 'Done.'\",\n    \"script_interpreter\": \"bash\",\n    \"timeout\": 30.0\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "无需上传文件，直接通过 stdin 注入脚本内容执行。适用于阅后即焚的自动化巡检或诊断脚本。"
+							},
+							"response": []
+						},
+						{
+							"name": "带上下文渲染的脚本执行",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"script_content\": \"#!/bin/bash\\necho 'Generating report for {{ report_name }}'\\ncat > /tmp/{{ report_name }}.txt << EOF\\nStatus: OK\\nTime: $(date)\\nEOF\\necho 'Report saved to /tmp/{{ report_name }}.txt'\",\n    \"script_interpreter\": \"bash\",\n    \"context\": {\n      \"report_name\": \"daily_health_check\"\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "结合 Jinja2 模板动态生成脚本内容并执行。"
+							},
+							"response": []
+						},
+						{
+							"name": "直接执行 Python 脚本",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"script_content\": \"import os\\nimport platform\\nprint(f'Kernel: {platform.release()}')\\nprint(f'Load Average: {os.getloadavg()}')\",\n    \"script_interpreter\": \"python3\"\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "直接注入 Python 代码并指定解析器。适合利用远程 Python 环境进行复杂逻辑判断。"
+							},
+							"response": []
+						}
+					],
+					"description": "Paramiko 直接脚本注入执行（无需上传文件）"
+				},
+				{
 					"name": "Paramiko文件传输",
 					"item": [
 						{
-							"name": "文件上传",
+							"name": "文件上传 - 递归与 Hash 同步",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [\n    \"__FILE_TRANSFER__\"\n  ],\n  \"driver_args\": {\n    \"file_transfer\": {\n      \"operation\": \"upload\",\n      \"local_path\": \"/path/to/local/dir/\",\n      \"remote_path\": \"/tmp/remote/dir/\",\n      \"recursive\": true,\n      \"sync_mode\": \"hash\",\n      \"resume\": true\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "Paramiko 高级文件上传 - 支持递归目录同步和基于 MD5 Hash 的增量校验，适合部署大量测试固件"
+							},
+							"response": []
+						},
+						{
+							"name": "文件下载 - 递归下载",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [\n    \"__FILE_TRANSFER__\"\n  ],\n  \"driver_args\": {\n    \"file_transfer\": {\n      \"operation\": \"download\",\n      \"local_path\": \"/path/to/local/backup/\",\n      \"remote_path\": \"/remote/log/dir/\",\n      \"recursive\": true,\n      \"resume\": true\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "Paramiko 递归文件下载 - 一次性拉取远程整个日志目录"
+							},
+							"response": []
+						},
+						{
+							"name": "文件上传 - 基础单文件",
 							"request": {
 								"method": "POST",
 								"header": [
@@ -1895,12 +2145,12 @@
 										"exec"
 									]
 								},
-								"description": "Paramiko文件上传 - SFTP上传文件到远程服务器"
+								"description": "Paramiko基础文件上传 - SFTP上传文件到远程服务器"
 							},
 							"response": []
 						},
 						{
-							"name": "文件下载",
+							"name": "文件下载 - 基础（断点续传）",
 							"request": {
 								"method": "POST",
 								"header": [
@@ -1926,12 +2176,40 @@
 								"description": "Paramiko文件下载 - SFTP从远程服务器下载文件（支持断点续传）"
 							},
 							"response": []
+						},
+						{
+							"name": "上传诊断工具并执行 (赋权 chmod)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [\n    \"__FILE_TRANSFER__\"\n  ],\n  \"driver_args\": {\n    \"file_transfer\": {\n      \"operation\": \"upload\",\n      \"local_path\": \"/local/tools/rdma_check\",\n      \"remote_path\": \"/tmp/rdma_check\",\n      \"chmod\": \"0755\",\n      \"execute_after_upload\": true,\n      \"execute_command\": \"/tmp/rdma_check --verbose\",\n      \"cleanup_after_exec\": true\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "企业级场景：上传一个二进制诊断工具，自动赋予执行权限 (0755)，运行并获取结果，最后自动清理工具。"
+							},
+							"response": []
 						}
 					],
 					"description": "Paramiko驱动的文件传输操作"
 				},
 				{
-					"name": "Paramiko SSH代理连接",
+					"name": "Paramiko SSH 代理/跳转 (Proxy/Jump Host)",
 					"item": [
 						{
 							"name": "通过代理连接 - 密码认证",
@@ -1957,7 +2235,7 @@
 										"exec"
 									]
 								},
-								"description": "Paramiko SSH代理连接 - 通过跳板机连接（密码认证）"
+								"description": "通过中间跳板机（Jump Host）透明访问内网目标机器。"
 							},
 							"response": []
 						},
@@ -1985,18 +2263,62 @@
 										"exec"
 									]
 								},
-								"description": "Paramiko SSH代理连接 - 通过跳板机连接（密钥认证）"
+								"description": "通过跳板机连接，且两端均使用密钥认证。"
+							},
+							"response": []
+						},
+						{
+							"name": "代理跳转 - 目标机免密 (Agent/Key)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"10.0.0.50\",\n    \"username\": \"target_user\",\n    \"proxy_host\": \"{{proxy_host}}\",\n    \"proxy_username\": \"{{proxy_username}}\",\n    \"proxy_password\": \"{{proxy_password}}\",\n    \"look_for_keys\": true,\n    \"allow_agent\": true\n  },\n  \"command\": \"uptime\",\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "场景：你拥有跳板机的密码，且跳板机或本地已配置对目标机的免密访问。"
 							},
 							"response": []
 						}
 					],
-					"description": "Paramiko驱动的SSH代理/跳板机连接示例"
+					"description": "Paramiko 驱动的 SSH 代理 (Proxy) 和跳板机 (Jump Host) 连接示例"
 				},
 				{
 					"name": "Paramiko后台任务管理",
 					"item": [
 						{
 							"name": "启动后台任务",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"var jsonData = pm.response.json();",
+											"if (jsonData && jsonData.data && jsonData.data.background_task) {",
+											"    pm.collectionVariables.set('task_pid', jsonData.data.background_task.pid);",
+											"    pm.collectionVariables.set('task_output_file', jsonData.data.background_task.output_file);",
+											"    console.log('PID已捕获: ' + jsonData.data.background_task.pid);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
 							"request": {
 								"method": "POST",
 								"header": [
@@ -2035,7 +2357,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"check_task\": {\n      \"pid\": 12345,\n      \"output_file\": \"/tmp/netpulse_xxx.log\",\n      \"tail_lines\": 50,\n      \"kill_if_running\": false,\n      \"cleanup_files\": false\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"check_task\": {\n      \"pid\": {{task_pid}},\n      \"output_file\": \"{{task_output_file}}\",\n      \"tail_lines\": 50,\n      \"kill_if_running\": false,\n      \"cleanup_files\": false\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -2063,7 +2385,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"check_task\": {\n      \"pid\": 12345,\n      \"output_file\": \"/tmp/netpulse_xxx.log\",\n      \"tail_lines\": 10,\n      \"kill_if_running\": true,\n      \"cleanup_files\": true\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"check_task\": {\n      \"pid\": {{task_pid}},\n      \"output_file\": \"{{task_output_file}}\",\n      \"tail_lines\": 10,\n      \"kill_if_running\": true,\n      \"cleanup_files\": true\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -2087,6 +2409,22 @@
 					"item": [
 						{
 							"name": "启动流式命令",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"var jsonData = pm.response.json();",
+											"if (jsonData && jsonData.data && jsonData.data.stream) {",
+											"    pm.collectionVariables.set('stream_session_id', jsonData.data.stream.session_id);",
+											"    pm.collectionVariables.set('stream_offset', 0);",
+											"    console.log('Stream SessionID已捕获: ' + jsonData.data.stream.session_id);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
 							"request": {
 								"method": "POST",
 								"header": [
@@ -2097,7 +2435,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"apt upgrade -y\",\n  \"driver_args\": {\n    \"stream\": true\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"ping 8.8.8.8\",\n  \"driver_args\": {\n    \"stream\": true\n  },\n  \"queue_strategy\": \"fifo\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -2125,7 +2463,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"stream_query\": {\n      \"session_id\": \"abc123def456\",\n      \"lines\": 50,\n      \"cleanup\": false\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"stream_query\": {\n      \"session_id\": \"{{stream_session_id}}\",\n      \"offset\": {{stream_offset}},\n      \"lines\": 50,\n      \"cleanup\": false\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -2153,7 +2491,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"stream_query\": {\n      \"session_id\": \"abc123def456\",\n      \"lines\": 10,\n      \"kill\": true,\n      \"cleanup\": true\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"stream_query\": {\n      \"session_id\": \"{{stream_session_id}}\",\n      \"lines\": 10,\n      \"kill\": true,\n      \"cleanup\": true\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -2722,30 +3060,6 @@
 			}
 		]
 	},
-	"event": [
-		{
-			"listen": "prerequest",
-			"script": {
-				"type": "text/javascript",
-				"packages": {},
-				"requests": {},
-				"exec": [
-					""
-				]
-			}
-		},
-		{
-			"listen": "test",
-			"script": {
-				"type": "text/javascript",
-				"packages": {},
-				"requests": {},
-				"exec": [
-					""
-				]
-			}
-		}
-	],
 	"variable": [
 		{
 			"key": "base_url",
