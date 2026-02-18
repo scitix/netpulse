@@ -39,10 +39,11 @@ def test_paramiko_send_uses_exec_args(monkeypatch):
 
     result = driver.send(session, ["cmd1", "cmd2"])  # type: ignore
     assert set(result.keys()) == {"cmd1", "cmd2"}
-    for _, kwargs in session.calls:
+    for cmd, kwargs in session.calls:
         assert kwargs["timeout"] == 1.5
         assert kwargs["get_pty"] is True
-        assert kwargs["environment"] == {"k": "v"}
+        assert cmd.startswith("export k='v'")
+        assert "environment" not in kwargs
         assert kwargs["bufsize"] == 1024
 
 

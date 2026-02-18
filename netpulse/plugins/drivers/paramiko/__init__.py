@@ -6,7 +6,7 @@ import sys
 import threading
 from io import StringIO
 from stat import S_ISDIR
-from typing import ClassVar, Optional
+from typing import ClassVar, Dict, Optional
 
 import paramiko
 
@@ -375,7 +375,11 @@ class ParamikoDriver(BaseDriver):
 
         # Render commands if context is provided
         context = (
-            (self.args.get("context") if isinstance(self.args, dict) else getattr(self.args, "context", None))
+            (
+                self.args.get("context")
+                if isinstance(self.args, dict)
+                else getattr(self.args, "context", None)
+            )
             if self.args
             else None
         )
@@ -502,7 +506,11 @@ class ParamikoDriver(BaseDriver):
 
         # Render config if context is provided
         context = (
-            (self.args.get("context") if isinstance(self.args, dict) else getattr(self.args, "context", None))
+            (
+                self.args.get("context")
+                if isinstance(self.args, dict)
+                else getattr(self.args, "context", None)
+            )
             if self.args
             else None
         )
@@ -605,10 +613,11 @@ class ParamikoDriver(BaseDriver):
             exec_kwargs["get_pty"] = args.get_pty
             if args.bufsize != -1:
                 exec_kwargs["bufsize"] = args.bufsize
+        exec_cmd = cmd
         if args and args.environment:
-            cmd = self._apply_env_to_command(cmd, args.environment)
+            exec_cmd = self._apply_env_to_command(cmd, args.environment)
 
-        _stdin, stdout, stderr = session.exec_command(cmd, **exec_kwargs)
+        _stdin, stdout, stderr = session.exec_command(exec_cmd, **exec_kwargs)
         output = stdout.read().decode("utf-8", errors="replace")
         error = stderr.read().decode("utf-8", errors="replace")
         exit_status = stdout.channel.recv_exit_status()

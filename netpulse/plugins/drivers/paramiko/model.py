@@ -142,7 +142,10 @@ class ParamikoFileTransferOperation(BaseModel):
     )
     chmod: Optional[str] = Field(
         default=None,
-        description="Optional permissions (octal string like '0755') to set on remote file after transfer",
+        description=(
+            "Optional permissions (octal string like '0755') "
+            "to set on remote file after transfer"
+        ),
     )
 
 
@@ -295,7 +298,7 @@ class ParamikoSendConfigArgs(DriverArgs):
 class ParamikoPullingRequest(ExecutionRequest):
     driver: DriverName = DriverName.PARAMIKO
     connection_args: ParamikoConnectionArgs
-    args: Optional[ParamikoSendCommandArgs] = None
+    driver_args: Optional[ParamikoSendCommandArgs] = Field(default=None, alias="args")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -311,17 +314,9 @@ class ParamikoPullingRequest(ExecutionRequest):
                     "host_key_policy": "auto_add",
                 },
                 "command": ["uname -a", "df -h", "free -m"],
-                "args": {
+                "driver_args": {
                     "timeout": 30.0,
                     "get_pty": False,
-                    # File transfer example (optional):
-                    # "file_transfer": {
-                    #     "operation": "upload",
-                    #     "local_path": "/local/file.txt",
-                    #     "remote_path": "/remote/file.txt",
-                    #     "resume": False,
-                    #     "chunk_size": 32768,
-                    # }
                 },
             }
         }
@@ -332,7 +327,7 @@ class ParamikoPullingRequest(ExecutionRequest):
 class ParamikoPushingRequest(ExecutionRequest):
     driver: DriverName = DriverName.PARAMIKO
     connection_args: ParamikoConnectionArgs
-    args: Optional[ParamikoSendConfigArgs] = None
+    driver_args: Optional[ParamikoSendConfigArgs] = Field(default=None, alias="args")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -349,7 +344,7 @@ class ParamikoPushingRequest(ExecutionRequest):
                     "echo 'Hello World' > /tmp/test.txt",
                     "chmod 644 /tmp/test.txt",
                 ],
-                "args": {
+                "driver_args": {
                     "sudo": True,
                     "sudo_password": "sudo_pass",
                     "timeout": 30.0,
@@ -379,7 +374,7 @@ class ParamikoExecutionRequest(ExecutionRequest):
                     "echo 'Hello World' > /tmp/test.txt",
                     "chmod 644 /tmp/test.txt",
                 ],
-                "args": {
+                "driver_args": {
                     "sudo": True,
                     "sudo_password": "sudo_pass",
                     "timeout": 30.0,
