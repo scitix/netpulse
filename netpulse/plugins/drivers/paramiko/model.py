@@ -204,12 +204,17 @@ class ParamikoSendCommandArgs(DriverArgs):
     )
     stream_query: Optional["StreamQuery"] = Field(
         default=None,
-        description="Query streaming command output by session_id",
+        description="Query streaming command output by session_id"
     )
-    # Rendering context
-    context: Optional[dict] = Field(
+    # Interactive support
+    expect_map: Optional[Dict[str, str]] = Field(
         default=None,
-        description="Jinja2 rendering context for commands or script content",
+        description="Map of expected prompts to automated responses (e.g. {'[Y/n]': 'y'})"
+    )
+    # Cleanup support
+    ttl_seconds: int = Field(
+        default=3600,
+        description="Time-to-live for background/stream task metadata and log files (default 1h)"
     )
 
 
@@ -278,11 +283,6 @@ class ParamikoSendConfigArgs(DriverArgs):
         default=None, description="Sudo password (if sudo is enabled)"
     )
     environment: Optional[Dict[str, str]] = Field(default=None, description="Environment variables")
-    # Rendering context
-    context: Optional[dict] = Field(
-        default=None,
-        description="Jinja2 rendering context for config commands",
-    )
 
     @model_validator(mode="after")
     def validate_sudo(self):

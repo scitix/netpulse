@@ -30,18 +30,28 @@ def execute(req: ExecutionRequest):
     # Render before execution if specified
     if req.rendering:
         try:
-            if not isinstance(payload, dict):
-                raise ValueError("Config/command must be a dict for rendering.")
-
             if req.rendering.context is None:
                 req.rendering.context = {}
 
-            # Merge payload into context (payload takes precedence)
-            if payload:
+            template_source = req.rendering.template
+
+            if isinstance(payload, dict):
+                # Merge payload into context (payload takes precedence)
                 req.rendering.context.update(payload)
+            elif template_source is None:
+                # If payload is str/list, and rendering.template is missing, use payload as template
+                if isinstance(payload, list):
+                    template_source = "\n".join(payload)
+                else:
+                    template_source = payload
+
+            if template_source is None:
+                raise ValueError("Template source is required for rendering.")
 
             # Do the rendering
-            render = renderers[req.rendering.name].from_rendering_request(req.rendering)
+            # Pass the template_source to the renderer if it was missing in req.rendering
+            render_req = req.rendering.model_copy(update={"template": template_source})
+            render = renderers[req.rendering.name].from_rendering_request(render_req)
             payload = render.render(req.rendering.context)
 
             # Persist rendered payload back to request so downstream validation sees a concrete
@@ -50,6 +60,17 @@ def execute(req: ExecutionRequest):
                 req.command = payload
             else:
                 req.config = payload
+
+            if req.driver_args:
+                script_content = getattr(req.driver_args, "script_content", None)
+                if isinstance(script_content, str) and script_content:
+                    script_render_req = req.rendering.model_copy(
+                        update={"template": script_content}
+                    )
+                    script_render = renderers[req.rendering.name].from_rendering_request(
+                        script_render_req
+                    )
+                    req.driver_args.script_content = script_render.render(req.rendering.context)
 
             # After payload is rendered, payload should be a str or list[str]
             # Besides, we need to delete the rendering field

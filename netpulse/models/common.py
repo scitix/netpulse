@@ -113,7 +113,7 @@ class CredentialRef(BaseModel):
     Reference to a credential entry resolved by credential providers.
     """
 
-    name: str = Field(..., description="Credential provider name")
+    name: Optional[str] = Field(default=None, description="Credential provider name")
     ref: str = Field(..., description="Provider-specific reference (e.g., secret path or ID)")
 
     mount: Optional[str] = Field(default=None, description="Optional mount point or backend name")

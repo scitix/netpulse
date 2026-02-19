@@ -36,10 +36,10 @@ class TemplateParseRequest(BaseModel):
 class TemplateRenderRequest(BaseModel):
     """Base request model for template rendering"""
 
-    name: str = Field("", title="Renderer name", description="Renderer name to use")
+    name: str = Field("jinja2", title="Renderer name", description="Renderer name to use")
 
-    template: str = Field(
-        ...,
+    template: Optional[str] = Field(
+        default=None,
         title="Template source",
         description="Template source URI (default: plain text)",
     )
@@ -115,8 +115,11 @@ class ExecutionRequest(BaseModel):
     @model_validator(mode="after")
     def check_payload_type(self):
         valid_payload = self.config if self.config is not None else self.command
-        if (self.rendering is not None) != isinstance(valid_payload, dict):
+        # If payload is a dict, rendering MUST be set
+        if isinstance(valid_payload, dict) and self.rendering is None:
             raise ValueError("`rendering` should be set when command/config is a dict")
+        # For non-dict payloads, rendering is optional
+        # (context-only mode or direct command-as-template)
         return self
 
     @model_validator(mode="after")

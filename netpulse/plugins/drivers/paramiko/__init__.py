@@ -4,13 +4,13 @@ import os
 import signal
 import sys
 import threading
+import time
 from io import StringIO
 from stat import S_ISDIR
 from typing import ClassVar, Dict, Optional
 
 import paramiko
 
-from ... import renderers
 from .. import BaseDriver
 from .model import (
     BackgroundTaskQuery,
@@ -373,18 +373,6 @@ class ParamikoDriver(BaseDriver):
             log.warning("No command provided")
             return {}
 
-        # Render commands if context is provided
-        context = (
-            (
-                self.args.get("context")
-                if isinstance(self.args, dict)
-                else getattr(self.args, "context", None)
-            )
-            if self.args
-            else None
-        )
-        if context:
-            command = [self._render(cmd, context) for cmd in command]
 
         try:
             result = {}
@@ -473,8 +461,6 @@ class ParamikoDriver(BaseDriver):
                 and file_transfer_op.execute_command
             ):
                 cmd_after = file_transfer_op.execute_command
-                if self.args and getattr(self.args, "context", None):
-                    cmd_after = self._render(cmd_after, self.args.context)
 
                 log.debug(f"Executing command after upload: {cmd_after}")
                 exec_result = self._execute_command(session, cmd_after, self.args)
@@ -504,18 +490,6 @@ class ParamikoDriver(BaseDriver):
             log.warning("No configuration provided")
             return {}
 
-        # Render config if context is provided
-        context = (
-            (
-                self.args.get("context")
-                if isinstance(self.args, dict)
-                else getattr(self.args, "context", None)
-            )
-            if self.args
-            else None
-        )
-        if context:
-            config = [self._render(cfg, context) for cfg in config]
 
         try:
             result = {}
@@ -583,44 +557,40 @@ class ParamikoDriver(BaseDriver):
             return output.split()[0]
         return None
 
-    def _render(self, template: str, context: dict) -> str:
-        """Render a string using Jinja2 renderer."""
-        try:
-            # Use the existing Jinja2 plugin
-            renderer_cls = renderers.get("jinja2")
-            if not renderer_cls:
-                log.warning("Jinja2 renderer not found, returning raw template")
-                return template
-
-            # Case: renderer_cls is a class, we need to instantiate it
-            # The Jinja2Renderer.__init__ expects (source, options)
-            renderer = renderer_cls(source=template)
-            return renderer.render(context)
-        except Exception as e:
-            log.error(f"Error in Jinja2 rendering: {e}")
-            # If rendering fails, we might want to return the original template
-            # or raise. Since this is an explicit feature, raising is safer.
-            raise e
 
     def _execute_command(
         self, session: paramiko.SSHClient, cmd: str, args: Optional[ParamikoSendCommandArgs]
     ) -> dict:
-        """Execute a single command and return result"""
+        """Execute a single command and return result with telemetry"""
+        import time
+        start_time = time.perf_counter()
+
         exec_kwargs = {}
+        expect_map = None
         if args and isinstance(args, ParamikoSendCommandArgs):
             if args.timeout:
                 exec_kwargs["timeout"] = args.timeout
             exec_kwargs["get_pty"] = args.get_pty
             if args.bufsize != -1:
                 exec_kwargs["bufsize"] = args.bufsize
+            expect_map = args.expect_map
+
         exec_cmd = cmd
         if args and args.environment:
             exec_cmd = self._apply_env_to_command(cmd, args.environment)
 
-        _stdin, stdout, stderr = session.exec_command(exec_cmd, **exec_kwargs)
-        output = stdout.read().decode("utf-8", errors="replace")
-        error = stderr.read().decode("utf-8", errors="replace")
-        exit_status = stdout.channel.recv_exit_status()
+        # Use interactive handler if expect_map is provided
+        if expect_map:
+            output, error, exit_status = self._execute_interactive(
+                session, exec_cmd, expect_map, **exec_kwargs
+            )
+        else:
+            _stdin, stdout, stderr = session.exec_command(exec_cmd, **exec_kwargs)
+            output = stdout.read().decode("utf-8", errors="replace")
+            error = stderr.read().decode("utf-8", errors="replace")
+            exit_status = stdout.channel.recv_exit_status()
+
+        duration = time.perf_counter() - start_time
 
         # Try to parse JSON for a better experience
         output_json = None
@@ -637,8 +607,60 @@ class ParamikoDriver(BaseDriver):
                 "output_json": output_json,
                 "error": error,
                 "exit_status": exit_status,
+                "telemetry": {
+                    "duration_seconds": round(duration, 3),
+                }
             }
         }
+
+    def _execute_interactive(
+        self, session: paramiko.SSHClient, cmd: str, expect_map: dict, **kwargs
+    ) -> tuple[str, str, int]:
+        """Execute a command in an interactive session with prompt handling"""
+        import time
+
+        # We need a PTY for interactive interaction
+        kwargs["get_pty"] = True
+        timeout = kwargs.get("timeout", 60.0)
+
+        # Start command
+        stdin, stdout, stderr = session.exec_command(cmd, **kwargs)
+
+        full_output = ""
+        # Small timeout for polling each chunk
+        poll_interval = 0.2
+        max_no_output = int((timeout or 60) / poll_interval)
+        no_output_count = 0
+
+        while not stdout.channel.exit_status_ready():
+            if stdout.channel.recv_ready():
+                chunk = stdout.channel.recv(4096).decode("utf-8", errors="replace")
+                if chunk:
+                    full_output += chunk
+                    no_output_count = 0
+
+                    # Check if any prompt matches
+                    for prompt, response in expect_map.items():
+                        if prompt in chunk:
+                            stdin.write(response + "\n")
+                            stdin.flush()
+                            break
+            else:
+                time.sleep(poll_interval)
+                no_output_count += 1
+                if no_output_count > max_no_output:
+                    break
+
+        # Read final output
+        if stdout.channel.recv_ready():
+            full_output += stdout.channel.recv(4096).decode("utf-8", errors="replace")
+
+        exit_status = stdout.channel.recv_exit_status()
+        error = ""
+        if stderr.channel.recv_stderr_ready():
+            error = stderr.channel.recv_stderr(4096).decode("utf-8", errors="replace")
+
+        return full_output, error, exit_status
 
     def _execute_script_content(
         self, session: paramiko.SSHClient, args: ParamikoSendCommandArgs
@@ -668,8 +690,6 @@ class ParamikoDriver(BaseDriver):
 
         # Write script content to stdin
         script_content = args.script_content
-        if args.context:
-            script_content = self._render(script_content, args.context)
 
         stdin.write(script_content)
         stdin.close()
@@ -701,7 +721,19 @@ class ParamikoDriver(BaseDriver):
         pid_file = args.background_pid_file or f"/tmp/netpulse_{task_id}.pid"
 
         # Build background command with nohup
-        bg_cmd = f"nohup {cmd} > {output_file} 2>&1 & echo $! > {pid_file}"
+        # 1. Start process
+        # 2. Save PID
+        # 3. Save creation time for TTL
+        import time
+        creation_time = int(time.time())
+        bg_cmd = (
+            f"nohup {cmd} > {output_file} 2>&1 & "
+            f"echo $! > {pid_file}; "
+            f"echo {creation_time} > {pid_file}.ttl"
+        )
+
+        # Cleanup expired tasks occasionally
+        self._cleanup_expired_tasks(session, args.ttl_seconds)
 
         # Execute the background command
         exec_result = self._execute_command(session, bg_cmd, args)
@@ -745,7 +777,18 @@ class ParamikoDriver(BaseDriver):
         pid_file = f"/tmp/netpulse_stream_{session_id}.pid"
 
         # Build background command with nohup
-        bg_cmd = f"nohup {cmd} > {output_file} 2>&1 & echo $! > {pid_file}"
+        # 1. Start process
+        # 2. Save PID
+        # 3. Save creation time for TTL
+        creation_time = int(time.time())
+        bg_cmd = (
+            f"nohup {cmd} > {output_file} 2>&1 & "
+            f"echo $! > {pid_file}; "
+            f"echo {creation_time} > {pid_file}.ttl"
+        )
+
+        # Cleanup expired tasks on this host occasionally
+        self._cleanup_expired_tasks(session, args.ttl_seconds if args else 3600)
 
         # Execute the background command
         exec_result = self._execute_command(session, bg_cmd, args)
@@ -856,9 +899,10 @@ class ParamikoDriver(BaseDriver):
             size_cmd = f"stat -c%s {output_file} 2>/dev/null || echo 0"
             size_result = self._execute_command(session, size_cmd, None)
             try:
-                result["stream_result"]["output_bytes"] = int(
-                    size_result[size_cmd]["output"].strip()
-                )
+                current_size = int(size_result[size_cmd]["output"].strip())
+                result["stream_result"]["output_bytes"] = current_size
+                # Calculate next offset for the user
+                result["stream_result"]["next_offset"] = current_size
             except ValueError:
                 pass
 
@@ -982,6 +1026,46 @@ class ParamikoDriver(BaseDriver):
             total_seconds += int(parts[0])
 
         return total_seconds
+
+    def _cleanup_expired_tasks(self, session: paramiko.SSHClient, ttl: int):
+        """Clean up expired temporary files on the remote host"""
+        try:
+            # Find all .ttl files in /tmp/netpulse_*
+            find_cmd = "ls /tmp/netpulse_*.ttl 2>/dev/null"
+            find_result = self._execute_command(session, find_cmd, None)
+            ttl_files = find_result[find_cmd]["output"].strip().split()
+
+            if not ttl_files:
+                return
+
+            import time
+            current_time = int(time.time())
+            files_to_remove = []
+
+            for ttl_file in ttl_files:
+                try:
+                    # Read creation time
+                    read_cmd = f"cat {ttl_file} 2>/dev/null"
+                    read_result = self._execute_command(session, read_cmd, None)
+                    creation_time_str = read_result[read_cmd]["output"].strip()
+                    if not creation_time_str:
+                        continue
+
+                    creation_time = int(creation_time_str)
+                    if current_time - creation_time > ttl:
+                        # Expired, mark for removal
+                        base_path = ttl_file[:-4] # Remove .ttl
+                        files_to_remove.extend(
+                            [ttl_file, base_path, base_path.replace(".pid", ".log")]
+                        )
+                except Exception:
+                    continue
+
+            if files_to_remove:
+                rm_cmd = f"rm -f {' '.join(files_to_remove)} 2>/dev/null"
+                self._execute_command(session, rm_cmd, None)
+        except Exception as e:
+            log.warning(f"Failed to cleanup expired tasks: {e}")
 
     def disconnect(self, session: paramiko.SSHClient, reset: bool = False):
         """

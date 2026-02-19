@@ -22,6 +22,9 @@ def render_template(req: TemplateRenderRequest, name: Optional[str] = None):
     if not req.name:
         raise ValueError("Renderer name is required")
 
+    if not req.template:
+        raise HTTPException(status_code=400, detail="Template source is required")
+
     try:
         robj = renderers[req.name].from_rendering_request(req)
     except KeyError:

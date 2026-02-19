@@ -311,7 +311,9 @@ def test_template_render_missing_name(monkeypatch, app_config):
         json={"template": "foo"},
         headers={"X-API-KEY": app_config.server.api_key},
     )
-    assert resp.status_code == 400
+    # Since name now defaults to 'jinja2', it's no longer 'missing'.
+    # Because 'jinja2' is not in our stubs, it results in 404.
+    assert resp.status_code == 404
 
 
 def test_template_render_not_found(monkeypatch, app_config):

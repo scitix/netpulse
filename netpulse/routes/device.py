@@ -33,8 +33,8 @@ def _resolve_request_credentials(req: ExecutionRequest | ConnectionTestRequest) 
     if cred_ref is None:
         return
 
-    if not g_config.credential.name:
-        raise ValueError("Credential is enabled but no provider name is configured")
+    if cred_ref.name is None:
+        cred_ref.name = g_config.credential.name
 
     if cred_ref.name != g_config.credential.name:
         raise ValueError(f"Unsupported credential provider: {cred_ref.name}")

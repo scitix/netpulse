@@ -24,7 +24,14 @@ from .. import BaseCredentialProvider
 log = logging.getLogger(__name__)
 
 
-DEFAULT_FIELD_MAPPING: dict[str, str] = {"username": "username", "password": "password"}
+DEFAULT_FIELD_MAPPING: dict[str, str] = {
+    "username": "username",
+    "password": "password",
+}
+OPTIONAL_FIELD_MAPPING: dict[str, str] = {
+    "pkey": "pkey",
+}
+
 
 
 class VaultKvConfig(BaseModel):
@@ -72,7 +79,7 @@ class VaultCredentialSettings(BaseModel):
     """Per-request credential reference."""
 
     ref: str = Field(..., description="Secret path inside the mount")
-    mount: str = Field(default="secret", description="Vault KV v2 mount point")
+    mount: str = Field(default="kv", description="Vault KV v2 mount point")
     version: int | None = Field(default=None, ge=1, description="Secret version (KV v2)")
     namespace: str | None = Field(default=None, description="Namespace override for this request")
     field_mapping: dict[str, str] = Field(
@@ -213,14 +220,25 @@ class VaultKvCredentialProvider(BaseCredentialProvider):
     def _extract_updates(self, secret: dict[str, Any]) -> dict[str, Any]:
         updates: dict[str, Any] = {}
         missing: list[str] = []
+
+        # Check mandatory/explicit mapping
         for dest, source in self.cfg.field_mapping.items():
-            if source not in secret or secret.get(source) is None:
+            if source in secret and secret.get(source) is not None:
+                updates[dest] = secret.get(source)
+            else:
                 missing.append(source)
-                continue
-            updates[dest] = secret.get(source)
 
         if missing:
-            raise ValueError(f"Missing required secret fields: {', '.join(sorted(set(missing)))}")
+            raise ValueError(f"Missing required secret fields: {', '.join(missing)}")
+
+        # Check optional default mapping (only if not explicitly overridden)
+        # Actually, if the user didn't provide any mapping, we also try optional ones
+        # but don't fail if they are missing.
+        # Check if we are using default mapping
+        if self.cfg.field_mapping == DEFAULT_FIELD_MAPPING:
+            for dest, source in OPTIONAL_FIELD_MAPPING.items():
+                if source in secret and secret.get(source) is not None:
+                    updates[dest] = secret.get(source)
 
         return updates
 
