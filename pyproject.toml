@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "netpulse"
-version = "0.3.1"
+version = "0.4.0"
 description = "API Server for Network Devices"
 authors = [
     { name = "Yongkun Li", email = "44155313+Nativu5@users.noreply.github.com" },
@@ -109,7 +109,12 @@ respect-gitignore = true
 select = ["E", "F", "W", "RUF", "I"]
 
 [tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     "e2e: end-to-end tests that require ContainerLab devices",
     "api: API-level tests without external deps",
+]
+filterwarnings = [
+    "ignore::pyparsing.PyparsingDeprecationWarning:jnpr.junos.*",
+    "ignore::DeprecationWarning:jnpr.junos.*",
 ]
