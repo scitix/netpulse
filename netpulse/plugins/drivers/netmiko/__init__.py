@@ -198,7 +198,10 @@ class NetmikoDriver(BaseDriver):
             log.error(f"Error in connecting: {e}")
             raise e
 
-    def send(self, session: BaseConnection, command: list[str]):
+    def send(self, session: BaseConnection, command: list[str]) -> dict:
+        """Execute commands and return rich results with telemetry"""
+        import time
+
         try:
             with self._monitor_lock:
                 if self.enabled:
@@ -206,105 +209,117 @@ class NetmikoDriver(BaseDriver):
 
                 result = {}
                 for cmd in command:
+                    start_time = time.perf_counter()
                     if self.args:
-                        # Only use NetmikoSendCommandArgs for send_command
-                        # Filter out NetmikoSendConfigSetArgs-specific parameters
                         if isinstance(self.args, NetmikoSendCommandArgs):
                             response = session.send_command(cmd, **self.args.model_dump())
                         else:
-                            # If it's NetmikoSendConfigSetArgs, only extract common parameters
-                            # that are valid for send_command
+                            # Filter parameters for send_command
                             cmd_args = {}
-                            if (
-                                hasattr(self.args, "read_timeout")
-                                and self.args.read_timeout is not None
-                            ):
-                                cmd_args["read_timeout"] = self.args.read_timeout
-                            if (
-                                hasattr(self.args, "delay_factor")
-                                and self.args.delay_factor is not None
-                            ):
-                                cmd_args["delay_factor"] = self.args.delay_factor
-                            if hasattr(self.args, "max_loops") and self.args.max_loops is not None:
-                                cmd_args["max_loops"] = self.args.max_loops
-                            if hasattr(self.args, "strip_prompt"):
-                                cmd_args["strip_prompt"] = self.args.strip_prompt
-                            if hasattr(self.args, "strip_command"):
-                                cmd_args["strip_command"] = self.args.strip_command
-                            if hasattr(self.args, "cmd_verify"):
-                                cmd_args["cmd_verify"] = self.args.cmd_verify
+                            for attr in [
+                                "read_timeout",
+                                "delay_factor",
+                                "max_loops",
+                                "strip_prompt",
+                                "strip_command",
+                                "cmd_verify",
+                            ]:
+                                if hasattr(self.args, attr):
+                                    val = getattr(self.args, attr)
+                                    if val is not None:
+                                        cmd_args[attr] = val
                             response = session.send_command(cmd, **cmd_args)
                     else:
                         response = session.send_command(cmd)
-                    result[cmd] = response
 
+                    duration = time.perf_counter() - start_time
+                    result[cmd] = {
+                        "output": response,
+                        "error": "",  # Netmiko merges stderr into output usually
+                        "exit_status": 0,  # Generic success
+                        "telemetry": {"duration_seconds": round(duration, 3)},
+                    }
                 if self.enabled:
                     session.exit_enable_mode()
 
             return result
         except Exception as e:
             log.error(f"Error in sending command: {e}")
-            raise e
+            return {
+                " ".join(command): {
+                    "output": "",
+                    "error": str(e),
+                    "exit_status": 1,
+                    "telemetry": {"duration_seconds": 0.0},
+                }
+            }
 
-    def config(
-        self,
-        session: BaseConnection,
-        config: list[str],
-    ):
-        """
-        Send -> (Commit) -> Save
-        Some devices may not support commit.
-        """
+    def config(self, session: BaseConnection, config: list[str]) -> dict:
+        """Execute configuration set and return unified rich result"""
+        import time
+
         try:
             with self._monitor_lock:
+                start_time = time.perf_counter()
                 if self.enabled:
                     session.enable()
 
                 if self.args:
-                    # Only use NetmikoSendConfigSetArgs for send_config_set
-                    # Filter out NetmikoSendCommandArgs-specific parameters
                     if isinstance(self.args, NetmikoSendConfigSetArgs):
-                        response = [session.send_config_set(config, **self.args.model_dump())]
+                        response = session.send_config_set(config, **self.args.model_dump())
                     else:
-                        # If it's NetmikoSendCommandArgs, only extract common parameters
-                        # that are valid for send_config_set
+                        # Filter parameters for send_config_set
                         config_args = {}
-                        if (
-                            hasattr(self.args, "read_timeout")
-                            and self.args.read_timeout is not None
-                        ):
-                            config_args["read_timeout"] = self.args.read_timeout
-                        if (
-                            hasattr(self.args, "delay_factor")
-                            and self.args.delay_factor is not None
-                        ):
-                            config_args["delay_factor"] = self.args.delay_factor
-                        if hasattr(self.args, "max_loops") and self.args.max_loops is not None:
-                            config_args["max_loops"] = self.args.max_loops
-                        if hasattr(self.args, "strip_prompt"):
-                            config_args["strip_prompt"] = self.args.strip_prompt
-                        if hasattr(self.args, "strip_command"):
-                            config_args["strip_command"] = self.args.strip_command
-                        if hasattr(self.args, "cmd_verify"):
-                            config_args["cmd_verify"] = self.args.cmd_verify
-                        response = [session.send_config_set(config, **config_args)]
+                        for attr in [
+                            "read_timeout",
+                            "delay_factor",
+                            "max_loops",
+                            "strip_prompt",
+                            "strip_command",
+                            "cmd_verify",
+                        ]:
+                            if hasattr(self.args, attr):
+                                val = getattr(self.args, attr)
+                                if val is not None:
+                                    config_args[attr] = val
+                        response = session.send_config_set(config, **config_args)
                 else:
-                    response = [session.send_config_set(config)]
+                    response = session.send_config_set(config)
 
                 if commit := self._commit(session):
-                    response.append(commit)
+                    response += f"\n{commit}"
 
                 if self.save:
                     session.set_base_prompt()
-                    response.append(session.save_config())
+                    save_res = session.save_config()
+                    response += f"\n{save_res}"
 
                 if self.enabled:
                     session.exit_enable_mode()
 
-            return response
+                duration = time.perf_counter() - start_time
+
+            # Harmonize config result as a dict mapping the full set string to result
+            # This allows rpc.py parsing to work the same way as send.
+            config_key = "\n".join(config)
+            return {
+                config_key: {
+                    "output": response,
+                    "error": "",
+                    "exit_status": 0,
+                    "telemetry": {"duration_seconds": round(duration, 3)},
+                }
+            }
         except Exception as e:
             log.error(f"Error in sending config: {e}")
-            raise e
+            return {
+                "\n".join(config): {
+                    "output": "",
+                    "error": str(e),
+                    "exit_status": 1,
+                    "telemetry": {"duration_seconds": 0.0},
+                }
+            }
 
     def _commit(self, session: BaseConnection) -> Optional[str]:
         """

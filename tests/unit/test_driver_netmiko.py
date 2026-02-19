@@ -63,14 +63,21 @@ def test_netmiko_send_and_config_with_stub(monkeypatch):
     session = FakeSession()
 
     send_result = driver.send(session, ["a", "b"])  # type: ignore
-    assert send_result == {"a": "resp-a", "b": "resp-b"}
+    assert "a" in send_result
+    assert send_result["a"]["output"] == "resp-a"
+    assert "telemetry" in send_result["a"]
+    assert send_result["b"]["output"] == "resp-b"
     assert calls["send"] and all(kwargs["cmd_verify"] is True for _, kwargs in calls["send"])
 
     driver.args = NetmikoSendConfigSetArgs(exit_config_mode=True)
     config_result = driver.config(session, ["int lo0", "desc test"])  # type: ignore
-    assert config_result[0] == "applied"
-    assert "committed" in config_result
-    assert "saved" in config_result
+    cfg_key = "int lo0\ndesc test"
+    assert cfg_key in config_result
+    assert "applied" in config_result[cfg_key]["output"]
+    assert "committed" in config_result[cfg_key]["output"]
+    assert "saved" in config_result[cfg_key]["output"]
+    assert "telemetry" in config_result[cfg_key]
+
     assert calls["commit"] == 1
     assert calls["save"] >= 1
     assert calls["enable"] == 2  # enable called in send() and config()

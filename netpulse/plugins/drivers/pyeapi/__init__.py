@@ -71,48 +71,95 @@ class PyeapiDriver(BaseDriver):
             raise e
         return self.connection
 
-    def send(self, session: "pyeapi.client.Node", command: list[str]):
+    def send(self, session: "pyeapi.client.Node", command: list[str]) -> dict:
         """
         Use pyeapi.Node.enable to send out commands
         """
+        import time
 
         session = session if session else self.connection
-        if session is None:
-            log.error("Connection is not established")
-            raise RuntimeError("Connection is not established")
-
-        if command is None:
-            log.warning("No command provided")
-            return {}
-
         try:
-            result = session.enable(commands=command, send_enable=self.enabled, **self.args)
+            if session is None:
+                log.error("Connection is not established")
+                raise RuntimeError("Connection is not established")
+
+            if command is None:
+                log.warning("No command provided")
+                return {}
+
+            start_time = time.perf_counter()
+            # session.enable returns a list of result objects for each command
+            raw_results = session.enable(commands=command, send_enable=self.enabled, **self.args)
+            duration = time.perf_counter() - start_time
+
+            result = {}
+            for i, cmd in enumerate(command):
+                output = raw_results[i]
+                result[cmd] = {
+                    "output": output,
+                    "error": "",
+                    "exit_status": 0,
+                    "telemetry": {"duration_seconds": round(duration / len(command), 3)},
+                }
             return result
         except Exception as e:
-            raise e
+            log.error(f"Error in pyeapi send: {e}")
+            # Determine a key for the error result. If command is None or empty, use a default.
+            error_key = " ".join(command) if command else "unknown_command"
+            return {
+                error_key: {
+                    "output": "",
+                    "error": str(e),
+                    "exit_status": 1,
+                    "telemetry": {"duration_seconds": 0.0},
+                }
+            }
 
-    def config(self, session: "pyeapi.client.Node", config: Optional[list[str]] = None):
+    def config(self, session: "pyeapi.client.Node", config: Optional[list[str]] = None) -> dict:
         """
-        In pyeapi, we don't need to use session.
+        Unified config result for pyeapi.
         """
+        import time
+
         session = session if session else self.connection
-        if session is None:
-            log.error("Connection is not established")
-            raise RuntimeError("Connection is not established")
-
-        if not config:
-            log.warning("No config provided")
-            return {}
-
         try:
-            if self.save:
-                config.append("write memory")
+            if session is None:
+                log.error("Connection is not established")
+                raise RuntimeError("Connection is not established")
 
-            result = session.config(commands=config, **self.args)
-            return result
+            if not config:
+                log.warning("No config provided")
+                return {}
+
+            start_time = time.perf_counter()
+            full_config = config.copy()
+            if self.save:
+                full_config.append("write memory")
+
+            response = session.config(commands=full_config, **self.args)
+            duration = time.perf_counter() - start_time
+
+            config_key = "\n".join(config)
+            return {
+                config_key: {
+                    "output": response,
+                    "error": "",
+                    "exit_status": 0,
+                    "telemetry": {"duration_seconds": round(duration, 3)},
+                }
+            }
         except Exception as e:
             log.error(f"Error in sending config: {e}")
-            raise e
+            # Determine a key for the error result. If config is None or empty, use a default.
+            error_key = "\n".join(config) if config else "unknown_config"
+            return {
+                error_key: {
+                    "output": "",
+                    "error": str(e),
+                    "exit_status": 1,
+                    "telemetry": {"duration_seconds": 0.0},
+                }
+            }
 
     def disconnect(self, session):
         """

@@ -401,7 +401,14 @@ class ParamikoDriver(BaseDriver):
             return result
         except Exception as e:
             log.error(f"Error in sending command: {e}")
-            raise e
+            return {
+                " ".join(command): {
+                    "output": "",
+                    "error": str(e),
+                    "exit_status": 1,
+                    "telemetry": {"duration_seconds": 0.0},
+                }
+            }
 
     def _apply_env_to_command(self, command: str, env: Optional[Dict[str, str]]) -> str:
         """Helper to prepend environment variables to a command string"""
@@ -494,6 +501,7 @@ class ParamikoDriver(BaseDriver):
         try:
             result = {}
             for cfg_line in config:
+                start_time = time.perf_counter()
                 if self.args and isinstance(self.args, ParamikoSendConfigArgs) and self.args.sudo:
                     cmd = f"sudo -S {cfg_line}"
                 else:
@@ -526,16 +534,25 @@ class ParamikoDriver(BaseDriver):
                 output = stdout.read().decode("utf-8", errors="replace")
                 error = stderr.read().decode("utf-8", errors="replace")
                 exit_status = stdout.channel.recv_exit_status()
+                duration = time.perf_counter() - start_time
 
                 result[cfg_line] = {
                     "output": output,
                     "error": error,
                     "exit_status": exit_status,
+                    "telemetry": {"duration_seconds": round(duration, 3)},
                 }
             return result
         except Exception as e:
             log.error(f"Error in sending config: {e}")
-            raise e
+            return {
+                "\n".join(config): {
+                    "output": "",
+                    "error": str(e),
+                    "exit_status": 1,
+                    "telemetry": {"duration_seconds": 0.0},
+                }
+            }
 
     def _get_local_md5(self, path: str) -> Optional[str]:
         """Calculate MD5 hash of a local file."""
@@ -592,19 +609,9 @@ class ParamikoDriver(BaseDriver):
 
         duration = time.perf_counter() - start_time
 
-        # Try to parse JSON for a better experience
-        output_json = None
-        if output.strip().startswith(("{", "[")):
-            try:
-                import json
-                output_json = json.loads(output)
-            except Exception:
-                pass
-
         return {
             cmd: {
                 "output": output,
-                "output_json": output_json,
                 "error": error,
                 "exit_status": exit_status,
                 "telemetry": {

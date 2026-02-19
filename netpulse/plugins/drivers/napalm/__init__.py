@@ -132,10 +132,12 @@ class NapalmDriver(BaseDriver):
             log.error(f"Connection failed: {e}")
             raise e
 
-    def send(self, session: NetworkDriver, command: list[str]) -> dict[str, str]:
+    def send(self, session: NetworkDriver, command: list[str]) -> dict:
         """
         Send commands to the device.
         """
+        import time
+
         assert isinstance(self.args, NapalmCliArgs)
 
         if not command:
@@ -149,49 +151,68 @@ class NapalmDriver(BaseDriver):
             session.open()
         except Exception as e:
             log.error(f"Failed to open session: {e}")
-            raise e
+            return {
+                " ".join(commands): {
+                    "output": "",
+                    "error": f"Failed to open session: {e}",
+                    "exit_status": 1,
+                    "telemetry": {"duration_seconds": 0.0},
+                }
+            }
 
         for cmd in commands:
-            if hasattr(session, str(cmd)):
-                # Calling NAPALM method
-                method = getattr(session, str(cmd))
-                method_params = signature(method).parameters
+            start_time = time.perf_counter()
+            output = ""
+            error = ""
+            exit_status = 0
 
-                # Filter arguments based on method parameters
-                args = {}
-                if self.args:
-                    dumped = self.args.model_dump(exclude_none=True)
-                    args = {k: v for k, v in dumped if k in method_params}
+            try:
+                if hasattr(session, str(cmd)):
+                    # Calling NAPALM method
+                    method = getattr(session, str(cmd))
+                    method_params = signature(method).parameters
 
-                try:
-                    log.info(f"Executing NAPLAM method: {cmd} with args: {args}")
-                    result[cmd] = method(**args)
-                except Exception as e:
-                    log.error(f"NAPLAM method execution failed: {e}")
-                    raise e
+                    # Filter arguments based on method parameters
+                    args = {}
+                    if self.args:
+                        dumped = self.args.model_dump(exclude_none=True)
+                        args = {k: v for k, v in dumped.items() if k in method_params}
 
-            else:
-                # Use CLI command
-                try:
+                    log.info(f"Executing NAPALM method: {cmd} with args: {args}")
+                    output = method(**args)
+                else:
+                    # Use CLI command
                     log.info(f"Executing CLI command: {cmd}")
                     resp = session.cli([cmd], encoding=self.args.encoding)
-                    result[cmd] = resp[cmd]
-                except Exception as e:
-                    log.error(f"CLI command execution failed: {e}")
-                    raise e
+                    output = resp[cmd]
+            except Exception as e:
+                log.error(f"Command execution failed: {e}")
+                error = str(e)
+                exit_status = 1
+
+            duration = time.perf_counter() - start_time
+            result[cmd] = {
+                "output": output,
+                "error": error,
+                "exit_status": exit_status,
+                "telemetry": {"duration_seconds": round(duration, 3)},
+            }
 
         return result
 
-    def config(self, session: NetworkDriver, cfg: list[str]):
+    def config(self, session: NetworkDriver, cfg: list[str]) -> dict:
         """
         Configure the device.
         """
+        import time
+
         assert isinstance(self.args, NapalmCommitConfigArgs)
 
         if not cfg:
             log.warning("No configuration provided")
             return {}
 
+        start_time = time.perf_counter()
         # Process config format
         if isinstance(cfg, list):
             cfg_text = cfg[0] if len(cfg) == 1 else "\n".join(cfg)
@@ -200,20 +221,24 @@ class NapalmDriver(BaseDriver):
 
         try:
             session.open()
-        except Exception as e:
-            log.error(f"Failed to open session: {e}")
-            raise e
-
-        # Load candidate configuration
-        try:
+            # Load candidate configuration
             session.load_merge_candidate(config=cfg_text)
             diff = session.compare_config()
         except Exception as e:
-            log.error(f"Configuration comparison failed: {e}")
-            raise e
+            log.error(f"Configuration setup failed: {e}")
+            return {
+                cfg_text: {
+                    "output": "",
+                    "error": str(e),
+                    "exit_status": 1,
+                    "telemetry": {"duration_seconds": 0.0},
+                }
+            }
 
         log.debug(f"Configuration diff: {diff[:50]}...")
 
+        error = ""
+        exit_status = 0
         # Apply or discard configuration
         try:
             if self.dry_run:
@@ -224,10 +249,18 @@ class NapalmDriver(BaseDriver):
                 session.commit_config(**self.args.model_dump(exclude_none=True))
         except Exception as e:
             log.error(f"Configuration commit failed: {e}")
-            raise e
+            error = str(e)
+            exit_status = 1
 
-        result = [diff]
-        return result
+        duration = time.perf_counter() - start_time
+        return {
+            cfg_text: {
+                "output": diff,
+                "error": error,
+                "exit_status": exit_status,
+                "telemetry": {"duration_seconds": round(duration, 3)},
+            }
+        }
 
     def disconnect(self, session):
         """

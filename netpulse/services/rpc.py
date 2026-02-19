@@ -106,11 +106,22 @@ def execute(req: ExecutionRequest):
             result = dobj.config(session, payload)
         dobj.disconnect(session)
     except Exception as e:
-        log.error(f"Error in sending config/command: {e}")
-        raise e
+        log.error(f"Error in connection or execution: {e}")
+        error_key = "\n".join(payload) if isinstance(payload, list) else str(payload)
+        return {
+            error_key: {
+                "output": "",
+                "error": str(e),
+                "exit_status": 1,
+                "telemetry": {"duration_seconds": 0.0},
+            }
+        }
     finally:
         if session:
-            dobj.disconnect(session)
+            try:
+                dobj.disconnect(session)
+            except Exception:
+                pass
 
     # Parsing after result is obtained
     if req.parsing:
@@ -123,8 +134,13 @@ def execute(req: ExecutionRequest):
                 log.warning("Context in request is overridden by output.")
 
             parser = parsers[req.parsing.name].from_parsing_request(req.parsing)
-            for cmd in result.keys():
-                result[cmd] = parser.parse(result[cmd])
+            for cmd, val in result.items():
+                # If it's a rich dict (output, error, etc.), parse only the output
+                if isinstance(val, dict) and "output" in val:
+                    val["parsed"] = parser.parse(val["output"])
+                else:
+                    # Backward compatibility for primitive drivers
+                    result[cmd] = parser.parse(val)
         except Exception as e:
             log.error(f"Error in parsing: {e}")
             raise e
