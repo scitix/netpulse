@@ -37,3 +37,10 @@ site*
 # Containerlab labs
 tests/clab/clab-netpulse-e2e/
 
+
+# Vault 
+vault/data/
+vault/logs/
+# Ignore these files even if they are generated elsewhere.
+*.token
+*.key
