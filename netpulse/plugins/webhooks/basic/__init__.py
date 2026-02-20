@@ -19,7 +19,7 @@ class BasicWebHookCaller(BaseWebHookCaller):
         # Determine success status and format result
         # Top 1 Alignment: Keep the result as a rich dict/object if possible
         is_success = job.get_status() == "finished"
-        
+
         # If result is an exception tuple from rpc_exception_callback
         if isinstance(result, tuple) and len(result) == 2:
             is_success = False

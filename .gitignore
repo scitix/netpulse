@@ -44,3 +44,6 @@ vault/logs/
 # Ignore these files even if they are generated elsewhere.
 *.token
 *.key
+# AI Documentation artifacts
+ai-docs/
+

@@ -265,9 +265,10 @@ ai-docs:
 	@echo "2/3 Packing codebase with Repomix (XML format)..."
 	@repomix
 	@echo "3/3 Checking LLM guide (llms.txt)..."
-	@if [ ! -f ai-docs/llms.txt ]; then \
-		echo "⚠️  llms.txt not found, creating a basic template..."; \
-		echo "# NetPulse AI Guide" > ai-docs/llms.txt; \
+	@if [ ! -f llms.txt ]; then \
+		echo "⚠️  llms.txt not found in root, creating a basic template..."; \
+		echo "# NetPulse AI Guide" > llms.txt; \
 	fi
+	@cp llms.txt ai-docs/llms.txt
 	@echo "✅ AI Knowledge Kit updated in ai-docs/ directory!"
 
