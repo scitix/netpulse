@@ -1,8 +1,12 @@
 import logging
-from typing import Optional
+from typing import TYPE_CHECKING, Dict, Optional
+
+if TYPE_CHECKING:
+    from ....models.driver import DriverExecutionResult
 
 import pyeapi
 
+from ....models.driver import DriverExecutionResult
 from .. import BaseDriver
 from .model import (
     PyeapiArg,
@@ -71,7 +75,9 @@ class PyeapiDriver(BaseDriver):
             raise e
         return self.connection
 
-    def send(self, session: "pyeapi.client.Node", command: list[str]) -> dict:
+    def send(
+        self, session: "pyeapi.client.Node", command: list[str]
+    ) -> "Dict[str, DriverExecutionResult]":
         """
         Use pyeapi.Node.enable to send out commands
         """
@@ -95,27 +101,29 @@ class PyeapiDriver(BaseDriver):
             result = {}
             for i, cmd in enumerate(command):
                 output = raw_results[i]
-                result[cmd] = {
-                    "output": output,
-                    "error": "",
-                    "exit_status": 0,
-                    "telemetry": {"duration_seconds": round(duration / len(command), 3)},
-                }
+                result[cmd] = DriverExecutionResult(
+                    output=output,
+                    error="",
+                    exit_status=0,
+                    telemetry={"duration_seconds": round(duration / len(command), 3)},
+                )
             return result
         except Exception as e:
             log.error(f"Error in pyeapi send: {e}")
             # Determine a key for the error result. If command is None or empty, use a default.
             error_key = " ".join(command) if command else "unknown_command"
             return {
-                error_key: {
-                    "output": "",
-                    "error": str(e),
-                    "exit_status": 1,
-                    "telemetry": {"duration_seconds": 0.0},
-                }
+                error_key: DriverExecutionResult(
+                    output="",
+                    error=str(e),
+                    exit_status=1,
+                    telemetry={"duration_seconds": 0.0},
+                )
             }
 
-    def config(self, session: "pyeapi.client.Node", config: Optional[list[str]] = None) -> dict:
+    def config(
+        self, session: "pyeapi.client.Node", config: Optional[list[str]] = None
+    ) -> "Dict[str, DriverExecutionResult]":
         """
         Unified config result for pyeapi.
         """
@@ -141,24 +149,24 @@ class PyeapiDriver(BaseDriver):
 
             config_key = "\n".join(config)
             return {
-                config_key: {
-                    "output": response,
-                    "error": "",
-                    "exit_status": 0,
-                    "telemetry": {"duration_seconds": round(duration, 3)},
-                }
+                config_key: DriverExecutionResult(
+                    output=response,
+                    error="",
+                    exit_status=0,
+                    telemetry={"duration_seconds": round(duration, 3)},
+                )
             }
         except Exception as e:
             log.error(f"Error in sending config: {e}")
             # Determine a key for the error result. If config is None or empty, use a default.
             error_key = "\n".join(config) if config else "unknown_config"
             return {
-                error_key: {
-                    "output": "",
-                    "error": str(e),
-                    "exit_status": 1,
-                    "telemetry": {"duration_seconds": 0.0},
-                }
+                error_key: DriverExecutionResult(
+                    output="",
+                    error=str(e),
+                    exit_status=1,
+                    telemetry={"duration_seconds": 0.0},
+                )
             }
 
     def disconnect(self, session):

@@ -157,7 +157,7 @@ def test_paramiko_telemetry():
     )
 
     result = driver._execute_command(FakeSession(), "echo test", ParamikoSendCommandArgs())
-    telemetry = result["echo test"].get("telemetry")
+    telemetry = result["echo test"].telemetry
     assert telemetry is not None
     assert "duration_seconds" in telemetry
     assert isinstance(telemetry["duration_seconds"], float)
@@ -176,7 +176,9 @@ def test_paramiko_stream_cursor():
             else:
                 stdout.read.return_value = b"log content"
             stdout.channel.recv_exit_status.return_value = 0
-            return MagicMock(), stdout, MagicMock()
+            stderr = MagicMock()
+            stderr.read.return_value = b""
+            return MagicMock(), stdout, stderr
 
     driver = ParamikoDriver(
         args=None,
@@ -187,8 +189,8 @@ def test_paramiko_stream_cursor():
     result = driver._query_stream(FakeSession(), query)
 
     stream_res = result["stream_result"]
-    assert stream_res["output_bytes"] == 1024
-    assert stream_res["next_offset"] == 1024
+    assert stream_res.telemetry["stream_result"]["output_bytes"] == 1024
+    assert stream_res.telemetry["stream_result"]["next_offset"] == 1024
 
 
 def test_paramiko_interactive_expect():
@@ -238,7 +240,9 @@ def test_paramiko_ttl_metadata():
     mock_stdout = MagicMock()
     mock_stdout.read.return_value = b"1234\n"  # PID
     mock_stdout.channel.recv_exit_status.return_value = 0
-    mock_session.exec_command.return_value = (MagicMock(), mock_stdout, MagicMock())
+    mock_stderr = MagicMock()
+    mock_stderr.read.return_value = b""
+    mock_session.exec_command.return_value = (MagicMock(), mock_stdout, mock_stderr)
 
     driver = ParamikoDriver(
         args=None,

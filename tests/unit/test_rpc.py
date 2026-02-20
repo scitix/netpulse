@@ -211,8 +211,8 @@ def test_rpc_disconnect_called_on_exception(monkeypatch, app_config):
     monkeypatch.setattr(rpc, "drivers", {DriverName.NETMIKO: FailingDriver})
 
     result = rpc.execute(req)
-    assert result["show version"]["exit_status"] == 1
-    assert "boom" in result["show version"]["error"]
+    assert result["show version"].exit_status == 1
+    assert "boom" in result["show version"].error
     assert disconnect_calls, "disconnect should be invoked on exception"
 
 

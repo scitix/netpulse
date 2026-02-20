@@ -4,6 +4,8 @@ from typing import Any
 import requests
 import rq
 
+from netpulse.models.driver import DriverExecutionResult
+
 from .. import BaseWebHookCaller, WebHook
 
 log = logging.getLogger(__name__)
@@ -17,13 +19,15 @@ class BasicWebHookCaller(BaseWebHookCaller):
 
     def call(self, req: Any, job: rq.job.Job, result: Any, **kwargs):
         # Determine success status and format result
-        # Top 1 Alignment: Keep the result as a rich dict/object if possible
         is_success = job.get_status() == "finished"
 
         # If result is an exception tuple from rpc_exception_callback
         if isinstance(result, tuple) and len(result) == 2:
             is_success = False
-            result_payload = {"error": f"{result[0]}: {result[1]}"}
+            result_payload = f"{result[0]}: {result[1]}"
+        elif isinstance(result, dict):
+            # Use the formatting logic for dictionary results
+            result_payload = self._format_dict_result(result)
         else:
             result_payload = result
 
@@ -98,8 +102,14 @@ class BasicWebHookCaller(BaseWebHookCaller):
         lines = []
         for cmd, output in result.items():
             lines.append(f"Command: {cmd}")
-            if isinstance(output, dict):
-                # Handle nested dict format (e.g., paramiko driver)
+            # Handle DriverExecutionResult object
+            if isinstance(output, DriverExecutionResult):
+                lines.append(f"Output:\n{output.output}")
+                if output.error:
+                    lines.append(f"Error: {output.error}")
+                lines.append(f"Exit Status: {output.exit_status}")
+            elif isinstance(output, dict):
+                # Handle nested dict format (e.g., legacy or other drivers)
                 if "output" in output:
                     lines.append(f"Output:\n{output['output']}")
                 if "error" in output and output.get("error"):

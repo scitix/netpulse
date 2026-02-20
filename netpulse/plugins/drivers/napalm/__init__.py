@@ -1,8 +1,10 @@
 import logging
 from inspect import signature
+from typing import Dict
 
 from napalm.base import NetworkDriver, get_network_driver
 
+from ....models.driver import DriverExecutionResult
 from .. import BaseDriver
 from .model import (
     DriverConnectionArgs,
@@ -132,7 +134,10 @@ class NapalmDriver(BaseDriver):
             log.error(f"Connection failed: {e}")
             raise e
 
-    def send(self, session: NetworkDriver, command: list[str]) -> dict:
+
+    def send(
+        self, session: NetworkDriver, command: list[str]
+    ) -> "Dict[str, DriverExecutionResult]":
         """
         Send commands to the device.
         """
@@ -152,12 +157,12 @@ class NapalmDriver(BaseDriver):
         except Exception as e:
             log.error(f"Failed to open session: {e}")
             return {
-                " ".join(commands): {
-                    "output": "",
-                    "error": f"Failed to open session: {e}",
-                    "exit_status": 1,
-                    "telemetry": {"duration_seconds": 0.0},
-                }
+                " ".join(commands): DriverExecutionResult(
+                    output="",
+                    error=f"Failed to open session: {e}",
+                    exit_status=1,
+                    telemetry={"duration_seconds": 0.0},
+                )
             }
 
         for cmd in commands:
@@ -191,16 +196,16 @@ class NapalmDriver(BaseDriver):
                 exit_status = 1
 
             duration = time.perf_counter() - start_time
-            result[cmd] = {
-                "output": output,
-                "error": error,
-                "exit_status": exit_status,
-                "telemetry": {"duration_seconds": round(duration, 3)},
-            }
+            result[cmd] = DriverExecutionResult(
+                output=str(output),
+                error=error,
+                exit_status=exit_status,
+                telemetry={"duration_seconds": round(duration, 3)},
+            )
 
         return result
 
-    def config(self, session: NetworkDriver, cfg: list[str]) -> dict:
+    def config(self, session: NetworkDriver, cfg: list[str]) -> "Dict[str, DriverExecutionResult]":
         """
         Configure the device.
         """
@@ -227,12 +232,12 @@ class NapalmDriver(BaseDriver):
         except Exception as e:
             log.error(f"Configuration setup failed: {e}")
             return {
-                cfg_text: {
-                    "output": "",
-                    "error": str(e),
-                    "exit_status": 1,
-                    "telemetry": {"duration_seconds": 0.0},
-                }
+                cfg_text: DriverExecutionResult(
+                    output="",
+                    error=str(e),
+                    exit_status=1,
+                    telemetry={"duration_seconds": 0.0},
+                )
             }
 
         log.debug(f"Configuration diff: {diff[:50]}...")
@@ -254,12 +259,12 @@ class NapalmDriver(BaseDriver):
 
         duration = time.perf_counter() - start_time
         return {
-            cfg_text: {
-                "output": diff,
-                "error": error,
-                "exit_status": exit_status,
-                "telemetry": {"duration_seconds": round(duration, 3)},
-            }
+            cfg_text: DriverExecutionResult(
+                output=diff,
+                error=error,
+                exit_status=exit_status,
+                telemetry={"duration_seconds": round(duration, 3)},
+            )
         }
 
     def disconnect(self, session):

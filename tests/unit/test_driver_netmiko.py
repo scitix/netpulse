@@ -64,19 +64,18 @@ def test_netmiko_send_and_config_with_stub(monkeypatch):
 
     send_result = driver.send(session, ["a", "b"])  # type: ignore
     assert "a" in send_result
-    assert send_result["a"]["output"] == "resp-a"
-    assert "telemetry" in send_result["a"]
-    assert send_result["b"]["output"] == "resp-b"
+    assert send_result["a"].output == "resp-a"
+    assert send_result["a"].telemetry is not None
+    assert send_result["b"].output == "resp-b"
     assert calls["send"] and all(kwargs["cmd_verify"] is True for _, kwargs in calls["send"])
 
     driver.args = NetmikoSendConfigSetArgs(exit_config_mode=True)
     config_result = driver.config(session, ["int lo0", "desc test"])  # type: ignore
     cfg_key = "int lo0\ndesc test"
     assert cfg_key in config_result
-    assert "applied" in config_result[cfg_key]["output"]
-    assert "committed" in config_result[cfg_key]["output"]
-    assert "saved" in config_result[cfg_key]["output"]
-    assert "telemetry" in config_result[cfg_key]
+    assert config_result[cfg_key].output == "applied\ncommitted\nsaved"
+    assert config_result[cfg_key].exit_status == 0
+    assert config_result[cfg_key].telemetry is not None
 
     assert calls["commit"] == 1
     assert calls["save"] >= 1

@@ -5,12 +5,14 @@ import signal
 import sys
 import threading
 import time
+import uuid
 from io import StringIO
 from stat import S_ISDIR
 from typing import ClassVar, Dict, Optional
 
 import paramiko
 
+from ....models.driver import DriverExecutionResult
 from .. import BaseDriver
 from .model import (
     BackgroundTaskQuery,
@@ -360,7 +362,7 @@ class ParamikoDriver(BaseDriver):
             log.debug(f"File transfer detected: {self.args.file_transfer}")
             return self._handle_file_transfer(session, self.args.file_transfer)
 
-        # Check if script_content is provided (function 2: direct script execution)
+        # Check if script_content is provided for direct script execution
         if (
             self.args
             and isinstance(self.args, ParamikoSendCommandArgs)
@@ -386,7 +388,7 @@ class ParamikoDriver(BaseDriver):
                     log.debug(f"Stream execution requested for: {cmd}")
                     stream_result = self._execute_stream_command(session, cmd, self.args)
                     result.update(stream_result)
-                # Check if background execution is requested (function 3)
+                # Check if background execution is requested
                 elif (
                     self.args
                     and isinstance(self.args, ParamikoSendCommandArgs)
@@ -402,12 +404,12 @@ class ParamikoDriver(BaseDriver):
         except Exception as e:
             log.error(f"Error in sending command: {e}")
             return {
-                " ".join(command): {
-                    "output": "",
-                    "error": str(e),
-                    "exit_status": 1,
-                    "telemetry": {"duration_seconds": 0.0},
-                }
+                " ".join(command): DriverExecutionResult(
+                    output="",
+                    error=str(e),
+                    exit_status=1,
+                    telemetry={"duration_seconds": 0.0},
+                )
             }
 
     def _apply_env_to_command(self, command: str, env: Optional[Dict[str, str]]) -> str:
@@ -449,16 +451,16 @@ class ParamikoDriver(BaseDriver):
             else:
                 raise ValueError(f"Unsupported operation: {file_transfer_op.operation}")
 
-            bytes_transferred = result.get("bytes_transferred", 0)
+            bytes_used = result.get("bytes_transferred", 0)
             total_bytes = result.get("total_bytes", 0)
 
             transfer_result = {
-                f"file_transfer_{file_transfer_op.operation}": {
-                    "output": f"File transfer completed: {bytes_transferred}/{total_bytes} bytes",
-                    "error": "",
-                    "exit_status": 0 if result.get("success") else 1,
-                    "transfer_result": result,
-                }
+                f"file_transfer_{file_transfer_op.operation}": DriverExecutionResult(
+                    output=f"File transfer completed: {bytes_used}/{total_bytes} bytes",
+                    error="",
+                    exit_status=0 if result.get("success") else 1,
+                    telemetry={"transfer_result": result},
+                )
             }
 
             # Execute command after upload if requested
@@ -485,14 +487,17 @@ class ParamikoDriver(BaseDriver):
         except Exception as e:
             log.error(f"Error in file transfer: {e}")
             return {
-                f"file_transfer_{file_transfer_op.operation}": {
-                    "output": "",
-                    "error": str(e),
-                    "exit_status": 1,
-                }
+                f"file_transfer_{file_transfer_op.operation}": DriverExecutionResult(
+                    output="",
+                    error=str(e),
+                    exit_status=1,
+                    telemetry={},
+                )
             }
 
-    def config(self, session: paramiko.SSHClient, config: list[str]) -> dict:
+    def config(
+        self, session: paramiko.SSHClient, config: list[str]
+    ) -> Dict[str, DriverExecutionResult]:
         if not config:
             log.warning("No configuration provided")
             return {}
@@ -536,22 +541,22 @@ class ParamikoDriver(BaseDriver):
                 exit_status = stdout.channel.recv_exit_status()
                 duration = time.perf_counter() - start_time
 
-                result[cfg_line] = {
-                    "output": output,
-                    "error": error,
-                    "exit_status": exit_status,
-                    "telemetry": {"duration_seconds": round(duration, 3)},
-                }
+                result[cfg_line] = DriverExecutionResult(
+                    output=output,
+                    error=error,
+                    exit_status=exit_status,
+                    telemetry={"duration_seconds": round(duration, 3)},
+                )
             return result
         except Exception as e:
             log.error(f"Error in sending config: {e}")
             return {
-                "\n".join(config): {
-                    "output": "",
-                    "error": str(e),
-                    "exit_status": 1,
-                    "telemetry": {"duration_seconds": 0.0},
-                }
+                "\n".join(config): DriverExecutionResult(
+                    output="",
+                    error=str(e),
+                    exit_status=1,
+                    telemetry={"duration_seconds": 0.0},
+                )
             }
 
     def _get_local_md5(self, path: str) -> Optional[str]:
@@ -577,9 +582,9 @@ class ParamikoDriver(BaseDriver):
 
     def _execute_command(
         self, session: paramiko.SSHClient, cmd: str, args: Optional[ParamikoSendCommandArgs]
-    ) -> dict:
+    ) -> Dict[str, DriverExecutionResult]:
         """Execute a single command and return result with telemetry"""
-        import time
+
         start_time = time.perf_counter()
 
         exec_kwargs = {}
@@ -610,21 +615,21 @@ class ParamikoDriver(BaseDriver):
         duration = time.perf_counter() - start_time
 
         return {
-            cmd: {
-                "output": output,
-                "error": error,
-                "exit_status": exit_status,
-                "telemetry": {
+            cmd: DriverExecutionResult(
+                output=output,
+                error=error,
+                exit_status=exit_status,
+                telemetry={
                     "duration_seconds": round(duration, 3),
-                }
-            }
+                },
+            )
         }
 
     def _execute_interactive(
         self, session: paramiko.SSHClient, cmd: str, expect_map: dict, **kwargs
     ) -> tuple[str, str, int]:
         """Execute a command in an interactive session with prompt handling"""
-        import time
+
 
         # We need a PTY for interactive interaction
         kwargs["get_pty"] = True
@@ -671,10 +676,13 @@ class ParamikoDriver(BaseDriver):
 
     def _execute_script_content(
         self, session: paramiko.SSHClient, args: ParamikoSendCommandArgs
-    ) -> dict:
-        """Execute script content directly via stdin (function 2)"""
+    ) -> Dict[str, DriverExecutionResult]:
+        """Execute script content directly via stdin"""
         if not args.script_content:
-            raise ValueError("script_content is required for script execution")
+            return {}
+
+
+        start_time = time.perf_counter()
 
         # Build command with interpreter
         interpreter = args.script_interpreter or "bash"
@@ -704,21 +712,24 @@ class ParamikoDriver(BaseDriver):
         output = stdout.read().decode("utf-8", errors="replace")
         error = stderr.read().decode("utf-8", errors="replace")
         exit_status = stdout.channel.recv_exit_status()
-
+        duration = time.perf_counter() - start_time
         return {
-            f"script_execution_{interpreter}": {
-                "output": output,
-                "error": error,
-                "exit_status": exit_status,
-                "script_content_length": len(args.script_content),
-            }
+            f"script_execution_{interpreter}": DriverExecutionResult(
+                output=output,
+                error=error,
+                exit_status=exit_status,
+                telemetry={
+                    "duration_seconds": round(duration, 3),
+                    "script_content_length": len(args.script_content),
+                },
+            )
         }
 
     def _execute_background_command(
         self, session: paramiko.SSHClient, cmd: str, args: ParamikoSendCommandArgs
-    ) -> dict:
-        """Execute command in background and return PID (function 3)"""
-        import uuid
+    ) -> Dict[str, DriverExecutionResult]:
+        """Execute command in background and return PID"""
+
 
         # Generate unique identifier for this background task
         task_id = str(uuid.uuid4())[:8]
@@ -731,7 +742,7 @@ class ParamikoDriver(BaseDriver):
         # 1. Start process
         # 2. Save PID
         # 3. Save creation time for TTL
-        import time
+
         creation_time = int(time.time())
         bg_cmd = (
             f"nohup {cmd} > {output_file} 2>&1 & "
@@ -747,13 +758,13 @@ class ParamikoDriver(BaseDriver):
 
         # Read PID from remote file
         pid = None
-        if exec_result[bg_cmd]["exit_status"] == 0:
+        if exec_result[bg_cmd].exit_status == 0:
             try:
                 # Read PID file
                 read_pid_cmd = f"cat {pid_file}"
                 pid_result = self._execute_command(session, read_pid_cmd, args)
                 if read_pid_cmd in pid_result:
-                    pid_output = pid_result[read_pid_cmd]["output"].strip()
+                    pid_output = pid_result[read_pid_cmd].output.strip()
                     if pid_output:
                         pid = int(pid_output)
             except (ValueError, KeyError) as e:
@@ -761,7 +772,7 @@ class ParamikoDriver(BaseDriver):
 
         # Update result with background task info
         result_key = next(iter(exec_result.keys()))
-        exec_result[result_key]["background_task"] = {
+        exec_result[result_key].telemetry["background_task"] = {
             "pid": pid,
             "pid_file": pid_file,
             "output_file": output_file,
@@ -772,9 +783,9 @@ class ParamikoDriver(BaseDriver):
 
     def _execute_stream_command(
         self, session: paramiko.SSHClient, cmd: str, args: ParamikoSendCommandArgs
-    ) -> dict:
+    ) -> Dict[str, DriverExecutionResult]:
         """Execute command in streaming mode (returns session_id for polling output)"""
-        import uuid
+
 
         # Generate unique session ID
         session_id = str(uuid.uuid4())[:12]
@@ -802,45 +813,53 @@ class ParamikoDriver(BaseDriver):
 
         # Read PID from remote file
         pid = None
-        if exec_result[bg_cmd]["exit_status"] == 0:
+        if exec_result[bg_cmd].exit_status == 0:
             try:
                 read_pid_cmd = f"cat {pid_file}"
                 pid_result = self._execute_command(session, read_pid_cmd, args)
                 if read_pid_cmd in pid_result:
-                    pid_output = pid_result[read_pid_cmd]["output"].strip()
+                    pid_output = pid_result[read_pid_cmd].output.strip()
                     if pid_output:
                         pid = int(pid_output)
             except (ValueError, KeyError) as e:
                 log.warning(f"Failed to read PID from {pid_file}: {e}")
 
+        # Since stream command doesn't actually produce output in this call, we return metadata
         return {
-            "stream": {
-                "session_id": session_id,
-                "pid": pid,
-                "output_file": output_file,
-                "command": cmd,
-            }
+            "stream": DriverExecutionResult(
+                output=f"Stream session started: {session_id}",
+                error="",
+                exit_status=0,
+                telemetry={
+                    "stream": {
+                        "session_id": session_id,
+                        "pid": pid,
+                        "output_file": output_file,
+                        "command": cmd,
+                    }
+                },
+            )
         }
 
-    def _query_stream(self, session: paramiko.SSHClient, query: StreamQuery) -> dict:
+    def _query_stream(
+        self, session: paramiko.SSHClient, query: StreamQuery
+    ) -> Dict[str, DriverExecutionResult]:
         """Query streaming command output by session_id"""
-        import time
+
 
         session_id = query.session_id
         output_file = f"/tmp/netpulse_stream_{session_id}.log"
         pid_file = f"/tmp/netpulse_stream_{session_id}.pid"
 
-        result = {
-            "stream_result": {
-                "session_id": session_id,
-                "completed": False,
-                "exit_code": None,
-                "output": None,
-                "output_bytes": 0,
-                "runtime_seconds": None,
-                "killed": False,
-                "cleaned": False,
-            }
+        result_data = {
+            "session_id": session_id,
+            "completed": False,
+            "exit_code": None,
+            "output": None,
+            "output_bytes": 0,
+            "runtime_seconds": None,
+            "killed": False,
+            "cleaned": False,
         }
 
         try:
@@ -848,7 +867,7 @@ class ParamikoDriver(BaseDriver):
             pid = None
             read_pid_cmd = f"cat {pid_file} 2>/dev/null"
             pid_result = self._execute_command(session, read_pid_cmd, None)
-            pid_output = pid_result[read_pid_cmd]["output"].strip()
+            pid_output = pid_result[read_pid_cmd].output.strip()
             if pid_output:
                 try:
                     pid = int(pid_output)
@@ -859,17 +878,17 @@ class ParamikoDriver(BaseDriver):
             if pid:
                 check_cmd = f"ps -p {pid} -o pid,etime --no-headers 2>/dev/null"
                 check_result = self._execute_command(session, check_cmd, None)
-                check_output = check_result[check_cmd]["output"].strip()
+                check_output = check_result[check_cmd].output.strip()
 
                 if check_output and str(pid) in check_output:
                     # Still running
-                    result["stream_result"]["completed"] = False
+                    result_data["completed"] = False
 
                     # Parse runtime
                     try:
                         parts = check_output.split()
                         if len(parts) >= 2:
-                            result["stream_result"]["runtime_seconds"] = self._parse_etime(parts[1])
+                            result_data["runtime_seconds"] = self._parse_etime(parts[1])
                     except (IndexError, ValueError):
                         pass
 
@@ -881,12 +900,12 @@ class ParamikoDriver(BaseDriver):
                             f"kill -9 {pid} 2>/dev/null"
                         )
                         self._execute_command(session, kill_cmd, None)
-                        result["stream_result"]["killed"] = True
-                        result["stream_result"]["completed"] = True
+                        result_data["killed"] = True
+                        result_data["completed"] = True
                         time.sleep(0.5)
                 else:
-                    result["stream_result"]["completed"] = True
-                    result["stream_result"]["exit_code"] = 0  # Assume success
+                    result_data["completed"] = True
+                    result_data["exit_code"] = 0  # Assume success
 
             # Read output (tail or from offset)
             if query.offset > 0:
@@ -899,59 +918,65 @@ class ParamikoDriver(BaseDriver):
                 read_cmd = f"tail -n {query.lines} {output_file} 2>/dev/null"
 
             output_result = self._execute_command(session, read_cmd, None)
-            output = output_result[read_cmd]["output"]
-            result["stream_result"]["output"] = output
+            output = output_result[read_cmd].output
+            result_data["output"] = output
 
             # Get file size for next offset
             size_cmd = f"stat -c%s {output_file} 2>/dev/null || echo 0"
             size_result = self._execute_command(session, size_cmd, None)
             try:
-                current_size = int(size_result[size_cmd]["output"].strip())
-                result["stream_result"]["output_bytes"] = current_size
+                current_size = int(size_result[size_cmd].output.strip())
+                result_data["output_bytes"] = current_size
                 # Calculate next offset for the user
-                result["stream_result"]["next_offset"] = current_size
+                result_data["next_offset"] = current_size
             except ValueError:
                 pass
 
             # Cleanup if requested and completed
-            if query.cleanup and result["stream_result"]["completed"]:
+            # Cleanup if requested and completed
+            if query.cleanup and result_data["completed"]:
                 cleanup_cmd = f"rm -f {output_file} {pid_file} 2>/dev/null"
                 self._execute_command(session, cleanup_cmd, None)
-                result["stream_result"]["cleaned"] = True
+                result_data["cleaned"] = True
 
         except Exception as e:
             log.error(f"Error querying stream: {e}")
-            result["stream_result"]["error"] = str(e)
+            result_data["error"] = str(e)
 
-        return result
+        return {
+            "stream_result": DriverExecutionResult(
+                output=result_data.get("output") or "",
+                error=result_data.get("error", ""),
+                exit_status=result_data.get("exit_code") or 0,
+                telemetry={"stream_result": result_data},
+            )
+        }
 
     def _check_background_task(
         self, session: paramiko.SSHClient, query: BackgroundTaskQuery
-    ) -> dict:
+    ) -> Dict[str, DriverExecutionResult]:
         """Check status of a background task by PID"""
-        import time
+
 
         pid = query.pid
-        result = {
-            "task_query": {
-                "pid": pid,
-                "running": False,
-                "exit_code": None,
-                "output_tail": None,
-                "runtime_seconds": None,
-                "killed": False,
-                "cleaned": False,
-            }
+        result_data = {
+            "pid": pid,
+            "running": False,
+            "exit_code": 0,
+            "output_tail": None,
+            "runtime_seconds": None,
+            "killed": False,
+            "cleaned": False,
         }
 
         try:
             # Check if process is running
             check_cmd = f"ps -p {pid} -o pid,etime --no-headers 2>/dev/null"
             check_result = self._execute_command(session, check_cmd, None)
-            check_output = check_result[check_cmd]["output"].strip()
+            check_output = check_result[check_cmd].output.strip()
 
             if check_output and str(pid) in check_output:
-                result["task_query"]["running"] = True
+                result_data["running"] = True
 
                 # Parse elapsed time (format: [[DD-]HH:]MM:SS)
                 try:
@@ -960,7 +985,7 @@ class ParamikoDriver(BaseDriver):
                         etime = parts[1]
                         # Parse elapsed time to seconds
                         runtime = self._parse_etime(etime)
-                        result["task_query"]["runtime_seconds"] = runtime
+                        result_data["runtime_seconds"] = runtime
                 except (IndexError, ValueError):
                     pass
 
@@ -973,29 +998,29 @@ class ParamikoDriver(BaseDriver):
                         "echo done"
                     )
                     self._execute_command(session, kill_cmd, None)
-                    result["task_query"]["killed"] = True
-                    result["task_query"]["running"] = False
+                    result_data["killed"] = True
+                    result_data["running"] = False
                     time.sleep(0.5)  # Give it time to die
 
             # Get output tail if output file is specified
             if query.output_file:
                 tail_cmd = f"tail -n {query.tail_lines} {query.output_file} 2>/dev/null"
                 tail_result = self._execute_command(session, tail_cmd, None)
-                output_tail = tail_result[tail_cmd]["output"]
+                output_tail = tail_result[tail_cmd].output
                 if output_tail:
-                    result["task_query"]["output_tail"] = output_tail
+                    result_data["output_tail"] = output_tail
 
             # Try to get exit code if task is not running
-            if not result["task_query"]["running"]:
+            if not result_data["running"]:
                 # Check via /proc if available
                 exit_cmd = f"cat /proc/{pid}/stat 2>/dev/null || echo 'not_found'"
                 exit_result = self._execute_command(session, exit_cmd, None)
-                if "not_found" in exit_result[exit_cmd]["output"]:
+                if "not_found" in exit_result[exit_cmd].output:
                     # Process exited, exit code not directly available
-                    result["task_query"]["exit_code"] = 0  # Assume success if no error in output
+                    result_data["exit_code"] = 0  # Assume success if no error in output
 
             # Cleanup files if requested and task is complete
-            if query.cleanup_files and not result["task_query"]["running"]:
+            if query.cleanup_files and not result_data["running"]:
                 cleanup_files = []
                 if query.output_file:
                     cleanup_files.append(query.output_file)
@@ -1006,13 +1031,20 @@ class ParamikoDriver(BaseDriver):
                 if cleanup_files:
                     cleanup_cmd = f"rm -f {' '.join(cleanup_files)} 2>/dev/null"
                     self._execute_command(session, cleanup_cmd, None)
-                    result["task_query"]["cleaned"] = True
+                    result_data["cleaned"] = True
 
         except Exception as e:
             log.error(f"Error checking background task: {e}")
-            result["task_query"]["error"] = str(e)
+            result_data["error"] = str(e)
 
-        return result
+        return {
+            "task_query": DriverExecutionResult(
+                output=result_data.get("output_tail") or "",
+                error=result_data.get("error", ""),
+                exit_status=result_data.get("exit_code") or 0,
+                telemetry={"task_query": result_data},
+            )
+        }
 
     def _parse_etime(self, etime: str) -> int:
         """Parse ps etime format to seconds"""
@@ -1040,12 +1072,12 @@ class ParamikoDriver(BaseDriver):
             # Find all .ttl files in /tmp/netpulse_*
             find_cmd = "ls /tmp/netpulse_*.ttl 2>/dev/null"
             find_result = self._execute_command(session, find_cmd, None)
-            ttl_files = find_result[find_cmd]["output"].strip().split()
+            ttl_files = find_result[find_cmd].output.strip().split()
 
             if not ttl_files:
                 return
 
-            import time
+
             current_time = int(time.time())
             files_to_remove = []
 
@@ -1054,7 +1086,7 @@ class ParamikoDriver(BaseDriver):
                     # Read creation time
                     read_cmd = f"cat {ttl_file} 2>/dev/null"
                     read_result = self._execute_command(session, read_cmd, None)
-                    creation_time_str = read_result[read_cmd]["output"].strip()
+                    creation_time_str = read_result[read_cmd].output.strip()
                     if not creation_time_str:
                         continue
 

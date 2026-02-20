@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from rq.job import Callback, Job
 
 from ..models import JobAdditionalData
+from ..models.driver import DriverExecutionResult
 from ..models.request import ExecutionRequest
 from ..plugins import drivers, parsers, renderers, webhooks
 from ..worker.node import start_pinned_worker
@@ -108,13 +109,23 @@ def execute(req: ExecutionRequest):
     except Exception as e:
         log.error(f"Error in connection or execution: {e}")
         error_key = "\n".join(payload) if isinstance(payload, list) else str(payload)
+        result_data = {
+            "pid": None,
+            "running": False,
+            "exit_code": None,
+            "output_tail": None,
+            "runtime_seconds": 0.0,
+            "killed": False,
+            "cleaned": False,
+        }
         return {
-            error_key: {
-                "output": "",
-                "error": str(e),
-                "exit_status": 1,
-                "telemetry": {"duration_seconds": 0.0},
-            }
+            error_key: DriverExecutionResult(
+                output="",
+                error=str(e),
+                exit_status=1,
+                telemetry={"duration_seconds": 0.0},
+                **result_data,
+            )
         }
     finally:
         if session:
@@ -135,8 +146,10 @@ def execute(req: ExecutionRequest):
 
             parser = parsers[req.parsing.name].from_parsing_request(req.parsing)
             for cmd, val in result.items():
-                # If it's a rich dict (output, error, etc.), parse only the output
-                if isinstance(val, dict) and "output" in val:
+                # If it's a rich object (output, error, etc.), parse only the output
+                if hasattr(val, "output"):
+                    val.parsed = parser.parse(val.output)
+                elif isinstance(val, dict) and "output" in val:
                     val["parsed"] = parser.parse(val["output"])
                 else:
                     # Backward compatibility for primitive drivers

@@ -3,7 +3,10 @@ import os
 import signal
 import sys
 import threading
-from typing import Optional
+from typing import TYPE_CHECKING, Dict, Optional
+
+if TYPE_CHECKING:
+    from ....models.driver import DriverExecutionResult
 
 from netmiko import BaseConnection, ConnectHandler
 
@@ -198,9 +201,13 @@ class NetmikoDriver(BaseDriver):
             log.error(f"Error in connecting: {e}")
             raise e
 
-    def send(self, session: BaseConnection, command: list[str]) -> dict:
+    def send(
+        self, session: BaseConnection, command: list[str]
+    ) -> "Dict[str, DriverExecutionResult]":
         """Execute commands and return rich results with telemetry"""
         import time
+
+        from ....models.driver import DriverExecutionResult
 
         try:
             with self._monitor_lock:
@@ -233,12 +240,12 @@ class NetmikoDriver(BaseDriver):
                         response = session.send_command(cmd)
 
                     duration = time.perf_counter() - start_time
-                    result[cmd] = {
-                        "output": response,
-                        "error": "",  # Netmiko merges stderr into output usually
-                        "exit_status": 0,  # Generic success
-                        "telemetry": {"duration_seconds": round(duration, 3)},
-                    }
+                    result[cmd] = DriverExecutionResult(
+                        output=response,
+                        error="",
+                        exit_status=0,
+                        telemetry={"duration_seconds": round(duration, 3)},
+                    )
                 if self.enabled:
                     session.exit_enable_mode()
 
@@ -246,17 +253,21 @@ class NetmikoDriver(BaseDriver):
         except Exception as e:
             log.error(f"Error in sending command: {e}")
             return {
-                " ".join(command): {
-                    "output": "",
-                    "error": str(e),
-                    "exit_status": 1,
-                    "telemetry": {"duration_seconds": 0.0},
-                }
+                " ".join(command): DriverExecutionResult(
+                    output="",
+                    error=str(e),
+                    exit_status=1,
+                    telemetry={"duration_seconds": 0.0},
+                )
             }
 
-    def config(self, session: BaseConnection, config: list[str]) -> dict:
+    def config(
+        self, session: BaseConnection, config: list[str]
+    ) -> "Dict[str, DriverExecutionResult]":
         """Execute configuration set and return unified rich result"""
         import time
+
+        from ....models.driver import DriverExecutionResult
 
         try:
             with self._monitor_lock:
@@ -303,22 +314,22 @@ class NetmikoDriver(BaseDriver):
             # This allows rpc.py parsing to work the same way as send.
             config_key = "\n".join(config)
             return {
-                config_key: {
-                    "output": response,
-                    "error": "",
-                    "exit_status": 0,
-                    "telemetry": {"duration_seconds": round(duration, 3)},
-                }
+                config_key: DriverExecutionResult(
+                    output=response,
+                    error="",
+                    exit_status=0,
+                    telemetry={"duration_seconds": round(duration, 3)},
+                )
             }
         except Exception as e:
             log.error(f"Error in sending config: {e}")
             return {
-                "\n".join(config): {
-                    "output": "",
-                    "error": str(e),
-                    "exit_status": 1,
-                    "telemetry": {"duration_seconds": 0.0},
-                }
+                "\n".join(config): DriverExecutionResult(
+                    output="",
+                    error=str(e),
+                    exit_status=1,
+                    telemetry={"duration_seconds": 0.0},
+                )
             }
 
     def _commit(self, session: BaseConnection) -> Optional[str]:

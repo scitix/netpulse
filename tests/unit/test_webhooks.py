@@ -1,13 +1,22 @@
-from types import SimpleNamespace
 from typing import Any
 
 from pydantic import HttpUrl
 
 from netpulse.models import DriverConnectionArgs, DriverName
 from netpulse.models.common import WebHook
+from netpulse.models.driver import DriverExecutionResult
 from netpulse.models.request import ExecutionRequest
 from netpulse.plugins.webhooks import basic as webhook_basic
 from netpulse.plugins.webhooks.basic import BasicWebHookCaller
+
+
+class MockJob:
+    def __init__(self, id, status="finished"):
+        self.id = id
+        self._status = status
+
+    def get_status(self):
+        return self._status
 
 
 def test_basic_webhook_calls_requests(monkeypatch):
@@ -33,9 +42,14 @@ def test_basic_webhook_calls_requests(monkeypatch):
     )
 
     caller = BasicWebHookCaller(hook)
-    # Use a dict result that simulates command output
-    result = {"show version": "Cisco IOS Software"}
-    caller.call(req=req, job=SimpleNamespace(id="job-1"), result=result)  # type: ignore
+    caller = BasicWebHookCaller(hook)
+    # Use a DriverExecutionResult object that simulates command output
+    result = {
+        "show version": DriverExecutionResult(
+            output="Cisco IOS Software", exit_status=0
+        )
+    }
+    caller.call(req=req, job=MockJob(id="job-1"), result=result)
 
     assert captured["method"] == hook.method.value
     assert captured["url"] == hook.url.unicode_string()
@@ -65,7 +79,9 @@ def test_basic_webhook_swallows_request_errors(monkeypatch):
 
     caller = BasicWebHookCaller(hook)
     # Should not raise even if the HTTP call fails
-    caller.call(req=None, job=SimpleNamespace(id="job-2"), result="done")  # type: ignore
+    caller = BasicWebHookCaller(hook)
+    # Should not raise even if the HTTP call fails
+    caller.call(req=None, job=MockJob(id="job-2"), result="done")
 
     assert calls == [1]
 
@@ -94,7 +110,7 @@ def test_basic_webhook_handles_failure_status(monkeypatch):
     caller = BasicWebHookCaller(hook)
     # Simulate failure with error tuple
     error_tuple = ("ConnectionError", "Unable to connect to device")
-    caller.call(req=req, job=SimpleNamespace(id="job-3"), result=error_tuple)  # type: ignore
+    caller.call(req=req, job=MockJob(id="job-3", status="failed"), result=error_tuple)
 
     payload: dict = captured["json"]
     assert payload["status"] == "failed"
@@ -124,12 +140,17 @@ def test_basic_webhook_formats_multiple_commands(monkeypatch):
     )
 
     caller = BasicWebHookCaller(hook)
+    caller = BasicWebHookCaller(hook)
     # Simulate result with multiple commands
     multi_cmd_result = {
-        "show version": "Cisco IOS Software, Version 15.1",
-        "show interfaces": "GigabitEthernet0/0 is up",
+        "show version": DriverExecutionResult(
+            output="Cisco IOS Software, Version 15.1", exit_status=0
+        ),
+        "show interfaces": DriverExecutionResult(
+            output="GigabitEthernet0/0 is up", exit_status=0
+        ),
     }
-    caller.call(req=req, job=SimpleNamespace(id="job-4"), result=multi_cmd_result)  # type: ignore
+    caller.call(req=req, job=MockJob(id="job-4"), result=multi_cmd_result)
 
     payload: dict = captured["json"]
     assert payload["status"] == "success"
@@ -163,15 +184,13 @@ def test_basic_webhook_formats_nested_dict_result(monkeypatch):
     )
 
     caller = BasicWebHookCaller(hook)
-    # Simulate paramiko nested dict result
+    # Simulate paramiko nested dict result using DriverExecutionResult model
     nested_result = {
-        "show version": {
-            "output": "Cisco IOS Software, Version 15.1",
-            "error": "",
-            "exit_status": 0,
-        }
+        "show version": DriverExecutionResult(
+            output="Cisco IOS Software, Version 15.1", error="", exit_status=0
+        )
     }
-    caller.call(req=req, job=SimpleNamespace(id="job-5"), result=nested_result)  # type: ignore
+    caller.call(req=req, job=MockJob(id="job-5"), result=nested_result)
 
     payload: dict = captured["json"]
     assert payload["status"] == "success"

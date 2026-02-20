@@ -79,21 +79,23 @@ def test_paramiko_send_runs_file_transfer(monkeypatch):
 
     called = {}
 
+    from netpulse.models.driver import DriverExecutionResult
     def fake_handle(self, session, file_transfer_op):
         called["session"] = session
         called["op"] = file_transfer_op
-        return {"file_transfer_upload": {"exit_status": 0}}
+        return {"file_transfer_upload": DriverExecutionResult(output="", error="", exit_status=0)}
 
     monkeypatch.setattr(ParamikoDriver, "_handle_file_transfer", fake_handle)
     fake_session = object()
 
     result = driver.send(fake_session, ["ignored"])  # type: ignore
-    assert result == {"file_transfer_upload": {"exit_status": 0}}
+    assert hasattr(result["file_transfer_upload"], "exit_status")
+    assert result["file_transfer_upload"].exit_status == 0
     assert called["session"] is fake_session
     assert called["op"] == op
 
 
-def test_paramiko_config_with_sudo(monkeypatch):
+def test_paramiko_config_with_sudo():
     """Prefix commands with sudo and request PTY when sudo_password is set."""
 
     class FakeChannel:
@@ -134,7 +136,7 @@ def test_paramiko_config_with_sudo(monkeypatch):
     cmd, kwargs = session.exec_calls[0]
     assert cmd.startswith("sudo -S")
     assert kwargs["get_pty"] is True  # sudo + password should force PTY
-    assert result["echo 1"]["exit_status"] == 0
+    assert result["echo 1"].exit_status == 0
 
 
 def test_paramiko_config_returns_empty_when_no_config():

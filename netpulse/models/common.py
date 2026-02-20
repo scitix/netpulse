@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Any, Dict, Optional, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
+from .driver import DriverExecutionResult
 
 
 class QueueStrategy(str, Enum):
@@ -40,14 +41,20 @@ class JobResult(BaseModel):
         RETRIED = 4
 
     type: ResultType
-    retval: Optional[Any] = None
+    retval: Optional[Dict[str, DriverExecutionResult]] = None
     error: Optional[Any] = None
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "type": 1,
-                "retval": "Interface GigabitEthernet1/0/1",
+                "retval": {
+                    "show version": {
+                        "output": "Interface GigabitEthernet1/0/1",
+                        "error": "",
+                        "exit_status": 0
+                    }
+                },
                 "error": {
                     "type": "ValueError",
                     "message": "Something went wrong",
