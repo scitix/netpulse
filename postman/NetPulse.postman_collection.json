@@ -277,6 +277,31 @@
 						"description": "查询所有已完成的任务"
 					},
 					"response": []
+				},
+				{
+					"name": "按节点查询任务",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/jobs?node=worker-node-1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"jobs"
+							],
+							"query": [
+								{
+									"key": "node",
+									"value": "worker-node-1",
+									"description": "分布式节点名称，用于多节点部署时按工作节点筛选任务"
+								}
+							]
+						},
+						"description": "查询指定工作节点上的所有任务（适用于分布式部署场景）"
+					},
+					"response": []
 				}
 			]
 		},
@@ -431,6 +456,31 @@
 							]
 						},
 						"description": "终止绑定到特定主机的所有工作器"
+					},
+					"response": []
+				},
+				{
+					"name": "按节点查询工作进程",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/workers?node=worker-node-1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"workers"
+							],
+							"query": [
+								{
+									"key": "node",
+									"value": "worker-node-1",
+									"description": "分布式节点名称，用于多节点部署时按工作节点筛选进程"
+								}
+							]
+						},
+						"description": "查询指定工作节点上的所有工作进程（适用于分布式部署场景）"
 					},
 					"response": []
 				}
@@ -802,7 +852,7 @@
 					"response": []
 				},
 				{
-					"name": "",
+					"name": "Paramiko连接测试 - Vault 凭据 (密钥)",
 					"event": [
 						{
 							"listen": "test",
@@ -871,7 +921,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"show version\"\n}"
+									"raw": "{\n  \"driver\": \"netmiko\",\n  \"connection_args\": {\n    \"device_type\": \"{{device_type}}\",\n    \"host\": \"{{device_host}}\",\n    \"username\": \"{{device_username}}\",\n    \"password\": \"{{device_password}}\"\n  },\n  \"command\": \"display version\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -2142,7 +2192,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": \"./long_running_script.sh\",\n  \"driver_args\": {\n    \"run_in_background\": true,\n    \"ttl_seconds\": 600\n  }\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": \"./long_running_script.sh\",\n  \"driver_args\": {\n    \"run_in_background\": true,\n    \"ttl_seconds\": 600\n  },\n  \"ttl\": 3600,\n  \"result_ttl\": 86400\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -2154,7 +2204,7 @@
 										"exec"
 									]
 								},
-								"description": "生产环境自洁模式。设置后台或流式任务临时文件（PID/Log）的有效期，控制器在执行后续操作时会自动物理删除过期的历史残留文件，避免存储溢出。"
+								"description": "生产环境自洁模式。设置后台或流式任务临时文件（PID/Log）的有效期，控制器在执行后续操作时会自动物理删除过期的历史残留文件，避免存储溢出。\n\n新增参数说明：\n- ttl (3600): Job 执行超时时间（秒）\n- result_ttl (86400): 任务结果在 Redis 中的保留时间（秒），默认跟随系统设置。对于48小时压力测试等长时间任务，可设置为更大的值（最大7天=604800秒），确保结果不会在任务完成后被过早清除。"
 							},
 							"response": []
 						},
@@ -2255,6 +2305,34 @@
 									]
 								},
 								"description": "终止后台任务并清理临时文件"
+							},
+							"response": []
+						},
+						{
+							"name": "任务发现 - 扫描所有活跃任务 (Discovery)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"driver_args\": {\n    \"list_active_tasks\": true\n  }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "任务救援模式：扫描远程机器上所有由 NetPulse 启动的活跃后台任务（含 Stream 和 Background）。即使控制端重启失联，也可通过此接口找回正在运行的任务并重新接管。"
 							},
 							"response": []
 						}
@@ -2997,8 +3075,19 @@
 	},
 	"event": [
 		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
 			"listen": "test",
 			"script": {
+				"type": "text/javascript",
 				"exec": [
 					"var jsonData = pm.response.json();",
 					"if (jsonData) {",
@@ -3019,8 +3108,7 @@
 					"        }",
 					"    }",
 					"}"
-				],
-				"type": "text/javascript"
+				]
 			}
 		}
 	],
