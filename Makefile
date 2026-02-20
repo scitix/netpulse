@@ -1,6 +1,9 @@
-.PHONY: help deploy build up down logs ps watch scale lint format clean clean-all restart shell stats health
+.PHONY: help deploy build up down logs ps watch scale lint format clean clean-all restart shell stats health ai-docs
 .PHONY: dev-up dev-down dev-build dev-logs dev-ps dev-watch dev-restart dev-shell
 .PHONY: prod-up prod-down prod-build prod-logs prod-ps prod-restart prod-shell
+
+# Python configuration
+PYTHON := $(shell if [ -d .venv ]; then echo ".venv/bin/python"; else echo "python3"; fi)
 
 # Default target: show help information
 help:
@@ -50,6 +53,9 @@ help:
 	@echo "Cleanup:"
 	@echo "  make clean       - Stop Docker services (preserves data volumes)"
 	@echo "  make clean-all   - Remove Docker services and volumes (⚠️  WARNING: deletes Redis data)"
+	@echo ""
+	@echo "AI Knowledge Kit (ai-docs/):"
+	@echo "  make ai-docs     - Generate AI-ready context (llms.txt, openapi.json, repomix-output.xml)"
 	@echo ""
 
 # Docker deployment operations
@@ -249,4 +255,19 @@ clean-all:
 	else \
 		echo "❌ Cleanup cancelled"; \
 	fi
+
+# AI Documentation operations
+ai-docs:
+	@echo "🤖 Generating AI-ready documentation in ai-docs/..."
+	@mkdir -p ai-docs
+	@echo "1/3 Exporting OpenAPI schema..."
+	@uv run --extra api python scripts/export_openapi.py
+	@echo "2/3 Packing codebase with Repomix (XML format)..."
+	@repomix
+	@echo "3/3 Checking LLM guide (llms.txt)..."
+	@if [ ! -f ai-docs/llms.txt ]; then \
+		echo "⚠️  llms.txt not found, creating a basic template..."; \
+		echo "# NetPulse AI Guide" > ai-docs/llms.txt; \
+	fi
+	@echo "✅ AI Knowledge Kit updated in ai-docs/ directory!"
 

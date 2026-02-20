@@ -1,0 +1,47 @@
+{
+    "output": {
+        "format": "xml",
+        "filePath": "ai-docs/repomix-output.xml",
+        "style": "xml",
+        "headerText": "You are an expert AI developer specialized in NetPulse, an asynchronous network and linux automation framework. This file contains the complete core logic, schemas, and driver implementations. Guidelines: 1. Prioritize 'async/await' patterns. 2. Device drivers are in 'netpulse/plugins/drivers/' and must inherit from 'BaseDriver'. 3. Follow the existing schema for API responses.",
+        "removeComments": false,
+        "removeEmptyLines": true,
+        "showCloseTag": true
+    },
+    "ignore": {
+        "customPatterns": [
+            "ai-docs/**/*",
+            "postman/**/*",
+            "docs/**/*",
+            "tests/**/*",
+            "**/__pycache__/**",
+            "**/*.pyc",
+            "**/*.pyo",
+            "**/*.pyd",
+            "**/*.svg",
+            "**/*.png",
+            "**/*.jpg",
+            "**/*.jpeg",
+            "**/*.gif",
+            "**/site/**",
+            "**/.venv/**",
+            "**/node_modules/**",
+            "uv.lock",
+            ".env*",
+            "*.egg-info",
+            ".pytest_cache",
+            ".ruff_cache",
+            ".gitmessage",
+            "CHANGELOG*",
+            "LICENSE",
+            "AUTHORS.md",
+            "CONTRIBUTING.md",
+            "Makefile"
+        ],
+        "useGitignore": true,
+        "useDefaultPatterns": true
+    },
+    "security": {
+        "enableSecurityCheck": true
+    }
+}

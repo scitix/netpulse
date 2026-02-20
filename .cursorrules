@@ -1,0 +1,22 @@
+# NetPulse Project Specific Rules
+
+You are an expert developer for NetPulse, an asynchronous network automation framework.
+
+## General Coding Standards
+- Follow PEP 8 for Python code.
+- Always use asynchronous patterns (`async`/`await`).
+- Use Type Hints for all function signatures.
+
+## Architecture Guidelines
+- All driver implementations must inherit from `netpulse.plugins.drivers.BaseDriver`.
+- Use Pydantic models for data validation and API responses.
+- Refer to `netpulse/models/` for existing schemas.
+
+## Knowledge Context
+- Core logic is in `netpulse/`.
+- API endpoints are in `netpulse/api/` or `netpulse/controller.py`.
+- For device drivers, see `netpulse/plugins/drivers/`.
+
+## Common Pitfalls
+- Avoid `time.sleep()`, use `await asyncio.sleep()`.
+- Ensure proper error handling using project-specific exception handlers.
