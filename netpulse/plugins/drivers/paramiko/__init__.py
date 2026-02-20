@@ -722,7 +722,29 @@ class ParamikoDriver(BaseDriver):
         if stdout.channel.recv_ready():
             full_output += stdout.channel.recv(4096).decode("utf-8", errors="replace")
 
-        exit_status = stdout.channel.recv_exit_status()
+        # Avoid blocking on recv_exit_status if the command is still hung
+        if not stdout.channel.exit_status_ready():
+            log.warning(
+                f"Interactive command timed out or hung, attempting graceful interrupt: {cmd}"
+            )
+            try:
+                # Send Ctrl+C
+                stdin.write("\x03")
+                stdin.flush()
+                # Wait a bit for it to react
+                time.sleep(1)
+            except Exception:
+                pass
+
+            if not stdout.channel.exit_status_ready():
+                log.error(f"Command still active after interrupt, closing channel: {cmd}")
+                stdout.channel.close()
+                exit_status = -1  # Mark as abnormal termination
+            else:
+                exit_status = stdout.channel.recv_exit_status()
+        else:
+            exit_status = stdout.channel.recv_exit_status()
+
         error = ""
         if stderr.channel.recv_stderr_ready():
             error = stderr.channel.recv_stderr(4096).decode("utf-8", errors="replace")

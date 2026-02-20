@@ -200,7 +200,7 @@ def test_paramiko_interactive_expect():
     # Mock behavior: return prompt on first call, then signal exit
     mock_channel.recv_ready.side_effect = [True, False, False]
     mock_channel.recv.return_value = b"Are you sure? [Y/n]: "
-    mock_channel.exit_status_ready.side_effect = [False, True]
+    mock_channel.exit_status_ready.side_effect = [False, True, True, True]
     mock_channel.recv_exit_status.return_value = 0
     mock_channel.recv_stderr_ready.return_value = False
 
