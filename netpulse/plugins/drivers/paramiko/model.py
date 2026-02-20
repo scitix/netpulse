@@ -287,6 +287,9 @@ class ParamikoSendConfigArgs(DriverArgs):
         default=None, description="Sudo password (if sudo is enabled)"
     )
     environment: Optional[Dict[str, str]] = Field(default=None, description="Environment variables")
+    stop_on_error: bool = Field(
+        default=True, description="Stop execution of subsequent lines if a command fails"
+    )
 
     @model_validator(mode="after")
     def validate_sudo(self):

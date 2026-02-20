@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import os
+import shlex
 import signal
 import sys
 import threading
@@ -523,7 +524,12 @@ class ParamikoDriver(BaseDriver):
             for cfg_line in config:
                 start_time = time.perf_counter()
                 if self.args and isinstance(self.args, ParamikoSendConfigArgs) and self.args.sudo:
-                    cmd = f"sudo -S {cfg_line}"
+                    # Smart wrapping: if command contains redirections or pipes, wrap it in bash -c
+                    has_shell_chars = any(c in cfg_line for c in (">", "|", ">>", "<<", "<"))
+                    if has_shell_chars and "bash -c" not in cfg_line:
+                        cmd = f"sudo -S bash -c {shlex.quote(cfg_line)}"
+                    else:
+                        cmd = f"sudo -S {cfg_line}"
                 else:
                     cmd = cfg_line
 
@@ -540,6 +546,8 @@ class ParamikoDriver(BaseDriver):
                 if self.args and self.args.environment:
                     cmd = self._apply_env_to_command(cmd, self.args.environment)
 
+                # Mask sensitive data in logs
+                log.debug(f"Executing config line: {cfg_line}")
                 stdin, stdout, stderr = session.exec_command(cmd, **exec_kwargs)
 
                 if (
@@ -556,12 +564,26 @@ class ParamikoDriver(BaseDriver):
                 exit_status = stdout.channel.recv_exit_status()
                 duration = time.perf_counter() - start_time
 
+                # Clean sudo output
+                if (
+                    self.args
+                    and isinstance(self.args, ParamikoSendConfigArgs)
+                    and self.args.sudo
+                    and self.args.sudo_password
+                ):
+                    output = self._clean_sudo_output(output, self.args.sudo_password)
+
                 result[cfg_line] = DriverExecutionResult(
                     output=output,
                     error=error,
                     exit_status=exit_status,
                     telemetry={"duration_seconds": round(duration, 3)},
                 )
+
+                # Fail-fast: Stop if stop_on_error is true (default)
+                if exit_status != 0 and self.args and getattr(self.args, "stop_on_error", True):
+                    log.warning(f"Config aborted at line due to error: {cfg_line}")
+                    break
             return result
         except Exception as e:
             log.error(f"Error in sending config: {e}")
@@ -593,6 +615,24 @@ class ParamikoDriver(BaseDriver):
         if output and " " in output:
             return output.split()[0]
         return None
+
+    def _clean_sudo_output(self, output: str, password: str) -> str:
+        """Remove sudo password echo and prompt from the output."""
+        lines = output.splitlines()
+        cleaned_lines = []
+
+        # Standard sudo prompt markers
+        noise_markers = [
+            password,
+            "[sudo] password for",
+        ]
+
+        for line in lines:
+            if any(marker in line for marker in noise_markers):
+                continue
+            cleaned_lines.append(line)
+
+        return "\n".join(cleaned_lines).lstrip()
 
 
     def _execute_command(
