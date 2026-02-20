@@ -41,7 +41,7 @@ def http_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, HTTPException)
     return JSONResponse(
         status_code=exc.status_code,
-        content={"code": -1, "message": exc.detail},
+        content={"detail": exc.detail},
     )
 
 
@@ -53,9 +53,8 @@ def validation_exception_handler(request: Request, exc: Exception) -> JSONRespon
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content={
-            "code": -1,
-            "message": "Validation Error",
-            "data": exc.errors(),
+            "detail": "Validation Error",
+            "errors": exc.errors(),
         },
     )
 
@@ -68,9 +67,7 @@ def value_error_handler(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content={
-            "code": -1,
-            "message": "Value Error",
-            "data": str(exc),
+            "detail": str(exc),
         },
     )
 
@@ -83,8 +80,6 @@ def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
-            "code": -1,
-            "message": "Internal Server Error",
-            "data": str(exc),
+            "detail": f"Internal Server Error: {exc}",
         },
     )

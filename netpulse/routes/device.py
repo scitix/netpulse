@@ -10,7 +10,7 @@ from ..models.request import (
     ConnectionTestRequest,
     ExecutionRequest,
 )
-from ..models.response import BatchSubmitJobResponse, ConnectionTestResponse, SubmitJobResponse
+from ..models.response import BatchSubmitJobResponse, ConnectionTestResponse, JobInResponse
 from ..plugins import credentials, drivers
 from ..services.manager import g_mgr
 from ..utils import g_config
@@ -66,7 +66,7 @@ def _resolve_request_credentials(req: ExecutionRequest | ConnectionTestRequest) 
     req.credential = None
 
 
-@router.post("/exec", response_model=SubmitJobResponse, status_code=201)
+@router.post("/exec", response_model=JobInResponse, status_code=201)
 def execute_on_device(req: ExecutionRequest):
     _resolve_request_credentials(req)
 
@@ -79,8 +79,7 @@ def execute_on_device(req: ExecutionRequest):
         raise ValueError(f"Unsupported driver: {req.driver}")
     dobj.validate(req)
 
-    resp = g_mgr.execute_on_device(req)
-    return SubmitJobResponse(code=201, message="success", data=resp)
+    return g_mgr.execute_on_device(req)
 
 
 @router.post("/bulk", response_model=BatchSubmitJobResponse, status_code=201)
@@ -133,7 +132,7 @@ def execute_on_bulk_devices(req: BulkExecutionRequest):
 
     # Early return if no devices
     if len(expanded) == 0:
-        return BatchSubmitJobResponse(code=201, message="success", data=None)
+        return BatchSubmitJobResponse(succeeded=[], failed=[])
 
     # Enforce driver-level validation, only need to check the first one
     dobj = drivers.get(req.driver, None)
@@ -143,13 +142,12 @@ def execute_on_bulk_devices(req: BulkExecutionRequest):
 
     result = g_mgr.execute_on_bulk_devices(expanded)
     if result is None:
-        return BatchSubmitJobResponse(code=201, message="success", data=None)
+        return BatchSubmitJobResponse(succeeded=[], failed=[])
 
-    data = BatchSubmitJobResponse.BatchSubmitJobData(
+    return BatchSubmitJobResponse(
         succeeded=result[0],
         failed=result[1],
     )
-    return BatchSubmitJobResponse(code=201, message="success", data=data)
 
 
 @router.post("/test", response_model=ConnectionTestResponse, status_code=200)
@@ -172,16 +170,10 @@ def test_device_connection(req: ConnectionTestRequest):
     finally:
         connection_time = time.time() - start_time
 
-    data = ConnectionTestResponse.ConnectionTestData(
+    return ConnectionTestResponse(
         success=success,
         latency=connection_time,
         error=error_message,
         result=device_info,
         timestamp=datetime.now().astimezone(),
-    )
-
-    return ConnectionTestResponse(
-        code=200,
-        message="Connection test completed" if success else "Connection test failed",
-        data=data,
     )

@@ -1,12 +1,12 @@
 import os
 import zoneinfo
 from datetime import datetime, timezone
-from typing import Any, List, Optional
+from typing import List, Optional
 
 import rq
 from pydantic import BaseModel, Field, ValidationError, computed_field, field_serializer
 
-from .common import DeviceTestInfo, JobAdditionalData, JobResult
+from .common import BatchFailedItem, DeviceTestInfo, JobAdditionalData, JobResult
 
 
 def _serialize_datetime_with_tz(dt: Optional[datetime], _info=None) -> Optional[str]:
@@ -31,12 +31,6 @@ def _serialize_datetime_with_tz(dt: Optional[datetime], _info=None) -> Optional[
             configured_tz = timezone.utc
 
     return dt.astimezone(configured_tz).isoformat()
-
-
-class BaseResponse(BaseModel):
-    code: int = 200
-    message: Optional[str] = None
-    data: Optional[Any] = None
 
 
 class JobInResponse(BaseModel):
@@ -86,13 +80,11 @@ class JobInResponse(BaseModel):
         error = None
         try:
             meta = JobAdditionalData.model_validate(job.meta)
-        except ValidationError as e:
-            # Print a warning and continue
+        except (ValidationError, TypeError) as e:
             log.warning(f"Error in validating JobMeta: {e}")
         else:
             error = meta.error
 
-        # We ignore exc_string as it's too verbose in response
         result_in_job = job.latest_result()
         result = (
             JobResult(
@@ -159,54 +151,26 @@ class WorkerInResponse(BaseModel):
         )
 
 
-class SubmitJobResponse(BaseResponse):
-    """Any route submits a job should use this model"""
-
-    data: Optional[JobInResponse] = None
-
-
-class BatchSubmitJobResponse(BaseResponse):
-    class BatchSubmitJobData(BaseModel):
-        succeeded: Optional[List[JobInResponse]] = None
-        failed: Optional[List[str]] = None
-
-    data: Optional[BatchSubmitJobData] = None
+class BatchSubmitJobResponse(BaseModel):
+    succeeded: Optional[List[JobInResponse]] = None
+    failed: Optional[List[BatchFailedItem]] = None
 
 
-class GetJobResponse(BaseResponse):
-    data: Optional[List[JobInResponse]] = None
-
-
-class DeleteJobResponse(BaseResponse):
-    data: Optional[List[str]] = None
-
-
-class GetWorkerResponse(BaseResponse):
-    data: Optional[List[WorkerInResponse]] = None
-
-
-class DeleteWorkerResponse(BaseResponse):
-    data: Optional[List[str]] = None
-
-
-class ConnectionTestResponse(BaseResponse):
+class ConnectionTestResponse(BaseModel):
     """Response model for device connection testing"""
 
-    class ConnectionTestData(BaseModel):
-        success: bool
-        latency: Optional[float] = Field(
-            None, description="Time taken to establish the connection in seconds"
-        )
-        error: Optional[str] = Field(None, description="Error message if the connection failed")
-        result: Optional[DeviceTestInfo] = Field(
-            None, description="Device information if the connection succeeded"
-        )
-        timestamp: Optional[datetime] = Field(
-            None, description="Timestamp of the test result is generated"
-        )
+    success: bool
+    latency: Optional[float] = Field(
+        None, description="Time taken to establish the connection in seconds"
+    )
+    error: Optional[str] = Field(None, description="Error message if the connection failed")
+    result: Optional[DeviceTestInfo] = Field(
+        None, description="Device information if the connection succeeded"
+    )
+    timestamp: Optional[datetime] = Field(
+        None, description="Timestamp of the test result is generated"
+    )
 
-        @field_serializer("timestamp")
-        def serialize_datetime(self, dt: Optional[datetime], _info):
-            return _serialize_datetime_with_tz(dt, _info)
-
-    data: Optional[ConnectionTestData] = None
+    @field_serializer("timestamp")
+    def serialize_datetime(self, dt: Optional[datetime], _info):
+        return _serialize_datetime_with_tz(dt, _info)

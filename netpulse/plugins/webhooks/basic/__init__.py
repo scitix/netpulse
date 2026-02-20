@@ -16,28 +16,22 @@ class BasicWebHookCaller(BaseWebHookCaller):
         self.config = hook
 
     def call(self, req: Any, job: rq.job.Job, result: Any, **kwargs):
-        # Convert result to string and determine success status
-        is_success = True
+        # Determine success status and format result
+        # Top 1 Alignment: Keep the result as a rich dict/object if possible
+        is_success = job.get_status() == "finished"
+        
+        # If result is an exception tuple from rpc_exception_callback
         if isinstance(result, tuple) and len(result) == 2:
-            # Error tuple format: (exc_type, exc_value)
             is_success = False
-            result_str = f"({result[0]}, {result[1]})"
-        elif isinstance(result, str):
-            result_str = result
-            # Check if result string contains error tuple format
-            if result_str.startswith("('") and result_str.endswith("')"):
-                is_success = False
-        elif isinstance(result, dict):
-            # Format dictionary result (multiple commands) in a readable way
-            result_str = self._format_dict_result(result)
+            result_payload = {"error": f"{result[0]}: {result[1]}"}
         else:
-            result_str = str(result)
+            result_payload = result
 
         # Build webhook payload with comprehensive information
         data = {
             "id": job.id,
-            "result": result_str,
             "status": "success" if is_success else "failed",
+            "result": result_payload,
         }
 
         # Add device information

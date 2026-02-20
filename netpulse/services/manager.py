@@ -13,6 +13,7 @@ from rq.worker import BaseWorker
 from redis.client import Pipeline
 
 from ..models import (
+    BatchFailedItem,
     DriverConnectionArgs,
     JobAdditionalData,
     NodeInfo,
@@ -390,7 +391,7 @@ class Manager:
         result_ttl: Optional[int] = None,
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
-    ) -> tuple[list[JobInResponse], list[str]]:
+    ) -> tuple[list[JobInResponse], list[BatchFailedItem]]:
         assert len(conn_args) == len(kwargses), "conn_args and kwargs mismatch"
 
         if q_strategy == QueueStrategy.FIFO:
@@ -415,11 +416,11 @@ class Manager:
         nodes: list[NodeInfo | None] = self._get_assigned_node_for_host(hosts)  # type: ignore
         assert len(hosts) == len(nodes), "Host and node number mismatch"
 
-        # NOTE: unassigned_hosts MUST be subscriptable
         assigned_host_idx: list[int] = []
         unassigned_host_idx: list[int] = []
-        failed_host_idx: set[int] = set()
-        for idx, n in enumerate(iterable=nodes):
+        failed_hosts: list[BatchFailedItem] = []
+
+        for idx, n in enumerate(nodes):
             if not n:
                 unassigned_host_idx.append(idx)
             else:
@@ -427,58 +428,62 @@ class Manager:
 
         # Schedule unassigned hosts
         if len(unassigned_host_idx) > 0:
-            # FIXME: Handle the case when duplicated hosts are scheduled
-            # For now, duplicated hosts should be filtered by the caller
             try:
                 selected_nodes = self.scheduler.batch_node_select(
                     self.get_all_nodes(), [hosts[i] for i in unassigned_host_idx]
                 )
                 if not selected_nodes:
                     raise WorkerUnavailableError("No available nodes to run the job")
-                assert len(selected_nodes) == len(unassigned_host_idx), (
-                    "Host and node num mismatch after scheduling"
-                )
 
-                # Appending indexes of original list
+                # Track which hosts failed scheduling
                 node_group: dict[int, list[int]] = defaultdict(list)
                 for idx, n in enumerate(selected_nodes):
+                    original_idx = unassigned_host_idx[idx]
                     if not n:
-                        failed_host_idx.add(unassigned_host_idx[idx])
+                        failed_hosts.append(
+                            BatchFailedItem(host=hosts[original_idx], reason="No capacity on nodes")
+                        )
                     else:
-                        node_group[idx].append(unassigned_host_idx[idx])
+                        # group by node index (in selected_nodes)
+                        node_group[idx].append(original_idx)
 
-                for idx, ids in node_group.items():
-                    try:
-                        # Retrieve the original NodeInfo by index
-                        n = selected_nodes[idx]
-                        assert n is not None
-
-                        # If node is not available, all assigned hosts are failed.
-                        if not self._check_worker_alive(n.queue):
-                            log.warning(
-                                msg=f"Node {n.hostname} is not available, force deleting..."
+                for node_idx, orig_indices in node_group.items():
+                    n = selected_nodes[node_idx]
+                    assert n is not None
+                    if not self._check_worker_alive(n.queue):
+                        self._force_delete_node(n)
+                        for i in orig_indices:
+                            failed_hosts.append(
+                                BatchFailedItem(host=hosts[i], reason=f"Node {n.hostname} dead")
                             )
-                            self._force_delete_node(n)
-                            failed_host_idx.update(ids)
-                            continue
+                        continue
 
-                        _ = self._try_launch_pinned_worker(hosts=[hosts[i] for i in ids], node=n)
+                    try:
+                        self._try_launch_pinned_worker(
+                            hosts=[hosts[i] for i in orig_indices], node=n
+                        )
                     except Exception as e:
-                        # Mark hosts for the whole node as failed but continue for other nodes
-                        log.error(f"Error in launching pinned worker for {ids}: {e}")
-                        failed_host_idx.update(ids)
+                        for i in orig_indices:
+                            failed_hosts.append(BatchFailedItem(host=hosts[i], reason=str(e)))
 
             except Exception as e:
                 log.error(f"Error in selecting nodes for hosts: {e}")
-                failed_host_idx.update(unassigned_host_idx)
+                for i in unassigned_host_idx:
+                    # Only add if not already added in node_group loop
+                    if not any(f.host == hosts[i] for f in failed_hosts):
+                        failed_hosts.append(BatchFailedItem(host=hosts[i], reason=str(e)))
+
+        # Indices of hosts that are actually ready to be sent
+        ready_idx = assigned_host_idx + [
+            i for i in unassigned_host_idx if not any(f.host == hosts[i] for f in failed_hosts)
+        ]
 
         # Send out all jobs except failed ones
-        def send(host_ids: list[int]) -> tuple[list[Job], list[int]]:
-            succeeded = []
-            failed = []
+        succeeded_jobs: list[Job] = []
+        if ready_idx:
             try:
                 with self.rdb.pipeline() as pipe:
-                    succeeded = [
+                    succeeded_jobs = [
                         self._send_job(
                             q_name=g_config.get_host_queue_name(hosts[idx]),
                             ttl=ttl,
@@ -489,22 +494,16 @@ class Manager:
                             on_failure=on_failure,
                             pipeline=pipe,
                         )
-                        for idx in host_ids
+                        for idx in ready_idx
                     ]
                     pipe.execute(raise_on_error=True)
             except Exception as e:
                 log.warning(f"Error in sending batch jobs: {e}")
-                succeeded = []
-                failed = host_ids
-            finally:
-                return succeeded, failed
+                for i in ready_idx:
+                    failed_hosts.append(BatchFailedItem(host=hosts[i], reason=f"Redis error: {e}"))
+                succeeded_jobs = []
 
-        succeeded, failed = send(
-            list(set(unassigned_host_idx) - failed_host_idx) + assigned_host_idx
-        )
-        failed.extend(list(failed_host_idx))
-
-        return [JobInResponse.from_job(job) for job in succeeded], [hosts[i] for i in failed]
+        return [JobInResponse.from_job(job) for job in succeeded_jobs], failed_hosts
 
     def execute_on_device(self, req: ExecutionRequest):
         # q_strategy must be set before calling. Assert for robustness.

@@ -39,7 +39,6 @@ from netpulse.models.request import (
 )
 from netpulse.models.response import (
     BatchSubmitJobResponse,
-    GetJobResponse,
     JobInResponse,
 )
 from netpulse.plugins.drivers.napalm.model import NapalmExecutionRequest
@@ -889,12 +888,7 @@ class NetPulseClient:
             timeout=self.http_timeout,
         )
         response.raise_for_status()
-
-        resp = BatchSubmitJobResponse(**response.json())
-        if resp.code not in (200, 201):
-            raise ValueError(f"job submission failed: {resp.message}")
-
-        return resp
+        return BatchSubmitJobResponse(**response.json())
 
     def check_jobs(self, jobs: set[HashableJob]) -> tuple[set[HashableJob], set[HashableJob]]:
         """Monitor execution status of submitted jobs
@@ -907,39 +901,32 @@ class NetPulseClient:
         failed = set()
 
         for oldjob in jobs:
-            response = requests.get(
-                f"{self.endpoint}/job",
-                headers=self.headers,
-                params={"id": oldjob.id},
-                timeout=self.http_timeout,
-            )
-            response.raise_for_status()
+            try:
+                # Use standard /{id} path for checking job status
+                response = requests.get(
+                    f"{self.endpoint}/jobs/{oldjob.id}",
+                    headers=self.headers,
+                    timeout=self.http_timeout,
+                )
+                response.raise_for_status()
+                newjob_data = response.json()
+                newjob = HashableJob(**newjob_data)
 
-            status_response = GetJobResponse(**response.json())
-            if not status_response.data:
-                oldjob.status = "UNKNOWN"
-                failed.add(oldjob)
-                continue
-
-            if isinstance(status_response.data, list):
-                newjob = status_response.data[0]
-            else:
-                newjob = status_response.data
-            newjob = HashableJob(**newjob.model_dump())
-
-            if newjob.status == "finished":
-                if newjob.result and newjob.result.error:
-                    pr.debug(f"Job {newjob.id} failed: {newjob.result}")
-                    newjob.status = "failed"
+                if newjob.status == "finished":
+                    if newjob.result and newjob.result.error:
+                        pr.debug(f"Job {newjob.id} failed: {newjob.result}")
+                        newjob.status = "failed"
+                        failed.add(newjob)
+                    else:
+                        pr.debug(f"Job {newjob.id} succeeded: {newjob.result}")
+                        succeeded.add(newjob)
+                elif newjob.status == "failed":
+                    pr.debug(f"Job {newjob.id} failed with no result")
                     failed.add(newjob)
-                else:
-                    pr.debug(f"Job {newjob.id} succeeded: {newjob.result}")
-                    succeeded.add(newjob)
-            elif newjob.status == "failed":
-                pr.debug(f"Job {newjob.id} failed with no result")
-                failed.add(newjob)
-
-            # If job still running, just ignore it and wait for next cycle
+            except Exception as e:
+                pr.debug(f"Error checking job {oldjob.id}: {e}")
+                # Keep in jobs to retry later
+                continue
 
         return succeeded, failed
 

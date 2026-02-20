@@ -216,3 +216,10 @@ class DeviceTestInfo(BaseModel):
     host: Optional[str] = Field(None, description="Device IP/hostname")
 
     model_config = ConfigDict(extra="allow")
+
+
+class BatchFailedItem(BaseModel):
+    """Item representing a failed job submission in a batch."""
+
+    host: str
+    reason: str
