@@ -211,7 +211,11 @@ class ParamikoSendCommandArgs(DriverArgs):
         default=None,
         description="Map of expected prompts to automated responses (e.g. {'[Y/n]': 'y'})"
     )
-    # Cleanup support
+    # Task Discovery
+    list_active_tasks: bool = Field(
+        default=False,
+        description="Scans the remote host for active NetPulse background/stream tasks",
+    )
     ttl_seconds: int = Field(
         default=3600,
         description="Time-to-live for background/stream task metadata and log files (default 1h)"

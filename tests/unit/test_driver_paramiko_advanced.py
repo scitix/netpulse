@@ -269,3 +269,162 @@ def test_paramiko_ttl_metadata():
     assert found_ttl_logic is True
     # Verify cleanup was called
     driver._cleanup_expired_tasks.assert_called_with(mock_session, 1800)
+
+
+def test_paramiko_pid_reuse_detection():
+    """Test that background task check detects PID reuse via comm verification."""
+    from netpulse.plugins.drivers.paramiko.model import BackgroundTaskQuery
+
+    mock_session = MagicMock()
+    mock_stdout = MagicMock()
+    mock_stderr = MagicMock()
+    mock_session.exec_command.return_value = (MagicMock(), mock_stdout, mock_stderr)
+
+    driver = ParamikoDriver(
+        args=None,
+        conn_args=ParamikoConnectionArgs(host="h", username="u", password="p"),
+    )
+
+    # 1. Setup: Case where comm matches (Identity Verified)
+    # Commands: ps -p ... and cat ...pid.meta
+    task_id = "task123"
+    pid = 12345
+
+    def side_effect(cmd, **kwargs):
+        ro = MagicMock()
+        re = MagicMock()
+        if "ps -p" in cmd:
+            ro.read.return_value = f"{pid} 00:01 {task_id}".encode()
+        elif ".meta" in cmd:
+            ro.read.return_value = f"{task_id}\n".encode()
+        else:
+            ro.read.return_value = b""
+
+        re.read.return_value = b""
+        ro.channel.recv_exit_status.return_value = 0
+        return MagicMock(), ro, re
+
+    mock_session.exec_command.side_effect = side_effect
+
+    query = BackgroundTaskQuery(pid=pid, output_file="/tmp/test.log")
+    result = driver._check_background_task(mock_session, query)["task_query"]
+
+    assert result.telemetry["task_query"]["running"] is True
+    assert result.telemetry["task_query"]["identity_verified"] is True
+
+    # 2. Setup: Case where comm mismatch (PID Reuse)
+    def side_effect_reuse(cmd, **kwargs):
+        ro = MagicMock()
+        re = MagicMock()
+        if "ps -p" in cmd:
+            ro.read.return_value = f"{pid} 10:00:00 nginx".encode() # Reuse by nginx
+        elif ".meta" in cmd:
+            ro.read.return_value = f"{task_id}\n".encode()
+        else:
+            ro.read.return_value = b""
+
+        re.read.return_value = b""
+        ro.channel.recv_exit_status.return_value = 0
+        return MagicMock(), ro, re
+
+    mock_session.exec_command.side_effect = side_effect_reuse
+    result_reuse = driver._check_background_task(mock_session, query)["task_query"]
+
+    assert result_reuse.telemetry["task_query"]["running"] is False
+    assert result_reuse.telemetry["task_query"]["identity_verified"] is False
+
+
+def test_paramiko_stream_identity_verification():
+    """Test that stream query detects PID reuse and handles results correctly."""
+    from netpulse.plugins.drivers.paramiko.model import StreamQuery
+
+    mock_session = MagicMock()
+    driver = ParamikoDriver(
+        args=None,
+        conn_args=ParamikoConnectionArgs(host="h", username="u", password="p"),
+    )
+
+    sid = "stream123"
+    pid = "5555"
+
+    def side_effect(cmd, **kwargs):
+        ro, re = MagicMock(), MagicMock()
+        if f"cat /tmp/netpulse_stream_{sid}.pid" in cmd:
+            ro.read.return_value = f"{pid}\n".encode()
+        elif "ps -p" in cmd:
+            # Case 1: Identity match
+            ro.read.return_value = f"{pid} 00:05 {sid}".encode()
+        elif "stat -c%s" in cmd:
+            ro.read.return_value = b"500\n"
+        else:
+            ro.read.return_value = b"some output"
+        ro.channel.recv_exit_status.return_value = 0
+        re.read.return_value = b""
+        return MagicMock(), ro, re
+
+    mock_session.exec_command.side_effect = side_effect
+    query = StreamQuery(session_id=sid, offset=0, lines=10)
+
+    # 1. Test Success Case
+    res = driver._query_stream(mock_session, query)["stream_result"]
+    assert res.telemetry["stream_result"]["identity_verified"] is True
+    assert res.telemetry["stream_result"]["completed"] is False
+    assert res.telemetry["stream_result"]["output_bytes"] == 500
+
+    # 2. Test PID Reuse Case
+    def side_effect_reuse(cmd, **kwargs):
+        ro, re = MagicMock(), MagicMock()
+        if f"cat /tmp/netpulse_stream_{sid}.pid" in cmd:
+            ro.read.return_value = f"{pid}\n".encode()
+        elif "ps -p" in cmd:
+            # Identity mismatch (reused by python)
+            ro.read.return_value = f"{pid} 01:00 python".encode()
+        elif "stat -c%s" in cmd:
+            ro.read.return_value = b"500\n"
+        else:
+            ro.read.return_value = b""
+        ro.channel.recv_exit_status.return_value = 0
+        re.read.return_value = b""
+        return MagicMock(), ro, re
+
+    mock_session.exec_command.side_effect = side_effect_reuse
+    res_reuse = driver._query_stream(mock_session, query)["stream_result"]
+    assert res_reuse.telemetry["stream_result"]["identity_verified"] is False
+    assert res_reuse.telemetry["stream_result"]["completed"] is True
+
+
+def test_paramiko_list_active_tasks():
+    """Test that active tasks can be discovered on the remote host."""
+    from netpulse.plugins.drivers.paramiko.model import ParamikoSendCommandArgs
+
+    mock_session = MagicMock()
+    driver = ParamikoDriver(
+        args=ParamikoSendCommandArgs(list_active_tasks=True),
+        conn_args=ParamikoConnectionArgs(host="h", username="u", password="p"),
+    )
+
+    def side_effect(cmd, **kwargs):
+        ro, re = MagicMock(), MagicMock()
+        if "ls /tmp/netpulse_*.pid.meta" in cmd:
+            ro.read.return_value = b"/tmp/netpulse_bg_123.pid.meta\n"
+        elif "cat /tmp/netpulse_bg_123.pid.meta" in cmd:
+            ro.read.return_value = b"task-xyz\n"
+        elif "cat /tmp/netpulse_bg_123.pid" in cmd:
+            ro.read.return_value = b"9999\n"
+        elif "ps -p 9999" in cmd:
+            ro.read.return_value = b"task-xyz\n"
+
+        ro.channel.recv_exit_status.return_value = 0
+        re.read.return_value = b""
+        return MagicMock(), ro, re
+
+    mock_session.exec_command.side_effect = side_effect
+
+    # Execute via the public send() method
+    results = driver.send(mock_session, [])
+
+    assert "task_list" in results
+    tasks = results["task_list"].telemetry["active_tasks"]
+    assert len(tasks) == 1
+    assert tasks[0]["task_id"] == "task-xyz"
+    assert tasks[0]["pid"] == 9999

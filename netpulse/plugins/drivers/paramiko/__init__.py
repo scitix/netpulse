@@ -8,7 +8,7 @@ import time
 import uuid
 from io import StringIO
 from stat import S_ISDIR
-from typing import ClassVar, Dict, Optional
+from typing import Any, ClassVar, Dict, List, Optional
 
 import paramiko
 
@@ -353,6 +353,21 @@ class ParamikoDriver(BaseDriver):
         ):
             log.debug(f"Background task query detected: {self.args.check_task}")
             return self._check_background_task(session, self.args.check_task)
+
+        # Check if task listing is requested
+        if (
+            self.args
+            and isinstance(self.args, ParamikoSendCommandArgs)
+            and self.args.list_active_tasks
+        ):
+            log.debug("Active task listing requested")
+            tasks = self._list_active_tasks(session)
+            return {
+                "task_list": DriverExecutionResult(
+                    output=f"Found {len(tasks)} active tasks",
+                    telemetry={"active_tasks": tasks}
+                )
+            }
 
         if (
             self.args
@@ -731,23 +746,17 @@ class ParamikoDriver(BaseDriver):
         """Execute command in background and return PID"""
 
 
-        # Generate unique identifier for this background task
         task_id = str(uuid.uuid4())[:8]
-
-        # Determine output and PID file paths
         output_file = args.background_output_file or f"/tmp/netpulse_{task_id}.log"
         pid_file = args.background_pid_file or f"/tmp/netpulse_{task_id}.pid"
+        meta_file = f"{pid_file}.meta"
 
-        # Build background command with nohup
-        # 1. Start process
-        # 2. Save PID
-        # 3. Save creation time for TTL
-
-        creation_time = int(time.time())
+        # exec -a sets the process name in 'comm' for later validation
         bg_cmd = (
-            f"nohup {cmd} > {output_file} 2>&1 & "
+            f'nohup bash -c "exec -a {task_id} {cmd}" > {output_file} 2>&1 & '
             f"echo $! > {pid_file}; "
-            f"echo {creation_time} > {pid_file}.ttl"
+            f"echo {int(time.time())} > {pid_file}.ttl; "
+            f"echo {task_id} > {meta_file}"
         )
 
         # Cleanup expired tasks occasionally
@@ -787,22 +796,16 @@ class ParamikoDriver(BaseDriver):
         """Execute command in streaming mode (returns session_id for polling output)"""
 
 
-        # Generate unique session ID
         session_id = str(uuid.uuid4())[:12]
-
-        # Determine output and PID file paths
         output_file = f"/tmp/netpulse_stream_{session_id}.log"
         pid_file = f"/tmp/netpulse_stream_{session_id}.pid"
+        meta_file = f"{pid_file}.meta"
 
-        # Build background command with nohup
-        # 1. Start process
-        # 2. Save PID
-        # 3. Save creation time for TTL
-        creation_time = int(time.time())
         bg_cmd = (
-            f"nohup {cmd} > {output_file} 2>&1 & "
+            f'nohup bash -c "exec -a {session_id} {cmd}" > {output_file} 2>&1 & '
             f"echo $! > {pid_file}; "
-            f"echo {creation_time} > {pid_file}.ttl"
+            f"echo {int(time.time())} > {pid_file}.ttl; "
+            f"echo {session_id} > {meta_file}"
         )
 
         # Cleanup expired tasks on this host occasionally
@@ -844,205 +847,156 @@ class ParamikoDriver(BaseDriver):
     def _query_stream(
         self, session: paramiko.SSHClient, query: StreamQuery
     ) -> Dict[str, DriverExecutionResult]:
-        """Query streaming command output by session_id"""
+        """Query streaming command output with identity verification"""
+        sid = query.session_id
+        log_f, pid_f = f"/tmp/netpulse_stream_{sid}.log", f"/tmp/netpulse_stream_{sid}.pid"
+        meta_f = f"{pid_f}.meta"
 
-
-        session_id = query.session_id
-        output_file = f"/tmp/netpulse_stream_{session_id}.log"
-        pid_file = f"/tmp/netpulse_stream_{session_id}.pid"
-
-        result_data = {
-            "session_id": session_id,
-            "completed": False,
-            "exit_code": None,
-            "output": None,
-            "output_bytes": 0,
-            "runtime_seconds": None,
-            "killed": False,
-            "cleaned": False,
+        data = {
+            "session_id": sid, "completed": False, "exit_code": None, "output": None,
+            "output_bytes": 0, "runtime_seconds": None, "killed": False,
+            "cleaned": False, "identity_verified": False,
         }
 
         try:
-            # Read PID
-            pid = None
-            read_pid_cmd = f"cat {pid_file} 2>/dev/null"
-            pid_result = self._execute_command(session, read_pid_cmd, None)
-            pid_output = pid_result[read_pid_cmd].output.strip()
-            if pid_output:
-                try:
-                    pid = int(pid_output)
-                except ValueError:
-                    pass
+            # Check PID and verify process identity (comm)
+            cmd_pid = f"cat {pid_f} 2>/dev/null"
+            res_pid = self._execute_command(session, cmd_pid, None)
+            pid = res_pid[cmd_pid].output.strip() if cmd_pid in res_pid else None
 
-            # Check if process is running
-            if pid:
-                check_cmd = f"ps -p {pid} -o pid,etime --no-headers 2>/dev/null"
-                check_result = self._execute_command(session, check_cmd, None)
-                check_output = check_result[check_cmd].output.strip()
+            if pid and pid.isdigit():
+                check_c = f"ps -p {pid} -o pid,etime,comm --no-headers 2>/dev/null"
+                res_check = self._execute_command(session, check_c, None)
+                out = res_check[check_c].output.strip()
 
-                if check_output and str(pid) in check_output:
-                    # Still running
-                    result_data["completed"] = False
+                if out:
+                    parts = out.split()
+                    if len(parts) >= 3 and parts[0] == pid and parts[2] == sid:
+                        data.update({"completed": False, "identity_verified": True})
+                        try:
+                            data["runtime_seconds"] = self._parse_etime(parts[1])
+                        except Exception:
+                            pass
 
-                    # Parse runtime
-                    try:
-                        parts = check_output.split()
-                        if len(parts) >= 2:
-                            result_data["runtime_seconds"] = self._parse_etime(parts[1])
-                    except (IndexError, ValueError):
-                        pass
-
-                    # Kill if requested
-                    if query.kill:
-                        kill_cmd = (
-                            f"kill -15 {pid} 2>/dev/null; "
-                            f"sleep 0.5; "
-                            f"kill -9 {pid} 2>/dev/null"
-                        )
-                        self._execute_command(session, kill_cmd, None)
-                        result_data["killed"] = True
-                        result_data["completed"] = True
-                        time.sleep(0.5)
+                        if query.kill:
+                            kill_c = (
+                                f"kill -15 {pid} 2>/dev/null; "
+                                "sleep 0.5; "
+                                f"kill -9 {pid} 2>/dev/null"
+                            )
+                            self._execute_command(session, kill_c, None)
+                            data.update({"killed": True, "completed": True})
+                    else:
+                        log.warning(f"Stream PID {pid} reuse detected! '{out}' != '{sid}'")
+                        data["completed"] = True
                 else:
-                    result_data["completed"] = True
-                    result_data["exit_code"] = 0  # Assume success
+                    data.update({"completed": True, "exit_code": 0})
 
-            # Read output (tail or from offset)
+            # Read output
+            read_c = f"tail -n {query.lines} {log_f} 2>/dev/null"
             if query.offset > 0:
-                # Read from offset using dd
-                read_cmd = (
-                    f"dd if={output_file} bs=1 skip={query.offset} 2>/dev/null "
+                read_c = (
+                    f"dd if={log_f} bs=1 skip={query.offset} 2>/dev/null "
                     f"| tail -n {query.lines}"
                 )
-            else:
-                read_cmd = f"tail -n {query.lines} {output_file} 2>/dev/null"
 
-            output_result = self._execute_command(session, read_cmd, None)
-            output = output_result[read_cmd].output
-            result_data["output"] = output
+            data["output"] = self._execute_command(session, read_c, None)[read_c].output
 
-            # Get file size for next offset
-            size_cmd = f"stat -c%s {output_file} 2>/dev/null || echo 0"
-            size_result = self._execute_command(session, size_cmd, None)
-            try:
-                current_size = int(size_result[size_cmd].output.strip())
-                result_data["output_bytes"] = current_size
-                # Calculate next offset for the user
-                result_data["next_offset"] = current_size
-            except ValueError:
-                pass
+            # Update sizing
+            size_c = f"stat -c%s {log_f} 2>/dev/null || echo 0"
+            size_out = self._execute_command(session, size_c, None)[size_c].output.strip()
+            data["output_bytes"] = data["next_offset"] = int(size_out) if size_out.isdigit() else 0
 
-            # Cleanup if requested and completed
-            # Cleanup if requested and completed
-            if query.cleanup and result_data["completed"]:
-                cleanup_cmd = f"rm -f {output_file} {pid_file} 2>/dev/null"
-                self._execute_command(session, cleanup_cmd, None)
-                result_data["cleaned"] = True
+            if query.cleanup and data["completed"]:
+                clean_c = f"rm -f {log_f} {pid_f} {pid_f}.ttl {meta_f} 2>/dev/null"
+                self._execute_command(session, clean_c, None)
+                data["cleaned"] = True
 
         except Exception as e:
             log.error(f"Error querying stream: {e}")
-            result_data["error"] = str(e)
+            data["error"] = str(e)
 
         return {
             "stream_result": DriverExecutionResult(
-                output=result_data.get("output") or "",
-                error=result_data.get("error", ""),
-                exit_status=result_data.get("exit_code") or 0,
-                telemetry={"stream_result": result_data},
+                output=data.get("output") or "",
+                error=data.get("error", ""),
+                exit_status=data.get("exit_code") or 0,
+                telemetry={"stream_result": data},
             )
         }
 
     def _check_background_task(
         self, session: paramiko.SSHClient, query: BackgroundTaskQuery
     ) -> Dict[str, DriverExecutionResult]:
-        """Check status of a background task by PID"""
-
-
+        """Check status of a background task by PID with identity verification"""
         pid = query.pid
-        result_data = {
-            "pid": pid,
-            "running": False,
-            "exit_code": 0,
-            "output_tail": None,
-            "runtime_seconds": None,
-            "killed": False,
-            "cleaned": False,
+        data = {
+            "pid": pid, "running": False, "exit_code": 0, "output_tail": None,
+            "runtime_seconds": None, "killed": False, "cleaned": False,
+            "identity_verified": False,
         }
 
         try:
-            # Check if process is running
-            check_cmd = f"ps -p {pid} -o pid,etime --no-headers 2>/dev/null"
-            check_result = self._execute_command(session, check_cmd, None)
-            check_output = check_result[check_cmd].output.strip()
+            # Verify process against comm via ps
+            cmd_check = f"ps -p {pid} -o pid,etime,comm --no-headers 2>/dev/null"
+            out = self._execute_command(session, cmd_check, None)[cmd_check].output.strip()
 
-            if check_output and str(pid) in check_output:
-                result_data["running"] = True
+            if out:
+                parts = out.split()
+                if len(parts) >= 3 and parts[0] == str(pid):
+                    # Pull expected task ID from meta file if available
+                    ident = None
+                    if query.output_file:
+                        meta_p = query.output_file.replace(".log", ".pid.meta")
+                        cmd_m = f"cat {meta_p} 2>/dev/null"
+                        res_m = self._execute_command(session, cmd_m, None)
+                        ident = res_m[cmd_m].output.strip() if cmd_m in res_m else None
 
-                # Parse elapsed time (format: [[DD-]HH:]MM:SS)
-                try:
-                    parts = check_output.split()
-                    if len(parts) >= 2:
-                        etime = parts[1]
-                        # Parse elapsed time to seconds
-                        runtime = self._parse_etime(etime)
-                        result_data["runtime_seconds"] = runtime
-                except (IndexError, ValueError):
-                    pass
+                    if ident and parts[2] != ident:
+                        log.warning(f"PID {pid} reuse detected! '{parts[2]}' != '{ident}'")
+                    else:
+                        data.update({
+                            "running": True,
+                            "identity_verified": True if ident else False
+                        })
+                        try:
+                            data["runtime_seconds"] = self._parse_etime(parts[1])
+                        except Exception:
+                            pass
 
-                # Kill if requested
-                if query.kill_if_running:
-                    kill_cmd = (
-                        f"kill -15 {pid} 2>/dev/null; "
-                        f"sleep 1; "
-                        f"kill -9 {pid} 2>/dev/null; "
-                        "echo done"
-                    )
-                    self._execute_command(session, kill_cmd, None)
-                    result_data["killed"] = True
-                    result_data["running"] = False
-                    time.sleep(0.5)  # Give it time to die
+                        if query.kill_if_running:
+                            kill_c = (
+                                f"kill -15 {pid} 2>/dev/null; "
+                                "sleep 0.5; "
+                                f"kill -9 {pid} 2>/dev/null"
+                            )
+                            self._execute_command(session, kill_c, None)
+                            data.update({"killed": True, "running": False})
 
-            # Get output tail if output file is specified
             if query.output_file:
-                tail_cmd = f"tail -n {query.tail_lines} {query.output_file} 2>/dev/null"
-                tail_result = self._execute_command(session, tail_cmd, None)
-                output_tail = tail_result[tail_cmd].output
-                if output_tail:
-                    result_data["output_tail"] = output_tail
+                tail_c = f"tail -n {query.tail_lines} {query.output_file} 2>/dev/null"
+                data["output_tail"] = self._execute_command(session, tail_c, None)[tail_c].output
 
-            # Try to get exit code if task is not running
-            if not result_data["running"]:
-                # Check via /proc if available
-                exit_cmd = f"cat /proc/{pid}/stat 2>/dev/null || echo 'not_found'"
-                exit_result = self._execute_command(session, exit_cmd, None)
-                if "not_found" in exit_result[exit_cmd].output:
-                    # Process exited, exit code not directly available
-                    result_data["exit_code"] = 0  # Assume success if no error in output
-
-            # Cleanup files if requested and task is complete
-            if query.cleanup_files and not result_data["running"]:
-                cleanup_files = []
+            if query.cleanup_files and not data["running"]:
                 if query.output_file:
-                    cleanup_files.append(query.output_file)
-                    # Also try to cleanup related pid file
-                    pid_file = query.output_file.replace(".log", ".pid")
-                    cleanup_files.append(pid_file)
-
-                if cleanup_files:
-                    cleanup_cmd = f"rm -f {' '.join(cleanup_files)} 2>/dev/null"
-                    self._execute_command(session, cleanup_cmd, None)
-                    result_data["cleaned"] = True
+                    base = query.output_file.replace(".log", "")
+                    clean_c = (
+                        f"rm -f {base}.log {base}.pid "
+                        f"{base}.pid.ttl {base}.pid.meta 2>/dev/null"
+                    )
+                    self._execute_command(session, clean_c, None)
+                    data["cleaned"] = True
 
         except Exception as e:
             log.error(f"Error checking background task: {e}")
-            result_data["error"] = str(e)
+            data["error"] = str(e)
 
         return {
             "task_query": DriverExecutionResult(
-                output=result_data.get("output_tail") or "",
-                error=result_data.get("error", ""),
-                exit_status=result_data.get("exit_code") or 0,
-                telemetry={"task_query": result_data},
+                output=data.get("output_tail") or "",
+                error=data.get("error", ""),
+                exit_status=data.get("exit_code") or 0,
+                telemetry={"task_query": data},
             )
         }
 
@@ -1077,7 +1031,6 @@ class ParamikoDriver(BaseDriver):
             if not ttl_files:
                 return
 
-
             current_time = int(time.time())
             files_to_remove = []
 
@@ -1093,10 +1046,14 @@ class ParamikoDriver(BaseDriver):
                     creation_time = int(creation_time_str)
                     if current_time - creation_time > ttl:
                         # Expired, mark for removal
-                        base_path = ttl_file[:-4] # Remove .ttl
-                        files_to_remove.extend(
-                            [ttl_file, base_path, base_path.replace(".pid", ".log")]
-                        )
+                        # ttl_file is like /tmp/netpulse_xxx.pid.ttl or /tmp/netpulse_xxx.ttl
+                        base_path = ttl_file.replace(".ttl", "")
+                        files_to_remove.extend([
+                            ttl_file,
+                            base_path,                       # The .pid file
+                            base_path.replace(".pid", ".log"), # The .log file
+                            base_path + ".meta"              # The .meta file
+                        ])
                 except Exception:
                     continue
 
@@ -1105,6 +1062,48 @@ class ParamikoDriver(BaseDriver):
                 self._execute_command(session, rm_cmd, None)
         except Exception as e:
             log.warning(f"Failed to cleanup expired tasks: {e}")
+
+    def _list_active_tasks(self, session: paramiko.SSHClient) -> List[Dict[str, Any]]:
+        """List all active background tasks on the remote host by scanning meta files"""
+        tasks = []
+        try:
+            # 1. Scan for all .meta files
+            ls_cmd = "ls /tmp/netpulse_*.pid.meta 2>/dev/null"
+            meta_files = self._execute_command(session, ls_cmd, None)[ls_cmd].output.strip().split()
+
+            for meta_f in meta_files:
+                try:
+                    # 2. Get task identity and PID
+                    cmd_m = f"cat {meta_f}"
+                    task_id = self._execute_command(session, cmd_m, None)[cmd_m].output.strip()
+                    pid_f = meta_f.replace(".meta", "")
+                    cmd_p = f"cat {pid_f}"
+                    pid_out = self._execute_command(session, cmd_p, None)[cmd_p].output.strip()
+
+                    if not pid_out.isdigit():
+                        continue
+
+                    pid = int(pid_out)
+
+                    # 3. Verify process is still running with this identity
+                    ps_cmd = f"ps -p {pid} -o comm= --no-headers 2>/dev/null"
+                    comm = self._execute_command(session, ps_cmd, None)[ps_cmd].output.strip()
+
+                    if comm == task_id:
+                        tasks.append({
+                            "task_id": task_id,
+                            "pid": pid,
+                            "type": "stream" if "stream" in meta_f else "background",
+                            "pid_file": pid_f,
+                            "meta_file": meta_f,
+                            "log_file": pid_f.replace(".pid", ".log")
+                        })
+                except Exception:
+                    continue
+        except Exception as e:
+            log.warning(f"Error listing active tasks: {e}")
+
+        return tasks
 
     def disconnect(self, session: paramiko.SSHClient, reset: bool = False):
         """
