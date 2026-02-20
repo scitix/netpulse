@@ -101,9 +101,12 @@ def test_vault_provider_resolves_and_populates(runtime_loader, monkeypatch):
         def is_authenticated(self):
             return self._authenticated
 
-    hvac_mock = SimpleNamespace(Client=FakeClient)
-    monkeypatch.setattr(vault_kv, "hvac", hvac_mock)
-    vault_kv.VaultKvCredentialProvider._cache = {}
+    import fakeredis
+
+    from netpulse.services.rediz import g_rdb
+    monkeypatch.setattr(g_rdb, "conn", fakeredis.FakeRedis())
+    vault_kv.VaultKvCredentialProvider._cache.clear()
+    monkeypatch.setattr(vault_kv, "hvac", SimpleNamespace(Client=FakeClient))
 
     req = ExecutionRequest(
         driver=DriverName.NETMIKO,
@@ -157,7 +160,11 @@ def test_vault_provider_respects_cache(runtime_loader, monkeypatch):
         def is_authenticated(self):
             return self._authenticated
 
-    vault_kv.VaultKvCredentialProvider._cache = {}
+    import fakeredis
+
+    from netpulse.services.rediz import g_rdb
+    monkeypatch.setattr(g_rdb, "conn", fakeredis.FakeRedis())
+    vault_kv.VaultKvCredentialProvider._cache.clear()
     monkeypatch.setattr(vault_kv, "hvac", SimpleNamespace(Client=FakeClient))
 
     for _ in range(2):
@@ -183,6 +190,7 @@ def test_vault_provider_reads_version_and_mapping(runtime_loader, monkeypatch):
             "NETPULSE_CREDENTIAL__ADDR": "http://vault:8200",
             "NETPULSE_CREDENTIAL__TOKEN": "dev-root-token",
             "NETPULSE_CREDENTIAL__ALLOWED_PATHS": "kv/netpulse",
+            "NETPULSE_CREDENTIAL__CACHE_TTL": "0",
         }
     )
 
@@ -211,7 +219,11 @@ def test_vault_provider_reads_version_and_mapping(runtime_loader, monkeypatch):
         def is_authenticated(self):
             return self._authenticated
 
-    vault_kv.VaultKvCredentialProvider._cache = {}
+    import fakeredis
+
+    from netpulse.services.rediz import g_rdb
+    monkeypatch.setattr(g_rdb, "conn", fakeredis.FakeRedis())
+    vault_kv.VaultKvCredentialProvider._cache.clear()
     monkeypatch.setattr(vault_kv, "hvac", SimpleNamespace(Client=FakeClient))
 
     req = ExecutionRequest(
@@ -242,6 +254,7 @@ def test_vault_provider_missing_required_field(runtime_loader, monkeypatch):
             "NETPULSE_CREDENTIAL__ADDR": "http://vault:8200",
             "NETPULSE_CREDENTIAL__TOKEN": "dev-root-token",
             "NETPULSE_CREDENTIAL__ALLOWED_PATHS": "kv/netpulse",
+            "NETPULSE_CREDENTIAL__CACHE_TTL": "0",
         }
     )
 
@@ -264,7 +277,11 @@ def test_vault_provider_missing_required_field(runtime_loader, monkeypatch):
         def is_authenticated(self):
             return self._authenticated
 
-    vault_kv.VaultKvCredentialProvider._cache = {}
+    import fakeredis
+
+    from netpulse.services.rediz import g_rdb
+    monkeypatch.setattr(g_rdb, "conn", fakeredis.FakeRedis())
+    vault_kv.VaultKvCredentialProvider._cache.clear()
     monkeypatch.setattr(vault_kv, "hvac", SimpleNamespace(Client=FakeClient))
 
     req = ExecutionRequest(

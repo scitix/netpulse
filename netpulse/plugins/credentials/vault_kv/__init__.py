@@ -1,6 +1,7 @@
+import json
 import logging
 import time
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Optional
 
 from pydantic import (
     BaseModel,
@@ -11,6 +12,8 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+
+from netpulse.services.rediz import g_rdb
 
 try:
     import hvac  # type: ignore
@@ -110,8 +113,9 @@ class VaultKvCredentialProvider(BaseCredentialProvider):
     credential_name: str = "vault_kv"
 
     _cache: ClassVar[
-        dict[tuple[str | None, str, str, int | None], tuple[float, dict[str, Any]]]
+        dict[tuple[Optional[str], str, str, Optional[int]], tuple[float, dict[str, Any]]]
     ] = {}
+    L1_CACHE_TTL: ClassVar[int] = 10  # Hardware local cache for 10 seconds
 
     def __init__(self, cfg: VaultCredentialSettings, client_cfg: VaultKvConfig):
         self.cfg = cfg
@@ -186,12 +190,32 @@ class VaultKvCredentialProvider(BaseCredentialProvider):
         return client
 
     def _read_secret(self) -> dict[str, Any]:
-        cache_key = (self.namespace, self.cfg.mount, self.cfg.ref, self.cfg.version)
-        if self.client_cfg.cache_ttl > 0:
-            cached = self._cache.get(cache_key)
-            if cached and cached[0] > time.time():
-                return cached[1]
+        params = (self.namespace, self.cfg.mount, self.cfg.ref, self.cfg.version)
+        cache_ttl = self.client_cfg.cache_ttl
 
+        # 1. L1 Cache Check (Memory - Very Fast)
+        if cache_ttl > 0:
+            cached_l1 = self._cache.get(params)
+            if cached_l1 and cached_l1[0] > time.time():
+                return cached_l1[1]
+
+        # 2. L2 Cache Check (Redis - Distributed)
+        ns = self.namespace or "default"
+        ver = self.cfg.version or "latest"
+        redis_key = f"netpulse:cache:vault:{ns}:{self.cfg.mount}:{self.cfg.ref}:{ver}"
+
+        if cache_ttl > 0:
+            try:
+                cached_l2 = g_rdb.conn.get(redis_key)
+                if cached_l2:
+                    data = json.loads(cached_l2)
+                    # Sync to L1
+                    self._cache[params] = (time.time() + self.L1_CACHE_TTL, data)
+                    return data
+            except Exception as e:
+                log.warning(f"Vault L2 Cache access failed, falling back to direct fetch: {e}")
+
+        # 3. Direct Fetch from Vault
         try:
             response = self._client.secrets.kv.v2.read_secret_version(
                 mount_point=self.cfg.mount,
@@ -212,8 +236,15 @@ class VaultKvCredentialProvider(BaseCredentialProvider):
         if not isinstance(data, dict) or not data:
             raise ValueError("Secret payload is empty or invalid")
 
-        if self.client_cfg.cache_ttl > 0:
-            self._cache[cache_key] = (time.time() + self.client_cfg.cache_ttl, data)
+        # 4. Populate Caches
+        if cache_ttl > 0:
+            # Populate L1
+            self._cache[params] = (time.time() + self.L1_CACHE_TTL, data)
+            # Populate L2 (Redis)
+            try:
+                g_rdb.conn.setex(redis_key, cache_ttl, json.dumps(data))
+            except Exception as e:
+                log.warning(f"Failed to populate Vault L2 Cache (Redis): {e}")
 
         return data
 
