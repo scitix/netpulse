@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from netpulse import controller
+from netpulse.models import BatchFailedItem
 from netpulse.models.request import (
     BulkExecutionRequest,
     ExecutionRequest,
@@ -35,9 +36,9 @@ class _StubManager:
 
     def execute_on_bulk_devices(
         self, reqs: Iterable[ExecutionRequest]
-    ) -> tuple[list[JobInResponse], list[str]]:
+    ) -> tuple[list[JobInResponse], list[BatchFailedItem]]:
         job = JobInResponse(id="job-bulk", status="queued", queue="q1")
-        return [job], ["failed-host"]
+        return [job], [BatchFailedItem(host="failed-host", reason="test-reason")]
 
 
 class _StubRenderer:
@@ -118,7 +119,7 @@ def test_device_exec_missing_host(monkeypatch, app_config):
         "/device/exec", json=payload, headers={"X-API-KEY": app_config.server.api_key}
     )
     assert resp.status_code == 400
-    assert resp.json()["message"] == "Value Error"
+    assert "detail" in resp.json()
 
 
 def test_device_exec_success(monkeypatch, app_config):
@@ -133,7 +134,7 @@ def test_device_exec_success(monkeypatch, app_config):
         "/device/exec", json=payload, headers={"X-API-KEY": app_config.server.api_key}
     )
     assert resp.status_code == 201
-    assert resp.json()["data"]["id"] == "job1"
+    assert resp.json()["id"] == "job1"
 
 
 def test_device_bulk_returns_success_when_no_devices(monkeypatch, app_config):
@@ -153,9 +154,38 @@ def test_device_bulk_returns_success_when_no_devices(monkeypatch, app_config):
 
     assert resp.status_code == 201
     body = resp.json()
-    assert body["code"] == 201
-    assert body["message"] == "success"
-    assert body["data"] is None
+    assert body["succeeded"] == []
+    assert body["failed"] == []
+
+
+def test_device_bulk_returns_failures(monkeypatch, app_config):
+    """POST /device/bulk returns failures with reasons."""
+    client = _client_with_stubs(monkeypatch)
+    payload = {
+        "driver": "netmiko",
+        "connection_args": {"host": "1.1.1.1"},
+        "command": "show version",
+        "devices": [{"host": "10.0.0.1"}],
+    }
+
+    # Mock manager to return a failure
+    class FailureManager(_StubManager):
+        def execute_on_bulk_devices(self, reqs):
+            return [], [BatchFailedItem(host="10.0.0.1", reason="No capacity")]
+
+    monkeypatch.setattr(device_module, "g_mgr", FailureManager())
+
+    resp = client.post(
+        "/device/bulk",
+        json=payload,
+        headers={"X-API-KEY": app_config.server.api_key},
+    )
+
+    assert resp.status_code == 201
+    body = resp.json()
+    assert len(body["failed"]) == 1
+    assert body["failed"][0]["host"] == "10.0.0.1"
+    assert body["failed"][0]["reason"] == "No capacity"
 
 
 def test_device_bulk_expands_devices(monkeypatch, app_config):
@@ -304,15 +334,13 @@ def test_device_bulk_per_device_command_config_conflict(monkeypatch, app_config)
 
 
 def test_template_render_missing_name(monkeypatch, app_config):
-    """POST /template/render should 400 when name missing."""
+    """POST /template/render should 404 when name missing (defaults to jinja2)."""
     client = _client_with_stubs(monkeypatch)
     resp = client.post(
         "/template/render",
         json={"template": "foo"},
         headers={"X-API-KEY": app_config.server.api_key},
     )
-    # Since name now defaults to 'jinja2', it's no longer 'missing'.
-    # Because 'jinja2' is not in our stubs, it results in 404.
     assert resp.status_code == 404
 
 
@@ -336,7 +364,7 @@ def test_template_render_success(monkeypatch, app_config):
         headers={"X-API-KEY": app_config.server.api_key},
     )
     assert resp.status_code == 200
-    assert resp.json()["data"] == "rendered"
+    assert resp.json() == "rendered"
 
 
 def test_template_parse_success(monkeypatch, app_config):
@@ -348,90 +376,64 @@ def test_template_parse_success(monkeypatch, app_config):
         headers={"X-API-KEY": app_config.server.api_key},
     )
     assert resp.status_code == 200
-    assert resp.json()["data"] == {"parsed": True}
+    assert resp.json() == {"parsed": True}
 
 
-def test_get_job_with_filters(monkeypatch, app_config):
+def test_get_jobs_with_filters(monkeypatch, app_config):
     client, stub = _client_with_manage_stub(monkeypatch)
     resp = client.get(
-        "/job",
+        "/jobs",
         params={"queue": "FifoQ", "status": "finished"},
         headers={"X-API-KEY": app_config.server.api_key},
     )
     assert resp.status_code == 200
     assert stub.calls["get_job_list"] == ("FifoQ", "finished", None)
-    data = resp.json()["data"]
+    data = resp.json()
     assert data[0]["queue"] == "FifoQ"
 
 
 def test_get_job_by_id(monkeypatch, app_config):
     client, stub = _client_with_manage_stub(monkeypatch)
     resp = client.get(
-        "/job",
-        params={"id": "job-123"},
+        "/jobs/job-123",
         headers={"X-API-KEY": app_config.server.api_key},
     )
     assert resp.status_code == 200
     assert stub.calls["get_job_list_by_ids"] == ["job-123"]
-    assert resp.json()["data"][0]["id"] == "job-123"
+    assert resp.json()["id"] == "job-123"
 
 
-def test_delete_job_by_id_and_queue(monkeypatch, app_config):
+def test_delete_job_by_id(monkeypatch, app_config):
     client, stub = _client_with_manage_stub(monkeypatch)
 
     resp = client.delete(
-        "/job",
-        params={"id": "job-1"},
+        "/jobs/job-1",
         headers={"X-API-KEY": app_config.server.api_key},
     )
     assert resp.status_code == 200
     assert stub.calls["cancel_job"] == ("job-1", None)
-    assert resp.json()["data"] == ["job-1"]
-
-    resp_queue = client.delete(
-        "/job",
-        params={"queue": "HostQ_h1"},
-        headers={"X-API-KEY": app_config.server.api_key},
-    )
-    assert resp_queue.status_code == 200
-    assert stub.calls["cancel_job"] == (None, "HostQ_h1")
-    assert resp_queue.json()["data"] == ["c1"]
+    assert resp.json()["id"] == "job-1"
 
 
 def test_get_workers_with_queue(monkeypatch, app_config):
     client, stub = _client_with_manage_stub(monkeypatch)
     resp = client.get(
-        "/worker",
+        "/workers",
         params={"queue": "HostQ_h1"},
         headers={"X-API-KEY": app_config.server.api_key},
     )
     assert resp.status_code == 200
     assert stub.calls["get_worker_list"] == "HostQ_h1"
-    assert resp.json()["data"][0]["queues"] == ["HostQ_h1"]
+    assert resp.json()[0]["queues"] == ["HostQ_h1"]
 
 
-def test_kill_worker_by_name_and_queue(monkeypatch, app_config):
+def test_kill_worker_by_name(monkeypatch, app_config):
     client, stub = _client_with_manage_stub(monkeypatch)
 
     resp = client.delete(
-        "/worker",
-        params={"name": "worker-1"},
+        "/workers/worker-1",
         headers={"X-API-KEY": app_config.server.api_key},
     )
     assert resp.status_code == 200
     assert stub.calls["kill_worker"] == ("worker-1", None)
-    assert resp.json()["data"] == ["worker-1"]
-
-    resp_queue = client.delete(
-        "/worker",
-        params={"queue": "HostQ_h2"},
-        headers={"X-API-KEY": app_config.server.api_key},
-    )
-    assert resp_queue.status_code == 200
-    assert stub.calls["kill_worker"] == (None, "HostQ_h2")
-    assert resp_queue.json()["data"] == ["HostQ_h2-w"]
-
-    resp_empty = client.delete("/worker", headers={"X-API-KEY": app_config.server.api_key})
-    assert resp_empty.status_code == 200
-    assert stub.calls["kill_worker"] == (None, None)
-    assert resp_empty.json()["data"] == []
+    assert resp.json()["name"] == "worker-1"
