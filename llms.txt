@@ -1,0 +1,57 @@
+# NetPulse AI Guide (llms.txt)
+> A high-performance asynchronous network and Linux automation framework powered by Python and FastAPI. Designed for multi-vendor infrastructure management with a focus on speed, persistence, and extensibility.
+
+## 1. Core Architecture
+- `netpulse/routes/`: FastAPI routes and request handlers.
+- `netpulse/plugins/drivers/`: Protocol-level abstraction layer (Inherit from `BaseDriver`).
+- `netpulse/services/`: Core business logic, connection pooling (`manager.py`), and task scheduling.
+- `netpulse/models/`: Centralized Pydantic models for all API schemas.
+- `ai-docs/`: AI metadata directory containing full context.
+
+## 2. Technical Stack (Infrastructure)
+Understanding these tools is key to successful development:
+- **Storage/Messaging**: **Redis** is used for distributed locking, worker heartbeats, and task queues.
+- **Security**: **HashiCorp Vault** is the primary secret engine for out-of-band credential storage.
+- **NLP/Parsing**: **TextFSM**, **TTP**, and **Jinja2** are used for command generation and output normalization.
+- **Runtime**: Powered by **Gunicorn/Uvicorn** for the API and specialized background workers for driver execution.
+
+## 3. Drivers Matrix
+| Driver | Target | Features |
+| :--- | :--- | :--- |
+| **Paramiko** | Linux Shell | Persistent sessions, Nohup backgrounding, Streaming, SFTP. |
+| **Netmiko** | Network CLI | Vendor-specific prompts, Expect Maps, Privilege (enable) mode. |
+| **NAPALM** | SDN/Standard | Normalized facts, Config transaction (Replace/Merge/Rollback). |
+| **PyEAPI** | Arista EOS | JSON-RPC based, ultra-stable API interaction. |
+
+## 4. Lifecycle of a Request
+1. **API Entry**: `netpulse/api/` validates inputs via `netpulse/models/`.
+2. **Manager Logic**: `netpulse/services/manager.py` resolves the driver and checks for existing persistent connections in Redis.
+3. **Driver Execution**: The specific `Driver.send()` or `Driver.config()` is executed asynchronously.
+4. **Telemetry**: Performance data is captured for every command and returned in the `telemetry` field.
+
+## 5. Integration & Performance
+- **Auth**: Primary via `X-API-KEY` header. Backup via `?api_key=` or cookies.
+- **Keepalive**: Use `keepalive: true` in `connection_args` to pin a connection to a specific worker for sub-second latency on subsequent requests.
+- **Async Execution**: Long tasks return a `task_id` for polling via `GET /v1/manage/task/{task_id}`.
+
+## 6. The Commandments (Development Rules)
+- **Async Mandate**: Use `asyncio`. Never use blocking code like `time.sleep()`.
+- **Schema Mandate**: Never use raw `dict`. Interactions MUST go through `netpulse/models/`.
+- **Security Mandate**: Never hardcode secrets. Always use `connection_args` or the Vault plugin.
+
+## 7. Quick Code Snippet (Style Reference)
+```python
+# Standard way to implement a new driver method
+async def execute_sample(self, command: str):
+    session = await self.connect()  # Uses auto-pooling/keepalive
+    try:
+        result = await self.send_async(session, [command])
+        return result
+    finally:
+        if not self.conn_args.keepalive:
+            await self.disconnect(session)
+```
+
+## 8. Extended Resources
+- [Full API Spec (JSON)](./ai-docs/openapi.json)
+- [Project Brain (XML)](./ai-docs/repomix-output.xml)
