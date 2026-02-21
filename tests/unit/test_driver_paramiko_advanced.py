@@ -189,8 +189,8 @@ def test_paramiko_stream_cursor():
     result = driver._query_stream(FakeSession(), query)
 
     stream_res = result["stream_result"]
-    assert stream_res.telemetry["stream_result"]["output_bytes"] == 1024
-    assert stream_res.telemetry["stream_result"]["next_offset"] == 1024
+    assert stream_res.telemetry["output_bytes"] == 1024
+    assert stream_res.telemetry["next_offset"] == 1024
 
 
 def test_paramiko_interactive_expect():
@@ -309,8 +309,8 @@ def test_paramiko_pid_reuse_detection():
     query = BackgroundTaskQuery(pid=pid, output_file="/tmp/test.log")
     result = driver._check_background_task(mock_session, query)["task_query"]
 
-    assert result.telemetry["task_query"]["running"] is True
-    assert result.telemetry["task_query"]["identity_verified"] is True
+    assert result.telemetry["running"] is True
+    assert result.telemetry["identity_verified"] is True
 
     # 2. Setup: Case where comm mismatch (PID Reuse)
     def side_effect_reuse(cmd, **kwargs):
@@ -330,8 +330,8 @@ def test_paramiko_pid_reuse_detection():
     mock_session.exec_command.side_effect = side_effect_reuse
     result_reuse = driver._check_background_task(mock_session, query)["task_query"]
 
-    assert result_reuse.telemetry["task_query"]["running"] is False
-    assert result_reuse.telemetry["task_query"]["identity_verified"] is False
+    assert result_reuse.telemetry["running"] is False
+    assert result_reuse.telemetry["identity_verified"] is False
 
 
 def test_paramiko_stream_identity_verification():
@@ -367,9 +367,9 @@ def test_paramiko_stream_identity_verification():
 
     # 1. Test Success Case
     res = driver._query_stream(mock_session, query)["stream_result"]
-    assert res.telemetry["stream_result"]["identity_verified"] is True
-    assert res.telemetry["stream_result"]["completed"] is False
-    assert res.telemetry["stream_result"]["output_bytes"] == 500
+    assert res.telemetry["identity_verified"] is True
+    assert res.telemetry["completed"] is False
+    assert res.telemetry["output_bytes"] == 500
 
     # 2. Test PID Reuse Case
     def side_effect_reuse(cmd, **kwargs):
@@ -389,8 +389,8 @@ def test_paramiko_stream_identity_verification():
 
     mock_session.exec_command.side_effect = side_effect_reuse
     res_reuse = driver._query_stream(mock_session, query)["stream_result"]
-    assert res_reuse.telemetry["stream_result"]["identity_verified"] is False
-    assert res_reuse.telemetry["stream_result"]["completed"] is True
+    assert res_reuse.telemetry["identity_verified"] is False
+    assert res_reuse.telemetry["completed"] is True
 
 
 def test_paramiko_list_active_tasks():

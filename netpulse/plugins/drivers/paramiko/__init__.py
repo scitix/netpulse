@@ -843,12 +843,12 @@ class ParamikoDriver(BaseDriver):
 
         # Update result with background task info
         result_key = next(iter(exec_result.keys()))
-        exec_result[result_key].telemetry["background_task"] = {
+        exec_result[result_key].telemetry.update({
             "pid": pid,
             "pid_file": pid_file,
             "output_file": output_file,
             "command": cmd,
-        }
+        })
 
         return exec_result
 
@@ -896,12 +896,10 @@ class ParamikoDriver(BaseDriver):
                 error="",
                 exit_status=0,
                 telemetry={
-                    "stream": {
-                        "session_id": session_id,
-                        "pid": pid,
-                        "output_file": output_file,
-                        "command": cmd,
-                    }
+                    "session_id": session_id,
+                    "pid": pid,
+                    "output_file": output_file,
+                    "command": cmd,
                 },
             )
         }
@@ -910,6 +908,7 @@ class ParamikoDriver(BaseDriver):
         self, session: paramiko.SSHClient, query: StreamQuery
     ) -> Dict[str, DriverExecutionResult]:
         """Query streaming command output with identity verification"""
+        start_time = time.perf_counter()
         sid = query.session_id
         log_f, pid_f = f"/tmp/netpulse_stream_{sid}.log", f"/tmp/netpulse_stream_{sid}.pid"
         meta_f = f"{pid_f}.meta"
@@ -932,10 +931,21 @@ class ParamikoDriver(BaseDriver):
                 out = res_check[check_c].output.strip()
 
                 if out:
-                    parts = out.split()
-                    if len(parts) >= 3 and parts[0] == pid and parts[2] == sid:
+                    # Logic: Try matching against comm (parts[2]) OR searching for sid in the
+                    # full ARGS. This handles environments where 'exec -a' doesn't change
+                    # 'comm' output.
+                    parts = out.split(None, 2)
+                    matched = False
+                    if len(parts) >= 3:
+                        if parts[2] == sid: # Direct comm match
+                            matched = True
+                        elif sid in parts[2]: # Found in args
+                            matched = True
+
+                    if matched:
                         data.update({"completed": False, "identity_verified": True})
                         try:
+                            # Use etime from middle column
                             data["runtime_seconds"] = self._parse_etime(parts[1])
                         except Exception:
                             pass
@@ -949,7 +959,8 @@ class ParamikoDriver(BaseDriver):
                             self._execute_command(session, kill_c, None)
                             data.update({"killed": True, "completed": True})
                     else:
-                        log.warning(f"Stream PID {pid} reuse detected! '{out}' != '{sid}'")
+                        msg = f"Stream PID {pid} identity mismatch! Out: '{out}' exp: '{sid}'"
+                        log.warning(msg)
                         data["completed"] = True
                 else:
                     data.update({"completed": True, "exit_code": 0})
@@ -978,12 +989,18 @@ class ParamikoDriver(BaseDriver):
             log.error(f"Error querying stream: {e}")
             data["error"] = str(e)
 
+        # Remove redundant data from telemetry to save bandwidth
+        telemetry_data = data.copy()
+        telemetry_data.pop("output", None)
+        telemetry_data.pop("error", None)
+        telemetry_data["duration_seconds"] = round(time.perf_counter() - start_time, 3)
+
         return {
             "stream_result": DriverExecutionResult(
                 output=data.get("output") or "",
                 error=data.get("error", ""),
                 exit_status=data.get("exit_code") or 0,
-                telemetry={"stream_result": data},
+                telemetry=telemetry_data,
             )
         }
 
@@ -991,6 +1008,7 @@ class ParamikoDriver(BaseDriver):
         self, session: paramiko.SSHClient, query: BackgroundTaskQuery
     ) -> Dict[str, DriverExecutionResult]:
         """Check status of a background task by PID with identity verification"""
+        start_time = time.perf_counter()
         pid = query.pid
         data = {
             "pid": pid, "running": False, "exit_code": 0, "output_tail": None,
@@ -999,8 +1017,8 @@ class ParamikoDriver(BaseDriver):
         }
 
         try:
-            # Verify process against comm via ps
-            cmd_check = f"ps -p {pid} -o pid,etime,comm --no-headers 2>/dev/null"
+            # Verify process against comm AND args via ps
+            cmd_check = f"ps -p {pid} -o pid,etime,args --no-headers 2>/dev/null"
             out = self._execute_command(session, cmd_check, None)[cmd_check].output.strip()
 
             if out:
@@ -1014,13 +1032,16 @@ class ParamikoDriver(BaseDriver):
                         res_m = self._execute_command(session, cmd_m, None)
                         ident = res_m[cmd_m].output.strip() if cmd_m in res_m else None
 
-                    if ident and parts[2] != ident:
-                        log.warning(f"PID {pid} reuse detected! '{parts[2]}' != '{ident}'")
-                    else:
-                        data.update({
-                            "running": True,
-                            "identity_verified": True if ident else False
-                        })
+                    if ident:
+                        # Logic: match ident against args part (parts[2])
+                        if ident not in parts[2]:
+                            msg = f"PID {pid} identity mismatch! '{parts[2]}' no '{ident}'"
+                            log.warning(msg)
+                        else:
+                            data.update({
+                                "running": True,
+                                "identity_verified": True
+                            })
                         try:
                             data["runtime_seconds"] = self._parse_etime(parts[1])
                         except Exception:
@@ -1053,12 +1074,18 @@ class ParamikoDriver(BaseDriver):
             log.error(f"Error checking background task: {e}")
             data["error"] = str(e)
 
+        # Remove redundant output from telemetry
+        telemetry_data = data.copy()
+        telemetry_data.pop("output_tail", None)
+        telemetry_data.pop("error", None)
+        telemetry_data["duration_seconds"] = round(time.perf_counter() - start_time, 3)
+
         return {
             "task_query": DriverExecutionResult(
                 output=data.get("output_tail") or "",
                 error=data.get("error", ""),
                 exit_status=data.get("exit_code") or 0,
-                telemetry={"task_query": data},
+                telemetry=telemetry_data,
             )
         }
 
