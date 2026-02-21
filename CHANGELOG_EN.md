@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.4.0] - 2026-02-20
+
+> [!CAUTION]
+> **BREAKING CHANGES**: This version introduces major refactoring of API paths and response structures. It is NOT backward compatible.
+
+### Added
+
+- **API Evolution**: Adopted flattened response structures and standard RESTful resource paths (`/jobs/{id}`, `/workers/{name}`).
+- **Unified Driver Format**: Standardized driver responses with `output`, `error`, `exit_status`, and `telemetry`.
+- **Paramiko Unified Async Task Engine**:
+  - **Merge Refactor**: Unified the former background tasks (`run_in_background`) and streaming tasks (`stream`) into a single async task engine (`async_task` + `task_query`), eliminating code duplication and simplifying the API.
+  - **Non-blocking Launch**: Introduced `_execute_command_nonblocking` to completely resolve Worker deadlocks caused by `stdout.read()` blocking on background processes.
+  - **Reliable Identity Verification**: Unified all identity checks to use `ps -o args` with `exec -a` injected task IDs, replacing the unreliable `ps -o comm` approach.
+  - **Safe Cleanup Strategy**: Cleanup of remote files is now only permitted when identity is verified AND the task has completed, preventing orphaned processes from losing their tracking metadata.
+  - **Task Discovery**: Added `list_tasks` API to scan and recover orphaned async tasks on remote hosts.
+- **Paramiko Enhancements**: Added support for interactive sessions (`expect_map`), incremental output reading, and improved SFTP stability.
+- **Vault Credential Caching**: Added support for in-memory caching logic with Vault credentials, enhancing stability by reducing API calls.
+- **Improved Reliability**: Implemented defensive exception wrapping; bulk APIs now provide structured failure reasons (`reason`).
+- **AI Native Support**: Established an AI knowledge kit (integrating `llms.txt`, `openapi.json`, and `repomix` source context) to significantly enhance LLM comprehension and assistive development efficiency.
+
+### Changed
+
+- **Behavior Cleanup**: Removed non-standard automatic JSON detection in favor of dedicated parsing engines.
+- **Collection Upgrade**: Fully updated the Postman API Collection to align with the new RESTful standards.
+
+### Fixed
+
+- Fixed inconsistent return formats in Netmiko driver under config mode.
+- Fixed potential Worker crashes caused by unhandled connection exceptions at the driver level.
+
+
 ## [0.3.0] - 2025-12-15
 
 ### Added
@@ -75,4 +106,3 @@
 - Support for Netmiko, NAPALM, PyEAPI drivers
 - Support for persistent connections, distributed architecture, and plugin system
 - Support for template engines (Jinja2, TextFSM, TTP) and Webhook notifications
-

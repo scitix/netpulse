@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.4.0] - 2026-02-20
+
+> [!CAUTION]
+> **不兼容变更**: 此版本对 API 路径和响应结构进行了重大重构，不向下兼容。
+
+### Added
+
+- **API 设计进化**: 采用扁平化响应结构和标准 RESTful 路径 (`/jobs/{id}`, `/workers/{name}`), 移除了原有的冗余包装层。
+- **驱动响应大一统**: 统一各驱动返回格式为富字典结构（含 `output`, `error`, `exit_status`, `telemetry`）。
+- **Paramiko 统一异步任务引擎**: 
+  - **合并重构**: 将原有的后台任务 (`run_in_background`) 和流式任务 (`stream`) 合并为统一的异步任务引擎 (`async_task` + `task_query`)，消除代码重复，简化 API 交互。
+  - **非阻塞启动**: 引入 `_execute_command_nonblocking` 方法，彻底解决异步任务启动时 Worker 因 `stdout.read()` 阻塞而死等的问题。
+  - **可靠身份校验**: 统一使用 `ps -o args` 配合 `exec -a` 注入任务 ID 进行身份校验，替代了不可靠的 `ps -o comm` 方案。
+  - **安全清理策略**: 仅在"身份校验成功 + 任务已结束"时才允许清理远程文件，防止身份校验失败时误删元数据导致孤儿进程。
+  - **任务自动发现**: 新增 `list_tasks` 接口，支持扫描并找回失联的异步任务，增强了系统的状态追踪能力。
+- **Paramiko 功能增强**: 完善了交互式会话 (`expect_map`)、增量输出读取及 SFTP 传输稳定性。
+- **Vault 凭据缓存**: 新增对 Vault 凭据的内存级缓存支持，通过减少 API 调用提升稳定性。
+- **可靠性提升**: 引入全局防御式异常处理，批量执行接口 (`bulk`) 现可返回具体的失败原因 (`reason`)。
+- **AI 原生支持**: 构建 AI 知识库体系（包含 `llms.txt`、`openapi.json` 及 `repomix` 源码语境），显著提升大语言模型对复杂系统的理解与辅助开发效率。
+
+### Changed
+
+- **清理偏僻行为**: 移除了非标的自动 JSON 探测逻辑，改为依赖解析插件。
+- **集合升级**: 按照最新 RESTful 标准全量更新了 Postman API Collection。
+
+### Fixed
+
+- 修复了 Netmiko 在配置模式下返回格式不一致的问题。
+- 修复了驱动层在极端连接异常时可能导致 Worker 崩溃的风险。
+
+
 ## [0.3.0] - 2025-12-14
 
 ### Added 
@@ -75,4 +106,3 @@
 - 支持 Netmiko、NAPALM、PyEAPI 驱动
 - 支持长连接技术、分布式架构、插件系统
 - 支持模板引擎（Jinja2、TextFSM、TTP）和 Webhook 通知
-

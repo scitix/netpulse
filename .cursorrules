@@ -20,3 +20,6 @@ You are an expert developer for NetPulse, an asynchronous network automation fra
 ## Common Pitfalls
 - Avoid `time.sleep()`, use `await asyncio.sleep()`.
 - Ensure proper error handling using project-specific exception handlers.
+
+## ruff check
+- Always run `ruff check` before committing.

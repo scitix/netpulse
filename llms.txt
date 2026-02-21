@@ -27,7 +27,7 @@ Understanding these tools is key to successful development:
 1. **API Entry**: `netpulse/api/` validates inputs via `netpulse/models/`.
 2. **Manager Logic**: `netpulse/services/manager.py` resolves the driver and checks for existing persistent connections in Redis.
 3. **Driver Execution**: The specific `Driver.send()` or `Driver.config()` is executed asynchronously.
-4. **Telemetry**: Performance data is captured for every command and returned in the `telemetry` field.
+4. **Result Format**: Drivers return a standardized dictionary containing `output`, `error`, `exit_status`, and `telemetry` for each command.
 
 ## 5. Integration & Performance
 - **Auth**: Primary via `X-API-KEY` header. Backup via `?api_key=` or cookies.
@@ -35,21 +35,25 @@ Understanding these tools is key to successful development:
 - **Async Execution**: Long tasks return a `task_id` for polling via `GET /v1/manage/task/{task_id}`.
 
 ## 6. The Commandments (Development Rules)
-- **Async Mandate**: Use `asyncio`. Never use blocking code like `time.sleep()`.
+- **Async Mandate**: API routes MUST use `asyncio`. Drivers running in workers use synchronous code.
 - **Schema Mandate**: Never use raw `dict`. Interactions MUST go through `netpulse/models/`.
 - **Security Mandate**: Never hardcode secrets. Always use `connection_args` or the Vault plugin.
 
 ## 7. Quick Code Snippet (Style Reference)
 ```python
-# Standard way to implement a new driver method
-async def execute_sample(self, command: str):
-    session = await self.connect()  # Uses auto-pooling/keepalive
-    try:
-        result = await self.send_async(session, [command])
-        return result
-    finally:
-        if not self.conn_args.keepalive:
-            await self.disconnect(session)
+# Standard way to implement a driver method (Synchronous)
+def send(self, session, command: list[str]) -> dict:
+    # Executed in background worker process
+    result = {}
+    for cmd in command:
+        # ... execution logic ...
+        result[cmd] = {
+            "output": "...",
+            "error": "",
+            "exit_status": 0,
+            "telemetry": {"duration": 0.5}
+        }
+    return result
 ```
 
 ## 8. Extended Resources
