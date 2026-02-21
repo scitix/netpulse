@@ -1,14 +1,10 @@
 # 05-vault/vault-init-job.yaml
-# One-time job to initialize Vault and store root token in secret
-# 
-# IMPORTANT: This job should be run ONCE after Vault StatefulSet is ready
+# One-time job to initialize Vault, unseal it, and enable KV v2 engine
 # 
 # Usage:
-#   1. Wait for Vault to be ready: kubectl wait --for=condition=ready pod -l app=vault -n netpulse --timeout=300s
-#   2. Run this job: kubectl apply -f k8s/05-vault-init-job.yaml
-#   3. Check job logs: kubectl logs -f job/vault-init -n netpulse
-#   4. After initialization, manually unseal Vault if needed
-#   5. Update netpulse-secrets with the root token
+#   1. Wait for Vault pod to be running: kubectl get pods -l app=vault -n netpulse
+#   2. Apply this job: kubectl apply -f k8s/05-vault-init-job.yaml
+#   3. Get the token: kubectl logs job/vault-init -n netpulse
 #
 # Note: For production, consider using Vault Auto-unseal or manual unseal process
 apiVersion: batch/v1
@@ -27,32 +23,59 @@ spec:
         - sh
         - -c
         - |
-          echo "Waiting for Vault to be ready..."
-          until vault status -address=http://vault:8200 2>/dev/null | grep -q "Sealed.*false"; do
-            echo "Vault is not ready yet, waiting..."
-            sleep 5
+          set -e
+          export VAULT_ADDR="http://vault:8200"
+
+          echo "Waiting for Vault service to respond..."
+          until vault status > /dev/null 2>&1 || [ $? -ne 127 ]; do
+            echo "Still waiting for Vault..."
+            sleep 2
           done
-          
-          if vault status -address=http://vault:8200 | grep -q "Initialized.*true"; then
-            echo "Vault is already initialized, skipping..."
-            exit 0
+
+          # 1. Initialize if needed
+          if ! vault status | grep -q "Initialized.*true"; then
+            echo "Initializing Vault..."
+            vault operator init -key-shares=1 -key-threshold=1 -format=json > /tmp/vault-init.json
+            
+            UNSEAL_KEY=$(cat /tmp/vault-init.json | jq -r '.unseal_keys_b64[0]')
+            ROOT_TOKEN=$(cat /tmp/vault-init.json | jq -r '.root_token')
+            
+            echo "IMPORTANT: INITIALIZATION SUCCESSFUL"
+            echo "Unseal Key: $UNSEAL_KEY"
+            echo "Root Token: $ROOT_TOKEN"
+            
+            # Save to temporary location (Pod will exit, but logs will remain)
+            echo "$UNSEAL_KEY" > /tmp/unseal.key
+            echo "$ROOT_TOKEN" > /tmp/root.token
+          else
+            echo "Vault already initialized."
           fi
-          
-          echo "Initializing Vault..."
-          vault operator init -address=http://vault:8200 -key-shares=1 -key-threshold=1 -format=json > /tmp/vault-init.json
-          
-          UNSEAL_KEY=$(cat /tmp/vault-init.json | jq -r '.unseal_keys_b64[0]')
-          ROOT_TOKEN=$(cat /tmp/vault-init.json | jq -r '.root_token')
-          
-          echo "Unseal Key: $UNSEAL_KEY"
-          echo "Root Token: $ROOT_TOKEN"
-          
-          echo "Unsealing Vault..."
-          vault operator unseal -address=http://vault:8200 $UNSEAL_KEY
-          
-          echo "Vault initialization complete!"
-          echo "Please save the Root Token and Unseal Key securely"
-          echo "Update netpulse-secrets with: kubectl create secret generic netpulse-secrets --from-literal=vault-token=$ROOT_TOKEN --dry-run=client -o yaml | kubectl apply -f -"
+
+          # 2. Unseal if needed
+          if vault status | grep -q "Sealed.*true"; then
+            echo "Vault is sealed. Attempting to unseal..."
+            if [ -f /tmp/unseal.key ]; then
+              vault operator unseal $(cat /tmp/unseal.key)
+            else
+              echo "Error: Vault is sealed but unseal key is missing in this job run."
+              echo "Manual unseal required or re-run initialization."
+              exit 1
+            fi
+          fi
+
+          # 3. Enable KV v2 Engine
+          echo "Ensuring KV v2 engine is enabled at kv/..."
+          # If we just initialized, we have the token in /tmp/root.token
+          if [ -f /tmp/root.token ]; then
+             export VAULT_TOKEN=$(cat /tmp/root.token)
+             if ! vault secrets list | grep -q "^kv/"; then
+               echo "Enabling KV v2..."
+               vault secrets enable -path=kv kv-v2
+             fi
+             echo "Vault setup complete and ready for Netpulse."
+          else
+             echo "Job finished. If this was a re-run, check manual status."
+          fi
         env:
         - name: VAULT_ADDR
           value: "http://vault:8200"
@@ -88,4 +111,3 @@ subjects:
 - kind: ServiceAccount
   name: vault-init
   namespace: netpulse
-

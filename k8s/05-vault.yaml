@@ -81,17 +81,17 @@ spec:
           name: http
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "100m"
+            memory: "128Mi"  # Vault 进程本身极轻量
+            cpu: "50m"       # 凭据请求已被60s TTL Cache 大量缓解
           limits:
-            memory: "512Mi"
-            cpu: "500m"
+            memory: "512Mi"  # 存储引擎(Raft/File)写入时的峰值缓冲
+            cpu: "500m"      # 处理并发认证请求时的弹性
         livenessProbe:
           exec:
             command:
             - sh
             - -c
-            - "vault status -address=http://127.0.0.1:8200 || exit 1"
+            - "vault status -address=http://127.0.0.1:8200 || [ $? -eq 2 ]"
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
@@ -100,7 +100,7 @@ spec:
             command:
             - sh
             - -c
-            - "vault status -address=http://127.0.0.1:8200 || exit 1"
+            - "vault status -address=http://127.0.0.1:8200"
           initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 3

@@ -14,20 +14,16 @@ metadata:
 data:
   NETPULSE_LOG__LEVEL: "INFO"
   NETPULSE_WORKER__PINNED_PER_NODE: "128" # Max number of connected devices per pod
-  NETPULSE_REDIS__HOST: "redis-nodes-0.redis-nodes" # See 00-redis.yaml for details
+  NETPULSE_REDIS__HOST: "netpulse-redis-master"    # Operator 创建: 始终指向主节点
   NETPULSE_REDIS__PORT: "6379"
   NETPULSE_REDIS__TLS__ENABLED: "false"
-  NETPULSE_REDIS__SENTINEL__ENABLED: "true"
-  NETPULSE_REDIS__SENTINEL__HOST: "redis-sentinel"
-  NETPULSE_REDIS__SENTINEL__PORT: "26379"
-  NETPULSE_REDIS__SENTINEL__MASTER_NAME: "mymaster"
   # Vault Credential Provider Configuration
   NETPULSE_CREDENTIAL__ENABLED: "true"
   NETPULSE_CREDENTIAL__NAME: "vault_kv"
   NETPULSE_CREDENTIAL__ADDR: "http://vault:8200"
   NETPULSE_CREDENTIAL__ALLOWED_PATHS: "kv/netpulse"
   NETPULSE_CREDENTIAL__VERIFY: "false"
-  NETPULSE_CREDENTIAL__CACHE_TTL: "30"
+  NETPULSE_CREDENTIAL__CACHE_TTL: "60" # Optimized cache for production
 ---
 # 02-netpulse/controller.deploy.yaml
 apiVersion: apps/v1
@@ -47,17 +43,26 @@ spec:
         app: netpulse
         component: controller
     spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: netpulse
+                  component: controller
+              topologyKey: kubernetes.io/hostname
       containers:
       - name: controller
         image: localhost/netpulse-controller:latest
         imagePullPolicy: IfNotPresent
         resources:
           requests:
-            memory: "4Gi"
-            cpu: "2000m"
+            memory: "1Gi"
+            cpu: "400m"   
           limits:
-            memory: "8Gi"
-            cpu: "8000m"
+            memory: "2Gi"
         envFrom:
         - configMapRef:
             name: netpulse-config
@@ -92,7 +97,7 @@ metadata:
   name: netpulse-node-worker
   namespace: netpulse
 spec:
-  replicas: 6
+  replicas: 18
   selector:
     matchLabels:
       app: netpulse
@@ -103,17 +108,26 @@ spec:
         app: netpulse
         component: node-worker
     spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: netpulse
+                  component: node-worker
+              topologyKey: kubernetes.io/hostname
       containers:
       - name: node-worker
         image: localhost/netpulse-node-worker:latest
         imagePullPolicy: IfNotPresent
         resources:
           requests:
-            memory: "2Gi"
-            cpu: "1000m"
+            memory: "2Gi"    
+            cpu: "300m"      
           limits:
-            memory: "4Gi"
-            cpu: "4000m"
+            memory: "8Gi"    
         envFrom:
         - configMapRef:
             name: netpulse-config
@@ -146,7 +160,7 @@ metadata:
   name: netpulse-fifo-worker
   namespace: netpulse
 spec:
-  replicas: 6
+  replicas: 12
   selector:
     matchLabels:
       app: netpulse
@@ -157,17 +171,26 @@ spec:
         app: netpulse
         component: fifo-worker
     spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: netpulse
+                  component: fifo-worker
+              topologyKey: kubernetes.io/hostname
       containers:
       - name: fifo-worker
         image: localhost/netpulse-fifo-worker:latest
         imagePullPolicy: IfNotPresent
         resources:
           requests:
-            memory: "2Gi"
-            cpu: "1000m"
+            memory: "1Gi"  
+            cpu: "300m"     
           limits:
-            memory: "4Gi"
-            cpu: "4000m"
+            memory: "2Gi"    
         envFrom:
         - configMapRef:
             name: netpulse-config
