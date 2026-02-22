@@ -1,5 +1,7 @@
 import logging
 
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import ValidationError
 
@@ -18,26 +20,30 @@ from .utils.logger import setup_logging
 
 log = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
+    import threading
+
+    log.info("Starting NetPulse Supervisor thread...")
+    supervisor_thread = threading.Thread(target=g_supervisor.start, daemon=True)
+    supervisor_thread.start()
+
+    yield
+
+    # Shutdown logic
+    log.info("Stopping NetPulse Supervisor...")
+    g_supervisor.stop()
+
+
 log.info("Starting NetPulse Controller...")
 app = FastAPI(
     title="NetPulse Controller",
     description="NetPulse Controller API",
     version=__version__,
     contact={"name": "NetPulse"},
+    lifespan=lifespan,
 )
-
-
-@app.on_event("startup")
-def startup_event():
-    import threading
-
-    supervisor_thread = threading.Thread(target=g_supervisor.start, daemon=True)
-    supervisor_thread.start()
-
-
-@app.on_event("shutdown")
-def shutdown_event():
-    g_supervisor.stop()
 
 
 # Static files
