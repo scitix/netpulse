@@ -21,6 +21,10 @@ NetPulse 是一个专为现代网络自动化设计的高性能分布式网络�
 
 * **统一接口**: 提供统一的 RESTful API，屏蔽不同厂商设备的差异。无论是 Cisco、华为还是其他厂商的设备，都可以通过相同的 API 接口进行操作，大大简化了网络自动化的开发工作。
 
+* **存储网关 (Storage Gateway)**: 集成式文件管理系统，支持分阶段上传和结构化找回，简化跨环境的文件同步。
+
+* **可靠后台管理器**: 增强型 Paramiko 引擎，支持持久化后台任务、自动发现、身份校验及增量日志流式读取。
+
 ### 技术架构
 
 ![NetPulse 系统架构](docs/zh/assets/images/architecture/workflow-overview.svg)

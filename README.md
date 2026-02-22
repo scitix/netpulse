@@ -21,6 +21,10 @@ NetPulse is a high-performance distributed network device management API framewo
 
 * **Unified Interface**: Provides a unified RESTful API that abstracts vendor-specific differences. Whether it's Cisco, Huawei, or other vendors' devices, they can all be operated through the same API interface, greatly simplifying network automation development.
 
+* **Storage Gateway**: Integrated file management system for staged uploads and structured retrievals, simplifying cross-environment file synchronization.
+
+* **Reliable Background Manager**: Advanced Paramiko engine supporting persistent detached tasks with automatic discovery, identity verification, and incremental log streaming.
+
 ### Technical Architecture
 
 ![NetPulse Architecture](docs/en/assets/images/architecture/workflow-overview-en.svg)
