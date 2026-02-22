@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "e0e5c8eb-8002-4231-87af-ac697ba47b21",
+		"_postman_id": "e7e04dc9-4375-4bca-8214-2af4ef865e37",
 		"name": "NetPulse API Collection v0.4.0",
 		"description": "NetPulse 网络设备管理 API",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
@@ -300,6 +300,293 @@
 							]
 						},
 						"description": "查询指定工作节点上的所有任务（适用于分布式部署场景）"
+					},
+					"response": []
+				},
+				{
+					"name": "列出后台任务 (Detached Tasks)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/detached-tasks?status=running",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"detached-tasks"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "running",
+									"description": "状态过滤"
+								}
+							]
+						},
+						"description": "列出所有已注册的后台任务 (Detached Tasks)。"
+					},
+					"response": []
+				},
+				{
+					"name": "查询后台任务 (Detached Tasks)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/detached-tasks/{{task_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"detached-tasks",
+								"{{task_id}}"
+							]
+						},
+						"description": "同步查询后台任务的日志和运行状态。"
+					},
+					"response": []
+				},
+				{
+					"name": "终止后台任务 (Detached Tasks)",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/detached-tasks/{{task_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"detached-tasks",
+								"{{task_id}}"
+							]
+						},
+						"description": "终止指定的后台任务，清理相关资源。"
+					},
+					"response": []
+				},
+				{
+					"name": "发现后台任务 (Detached Task Discovery)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\",\n        \"port\": 22\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/detached-tasks/discover",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"detached-tasks",
+								"discover"
+							]
+						},
+						"description": "扫描设备上活跃的后台任务，重新同步到系统注册表中。"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Network Storage & File Gateway",
+			"item": [
+				{
+					"name": "Paramiko - 上传文件 (Upload Multipart)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "request",
+									"value": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"driver_args\": {\n        \"file_transfer\": {\n            \"operation\": \"upload\",\n            \"remote_path\": \"/tmp/test_upload.txt\"\n        }\n    }\n}",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/device/exec",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"exec"
+							]
+						},
+						"description": "使用 Paramiko 通过 Multipart 上传文件到 Linux 服务器。"
+					},
+					"response": []
+				},
+				{
+					"name": "Paramiko - 下载文件 (Download JSON)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"driver_args\": {\n        \"file_transfer\": {\n            \"operation\": \"download\",\n            \"remote_path\": \"/etc/hosts\"\n        }\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/device/exec",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"exec"
+							]
+						},
+						"description": "使用 Paramiko 从 Linux 服务器下载文件。任务完成后将生成 download_url。"
+					},
+					"response": []
+				},
+				{
+					"name": "Paramiko - 后台任务组合 (Upload + Detached Exec)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "request",
+									"value": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"driver_args\": {\n        \"file_transfer\": {\n            \"operation\": \"upload\",\n            \"remote_path\": \"/tmp/background_script.sh\",\n            \"execute_after_upload\": true,\n            \"execute_command\": \"bash /tmp/background_script.sh\"\n        }\n    },\n    \"run_in_background\": true\n}",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/device/exec",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"exec"
+							]
+						},
+						"description": "组合案例：通过 Paramiko 上传脚本并立即以 Detached 模式在后台运行。适用于长时间运行的安装或维护任务。"
+					},
+					"response": []
+				},
+				{
+					"name": "Netmiko - 上传文件 (Upload Multipart)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "request",
+									"value": "{\n    \"driver\": \"netmiko\",\n    \"connection_args\": {\n        \"device_type\": \"{{device_type}}\",\n        \"host\": \"{{device_host}}\",\n        \"username\": \"{{device_username}}\",\n        \"password\": \"{{device_password}}\"\n    },\n    \"driver_args\": {\n        \"operation\": \"upload\",\n        \"remote_path\": \"flash:test_config.txt\"\n    }\n}",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/device/exec",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"exec"
+							]
+						},
+						"description": "使用 Netmiko 通过 Multipart 上传文件到网络设备 (iOS/Nexus/Arista等)。"
+					},
+					"response": []
+				},
+				{
+					"name": "Netmiko - 下载文件 (Download JSON)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"driver\": \"netmiko\",\n    \"connection_args\": {\n        \"device_type\": \"{{device_type}}\",\n        \"host\": \"{{device_host}}\",\n        \"username\": \"{{device_username}}\",\n        \"password\": \"{{device_password}}\"\n    },\n    \"driver_args\": {\n        \"operation\": \"download\",\n        \"remote_path\": \"flash:running-config\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/device/exec",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"exec"
+							]
+						},
+						"description": "使用 Netmiko 从网络设备下载文件。任务完成后将生成 download_url。"
+					},
+					"response": []
+				},
+				{
+					"name": "PyEAPI (Arista) - 模拟下载 (via Command)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"driver\": \"pyeapi\",\n    \"connection_args\": {\n        \"host\": \"{{device_host}}\",\n        \"username\": \"{{device_username}}\",\n        \"password\": \"{{device_password}}\",\n        \"transport\": \"https\"\n    },\n    \"command\": \"copy running-config sftp://{{server_host}}/tmp/arista_backup.txt\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/device/exec",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"exec"
+							]
+						},
+						"description": "由于 PyEAPI 是基于 HTTP 的，通常使用设备原生的 copy 命令将文件推送到外部服务器。如果需要直接获取文件流，建议切换到 Netmiko 驱动进行 File Transfer 操作。"
+					},
+					"response": []
+				},
+				{
+					"name": "取回已下载文件 (Storage Gateway Fetch)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/storage/fetch/{{file_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"storage",
+								"fetch",
+								"{{file_id}}"
+							]
+						},
+						"description": "真正取回存储在 NetPulse 服务器中的二进制文件。file_id 可以从任务执行结果的 download_url 中获得。"
 					},
 					"response": []
 				}
@@ -1736,7 +2023,7 @@
 							"response": []
 						},
 						{
-							"name": "查询 - 网络诊断",
+							"name": "查询 - 网络诊断-pinned",
 							"request": {
 								"method": "POST",
 								"header": [
@@ -1747,7 +2034,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": [\n    \"ip addr show\",\n    \"ip route show\",\n    \"ss -tuln\",\n    \"netstat -rn\"\n  ],\n  \"driver_args\": {\n    \"timeout\": 60.0\n  },\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 300\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": [\n    \"ip addr show\",\n    \"ip route show\",\n    \"ss -tuln\",\n    \"netstat -rn\"\n  ],\n  \"driver_args\": {\n    \"timeout\": 60.0\n  },\n  \"queue_strategy\": \"pinned\",\n  \"ttl\": 300\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1760,34 +2047,6 @@
 									]
 								},
 								"description": "Paramiko网络诊断 - 网络配置和连接状态"
-							},
-							"response": []
-						},
-						{
-							"name": "查询 - 环境注入 (Environment)",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": \"echo $APP_VERSION; ls -l $TOOL_PATH\",\n  \"driver_args\": {\n    \"environment\": {\n      \"APP_VERSION\": \"v2.4.0\",\n      \"TOOL_PATH\": \"/opt/rdma/bin\"\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
-								},
-								"url": {
-									"raw": "{{base_url}}/device/exec",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"device",
-										"exec"
-									]
-								},
-								"description": "通过 API 注入远程服务器的环境变量，避免在命令字符串中手动写 export。"
 							},
 							"response": []
 						},
@@ -1820,7 +2079,7 @@
 							"response": []
 						},
 						{
-							"name": "查询 - Vault 凭据 (密钥字符串)",
+							"name": "查询 - Vault 凭据 (key)",
 							"request": {
 								"method": "POST",
 								"header": [
@@ -1831,7 +2090,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"port\": 22\n  },\n  \"credential\": {\n    \"name\": \"vault_kv\",\n    \"ref\": \"{{server_cred_ref}}\",\n    \"mount\": \"kv\",\n    \"field_mapping\": {\n      \"username\": \"username\",\n      \"pkey\": \"ssh_private_key\",\n      \"passphrase\": \"key_passphrase\"\n    }\n  },\n  \"command\": \"uptime\",\n  \"queue_strategy\": \"fifo\"\n}"
+									"raw": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"port\": 22\n    },\n    \"credential\": {\n        \"ref\": \"{{server_cred_ref}}\"\n    },\n    \"command\": \"uptime\",\n    \"queue_strategy\": \"fifo\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1844,6 +2103,62 @@
 									]
 								},
 								"description": "Paramiko 查询 - 使用 Vault 获取私钥字符串(pkey)"
+							},
+							"response": []
+						},
+						{
+							"name": "查询 - Vault 凭据 (key)-mapping",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"port\": 22\n  },\n  \"credential\": {\n    // name和mount这两个参数可以默认不传，\n    \"name\": \"vault_kv\",\n    \"ref\": \"{{server_cred_ref}}\",\n    \"mount\": \"kv\",\n    // vault中username、password、pkey是默认固定的，如果vault中用的key是这三个，就不用field_mapping\n    \"field_mapping\": {\n      \"username\": \"username\",\n      \"pkey\": \"pkey\"\n    }\n  },\n  \"command\": \"uptime\",\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "Paramiko 查询 - 使用 Vault 获取私钥字符串(pkey)"
+							},
+							"response": []
+						},
+						{
+							"name": "查询 - 环境注入 (Environment)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": \"echo $APP_VERSION; ls -l $TOOL_PATH\",\n  \"driver_args\": {\n    \"environment\": {\n      \"APP_VERSION\": \"v2.4.0\",\n      // 这里故意引入了一个错误的环境变量，让命令无法执行，应该返回 \"error\": \"ls: cannot access '/opt/rdma/bin': No such file or directory\\n\",\n      \"TOOL_PATH\": \"/opt/rdma/bin\"\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/device/exec",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"device",
+										"exec"
+									]
+								},
+								"description": "通过 API 注入远程服务器的环境变量，避免在命令字符串中手动写 export。"
 							},
 							"response": []
 						}
@@ -1892,7 +2207,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"config\": [\n    \"echo 'server.example.com' > /etc/hostname\",\n    \"systemctl restart hostname\"\n  ],\n  \"driver_args\": {\n    \"sudo\": true,\n    \"sudo_password\": \"{{sudo_password}}\",\n    \"timeout\": 60.0\n  },\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 300\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"config\": [\n    \"echo 'Welcome to NetPulse Managed Server!' > /etc/motd\",\n    \"ls -l /etc/motd\"\n  ],\n  \"driver_args\": {\n    \"sudo\": true,\n    \"sudo_password\": \"{{sudo_password}}\",\n    \"timeout\": 60.0\n  },\n  \"queue_strategy\": \"fifo\",\n  \"ttl\": 300\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1925,7 +2240,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": \"passwd\",\n  \"driver_args\": {\n    \"get_pty\": true,\n    \"expect_map\": {\n      \"Current password\": \"{{server_password}}\",\n      \"New password\": \"NewPass123!\",\n      \"Retype new password\": \"NewPass123!\"\n    }\n  }\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": \"ssh-keygen -t rsa -b 2048 -f /tmp/id_rsa_test\",\n  \"driver_args\": {\n    // 交互式命令，可以对交互过程中的提示进行输入\n    \"get_pty\": true,\n    \"expect_map\": {\n      \"Enter passphrase\": \"demo-passphrase\",\n      \"Enter same passphrase again\": \"demo-passphrase\"\n    }\n  }\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1940,34 +2255,6 @@
 								"description": "用于执行需要二次交互确认的命令（如 passwd, sudo 提权等）。通过 expect_map 定义关键字匹配逻辑，控制器在检测到匹配项时自动注入对应的输入流。"
 							},
 							"response": []
-						},
-						{
-							"name": "Stream Cursor (session_id, offset, lines)",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"driver_args\": {\n    \"stream_query\": {\n      \"session_id\": \"PASTE_YOUR_SESSION_ID_HERE\",\n      \"offset\": 0,\n      \"lines\": 50\n    }\n  }\n}"
-								},
-								"url": {
-									"raw": "{{base_url}}/device/exec",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"device",
-										"exec"
-									]
-								},
-								"description": "实现类似 tail -f 的平滑日志追踪。查询接口返回的 next_offset 代表当前已读取的字节边界，后续查询只需将该值传入 offset 字段，即可实现增量获取，防止数据重叠或丢失。"
-							},
-							"response": []
 						}
 					]
 				},
@@ -1975,18 +2262,29 @@
 					"name": "File Transfer Mechanics (SFTP)",
 					"item": [
 						{
-							"name": "Upload & Execute (chmod, execute_after_upload, cleanup_after_exec)",
+							"name": "基础文件上传 (Multipart Upload)",
 							"request": {
 								"method": "POST",
 								"header": [
 									{
 										"key": "Content-Type",
-										"value": "application/json"
+										"value": "multipart/form-data"
 									}
 								],
 								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": [\n    \"__FILE_TRANSFER__\"\n  ],\n  \"driver_args\": {\n    \"file_transfer\": {\n      \"operation\": \"upload\",\n      \"local_path\": \"/local/tools/rdma_check\",\n      \"remote_path\": \"/tmp/rdma_check\",\n      \"chmod\": \"0755\",\n      \"execute_after_upload\": true,\n      \"execute_command\": \"/tmp/rdma_check --verbose\",\n      \"cleanup_after_exec\": true\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "request",
+											"value": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"driver_args\": {\n        \"file_transfer\": {\n            \"operation\": \"upload\",\n            \"remote_path\": \"/tmp/uploaded_postman_test.txt\"\n        }\n    },\n    \"command\": []\n}",
+											"type": "text"
+										},
+										{
+											"key": "file",
+											"type": "file",
+											"src": []
+										}
+									]
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -1998,23 +2296,34 @@
 										"exec"
 									]
 								},
-								"description": "演示 SFTP 组合操作：上传、chmod (0755)、execute_after_upload、cleanup_after_exec。"
+								"description": "使用 Multipart/Form-Data 上传文件并通过 Paramiko 传输至服务器。"
 							},
 							"response": []
 						},
 						{
-							"name": "Recursive Sync (sync_mode=hash, resume)",
+							"name": "上传脚本并即时执行 (Upload & Execute)",
 							"request": {
 								"method": "POST",
 								"header": [
 									{
 										"key": "Content-Type",
-										"value": "application/json"
+										"value": "multipart/form-data"
 									}
 								],
 								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": [\n    \"__FILE_TRANSFER__\"\n  ],\n  \"driver_args\": {\n    \"file_transfer\": {\n      \"operation\": \"upload\",\n      \"local_path\": \"/path/to/local/dir/\",\n      \"remote_path\": \"/tmp/remote/dir/\",\n      \"recursive\": true,\n      \"sync_mode\": \"hash\",\n      \"resume\": true\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "request",
+											"value": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"driver_args\": {\n        \"file_transfer\": {\n            \"operation\": \"upload\",\n            \"remote_path\": \"/tmp/uploaded_postman_test.txt\",\n            \"chmod\": \"0755\",\n            \"execute_after_upload\": true,\n            \"execute_command\": \"bash /tmp/uploaded_postman_test.txt\",\n            \"cleanup_after_exec\": true\n        }\n    },\n    \"command\": []\n}",
+											"type": "text"
+										},
+										{
+											"key": "file",
+											"type": "file",
+											"src": []
+										}
+									]
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -2026,12 +2335,12 @@
 										"exec"
 									]
 								},
-								"description": "演示 SFTP 增量同步：recursive, sync_mode (hash), resume 参数。"
+								"description": "高级用法：上传一个 Shell 脚本，设置权限，立刻执行，并且执行完后自动清理掉上传的源文件。"
 							},
 							"response": []
 						},
 						{
-							"name": "Download Recursive (resume)",
+							"name": "Paramiko - 下载文件 (Download to Worker OS)",
 							"request": {
 								"method": "POST",
 								"header": [
@@ -2042,7 +2351,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": [\n    \"__FILE_TRANSFER__\"\n  ],\n  \"driver_args\": {\n    \"file_transfer\": {\n      \"operation\": \"download\",\n      \"local_path\": \"/path/to/local/backup/\",\n      \"remote_path\": \"/remote/log/dir/\",\n      \"recursive\": true,\n      \"resume\": true\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+									"raw": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"driver_args\": {\n        \"file_transfer\": {\n            \"operation\": \"download\",\n            \"remote_path\": \"/var/log/syslog\",\n            \"local_path\": \"/app/storage/staging/syslog_backup.log\"\n        }\n    },\n    \"command\": [\n        \"__FILE_TRANSFER__\"\n    ],\n    \"queue_strategy\": \"fifo\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -2054,63 +2363,27 @@
 										"exec"
 									]
 								},
-								"description": "Paramiko 递归文件下载 - 一次性拉取远程整个日志目录"
+								"description": "Paramiko 下载文件：将远程 Linux 服务器上的文件（例如日志），下载并保存到 NetPulse Worker 容器内的 /tmp 目录下。 注意：想要把文件进一步下载到本机(A)，请把 local_path 设在 `/app/storage/staging/` 目录下，随后调用 `/device/download` 接口拉取。"
 							},
 							"response": []
 						},
 						{
-							"name": "文件上传 - 基础单文件",
+							"name": "从服务器拉取已下载文件 (Get from Worker API)",
 							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\",\n    \"port\": 22\n  },\n  \"command\": [\n    \"__FILE_TRANSFER__\"\n  ],\n  \"driver_args\": {\n    \"file_transfer\": {\n      \"operation\": \"upload\",\n      \"local_path\": \"/local/file.txt\",\n      \"remote_path\": \"/remote/file.txt\",\n      \"resume\": false,\n      \"chunk_size\": 32768\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
-								},
+								"method": "GET",
+								"header": [],
 								"url": {
-									"raw": "{{base_url}}/device/exec",
+									"raw": "{{base_url}}/device/files/syslog_backup.log",
 									"host": [
 										"{{base_url}}"
 									],
 									"path": [
 										"device",
-										"exec"
+										"files",
+										"syslog_backup.log"
 									]
 								},
-								"description": "Paramiko基础文件上传 - SFTP上传文件到远程服务器"
-							},
-							"response": []
-						},
-						{
-							"name": "文件下载 - 基础（断点续传）",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\",\n    \"port\": 22\n  },\n  \"command\": [\n    \"__FILE_TRANSFER__\"\n  ],\n  \"driver_args\": {\n    \"file_transfer\": {\n      \"operation\": \"download\",\n      \"local_path\": \"/local/file.txt\",\n      \"remote_path\": \"/remote/file.txt\",\n      \"resume\": true,\n      \"chunk_size\": 32768\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
-								},
-								"url": {
-									"raw": "{{base_url}}/device/exec",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"device",
-										"exec"
-									]
-								},
-								"description": "Paramiko文件下载 - SFTP从远程服务器下载文件（支持断点续传）"
+								"description": "在上一步 `Paramiko - 下载文件` 指令成功完成后，可以立刻调用此 GET HTTP 接口将文件从 Worker OS （`/app/storage/staging` 存放区）真正拉取到你的浏览器或电脑端(A)。"
 							},
 							"response": []
 						}
@@ -2178,10 +2451,10 @@
 					]
 				},
 				{
-					"name": "Job Control (Background & Stream)",
+					"name": "Detached Task Management (Async)",
 					"item": [
 						{
-							"name": "后台任务 TTL 与自动清理",
+							"name": "Start Detached Task - 无推送",
 							"request": {
 								"method": "POST",
 								"header": [
@@ -2192,7 +2465,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": \"./long_running_script.sh\",\n  \"driver_args\": {\n    \"run_in_background\": true,\n    \"ttl_seconds\": 600\n  },\n  \"ttl\": 3600,\n  \"result_ttl\": 86400\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": \"vmstat 5 60 | cat -n\",\n  \"detach\": true,\n  \"driver_args\": {\n    \"max_age\": 86400\n  },\n  \"queue_strategy\": \"pinned\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -2204,28 +2477,12 @@
 										"exec"
 									]
 								},
-								"description": "生产环境自洁模式。设置后台或流式任务临时文件（PID/Log）的有效期，控制器在执行后续操作时会自动物理删除过期的历史残留文件，避免存储溢出。\n\n新增参数说明：\n- ttl (3600): Job 执行超时时间（秒）\n- result_ttl (86400): 任务结果在 Redis 中的保留时间（秒），默认跟随系统设置。对于48小时压力测试等长时间任务，可设置为更大的值（最大7天=604800秒），确保结果不会在任务完成后被过早清除。"
+								"description": "启动后台任务并返回 task_id。"
 							},
 							"response": []
 						},
 						{
-							"name": "启动后台任务",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"var jsonData = pm.response.json();",
-											"if (jsonData && jsonData && jsonData.background_task) {",
-											"    pm.collectionVariables.set('task_pid', jsonData.background_task.pid);",
-											"    pm.collectionVariables.set('task_output_file', jsonData.background_task.output_file);",
-											"    console.log('PID已捕获: ' + jsonData.background_task.pid);",
-											"}"
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
+							"name": "Start Detached Task - Webhook 订阅模式",
 							"request": {
 								"method": "POST",
 								"header": [
@@ -2236,7 +2493,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": \"bash -c 'for i in $(seq 1 60); do echo Step $i; sleep 1; done'\",\n  \"driver_args\": {\n    \"run_in_background\": true\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": \"vmstat 5 60 | cat -n\",\n  \"detach\": true,\n  \"push_interval\": 15,\n  \"webhook\": {\n    \"url\": \"http://10.155.30.35:8888/webhook\",\n    \"name\": \"basic\"\n  },\n  \"queue_strategy\": \"pinned\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -2248,12 +2505,12 @@
 										"exec"
 									]
 								},
-								"description": "启动后台任务 - 返回 PID 和输出文件路径，用于后续查询"
+								"description": "开启自动推送模式，每隔 push_interval 秒向 Webhook 传输日志增量。"
 							},
 							"response": []
 						},
 						{
-							"name": "查询后台任务状态",
+							"name": "Start Detached Task - Webhook 无中断订阅",
 							"request": {
 								"method": "POST",
 								"header": [
@@ -2264,7 +2521,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"check_task\": {\n      \"pid\": {{task_pid}},\n      \"output_file\": \"{{task_output_file}}\",\n      \"tail_lines\": 50,\n      \"kill_if_running\": false,\n      \"cleanup_files\": false\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": \"vmstat 5 60 | cat -n\",\n  \"detach\": true,\n  \"push_interval\": 15,\n  \"webhook\": {\n    \"url\": \"http://10.155.30.35:8888/webhook\",\n    \"name\": \"basic\"\n  },\n  \"queue_strategy\": \"pinned\"\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -2276,172 +2533,161 @@
 										"exec"
 									]
 								},
-								"description": "查询后台任务状态 - 返回运行状态、运行时长、输出日志等"
+								"description": "开启自动推送模式，每隔 push_interval 秒向 Webhook 传输日志增量。"
 							},
 							"response": []
 						},
 						{
-							"name": "终止并清理后台任务",
+							"name": "Query Task Status",
 							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"check_task\": {\n      \"pid\": {{task_pid}},\n      \"output_file\": \"{{task_output_file}}\",\n      \"tail_lines\": 10,\n      \"kill_if_running\": true,\n      \"cleanup_files\": true\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
-								},
+								"method": "GET",
+								"header": [],
 								"url": {
-									"raw": "{{base_url}}/device/exec",
+									"raw": "{{base_url}}/detached-tasks/{{task_id}}",
 									"host": [
 										"{{base_url}}"
 									],
 									"path": [
-										"device",
-										"exec"
+										"detached-tasks",
+										"{{task_id}}"
 									]
 								},
-								"description": "终止后台任务并清理临时文件"
+								"description": "获取任务的详细日志和最新执行情况。\n注意：将 {{task_id}} 替换为你通过 /device/exec 启动任务后返回的 id 。"
 							},
 							"response": []
 						},
 						{
-							"name": "任务发现 - 扫描所有活跃任务 (Discovery)",
+							"name": "获取集群活动任务清单",
 							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"driver_args\": {\n    \"list_active_tasks\": true\n  }\n}"
-								},
+								"method": "GET",
+								"header": [],
 								"url": {
-									"raw": "{{base_url}}/device/exec",
+									"raw": "{{base_url}}/detached-tasks",
 									"host": [
 										"{{base_url}}"
 									],
 									"path": [
-										"device",
-										"exec"
+										"detached-tasks"
 									]
 								},
-								"description": "任务救援模式：扫描远程机器上所有由 NetPulse 启动的活跃后台任务（含 Stream 和 Background）。即使控制端重启失联，也可通过此接口找回正在运行的任务并重新接管。"
+								"description": "从 Redis 注册表中直接拉取当前系统中所有存在的 Detached Tasks。"
+							},
+							"response": []
+						},
+						{
+							"name": "获取集群活动任务清单-running",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/detached-tasks?status=running",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"detached-tasks"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "running"
+										}
+									]
+								},
+								"description": "从 Redis 注册表中直接拉取当前系统中所有存在的 Detached Tasks。"
+							},
+							"response": []
+						},
+						{
+							"name": "Task discover",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  }\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{base_url}}/detached-tasks/discover",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"detached-tasks",
+										"discover"
+									]
+								},
+								"description": "从 Redis 注册表中直接拉取当前系统中所有存在的 Detached Tasks。"
+							},
+							"response": []
+						},
+						{
+							"name": "强杀进程并清理 (Kill & Cleanup)",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/detached-tasks/{{task_id}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"detached-tasks",
+										"{{task_id}}"
+									]
+								},
+								"description": "强制终止进程并清理任务文件。"
 							},
 							"response": []
 						}
 					]
 				},
 				{
-					"name": "Paramiko流式输出",
-					"item": [
+					"name": "Paramiko - 启动后台任务 (Detached Execution)",
+					"event": [
 						{
-							"name": "启动流式命令",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"var jsonData = pm.response.json();",
-											"if (jsonData && jsonData && jsonData.stream) {",
-											"    pm.collectionVariables.set('stream_session_id', jsonData.stream.session_id);",
-											"    pm.collectionVariables.set('stream_offset', 0);",
-											"    console.log('Stream SessionID已捕获: ' + jsonData.stream.session_id);",
-											"}"
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.json() && pm.response.json().id) {",
+									"    pm.collectionVariables.set('task_id', pm.response.json().id);",
+									"    console.log('Task ID已设置: ' + pm.collectionVariables.get('task_id'));",
+									"}"
 								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": \"ping 8.8.8.8\",\n  \"driver_args\": {\n    \"stream\": true\n  },\n  \"queue_strategy\": \"fifo\"\n}"
-								},
-								"url": {
-									"raw": "{{base_url}}/device/exec",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"device",
-										"exec"
-									]
-								},
-								"description": "启动流式命令 - 返回 session_id，用于轮询获取输出"
-							},
-							"response": []
-						},
-						{
-							"name": "轮询流式输出",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"stream_query\": {\n      \"session_id\": \"{{stream_session_id}}\",\n      \"offset\": {{stream_offset}},\n      \"lines\": 50,\n      \"cleanup\": false\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
-								},
-								"url": {
-									"raw": "{{base_url}}/device/exec",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"device",
-										"exec"
-									]
-								},
-								"description": "轮询获取流式输出 - 返回当前输出、完成状态、运行时长"
-							},
-							"response": []
-						},
-						{
-							"name": "终止流式命令并清理",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"driver\": \"paramiko\",\n  \"connection_args\": {\n    \"host\": \"{{server_host}}\",\n    \"username\": \"{{server_username}}\",\n    \"password\": \"{{server_password}}\"\n  },\n  \"command\": [],\n  \"driver_args\": {\n    \"stream_query\": {\n      \"session_id\": \"{{stream_session_id}}\",\n      \"lines\": 10,\n      \"kill\": true,\n      \"cleanup\": true\n    }\n  },\n  \"queue_strategy\": \"fifo\"\n}"
-								},
-								"url": {
-									"raw": "{{base_url}}/device/exec",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"device",
-										"exec"
-									]
-								},
-								"description": "终止流式命令并清理临时文件"
-							},
-							"response": []
+								"type": "text/javascript"
+							}
 						}
-					]
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\",\n        \"port\": 22\n    },\n    \"command\": [\n        \"ping 8.8.8.8 -c 100\"\n    ],\n    \"detach\": true,\n    \"push_interval\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/device/exec",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"exec"
+							]
+						},
+						"description": "在目标服务器后台启动长时间运行的任务（如ping、stress），并返回 Task ID。"
+					},
+					"response": []
 				}
 			]
 		},
