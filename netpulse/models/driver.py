@@ -11,5 +11,6 @@ class DriverExecutionResult(BaseModel):
     output: Any
     error: str = ""
     exit_status: int = 0
-    telemetry: Dict[str, Any] = Field(default_factory=dict)
+    download_url: Optional[str] = None  # Formal field for file resources
+    metadata: Dict[str, Any] = Field(default_factory=dict)
     parsed: Optional[Any] = None

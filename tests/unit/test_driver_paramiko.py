@@ -1,7 +1,7 @@
+from netpulse.models.common import FileTransferModel
 from netpulse.plugins.drivers.paramiko import ParamikoDriver
 from netpulse.plugins.drivers.paramiko.model import (
     ParamikoConnectionArgs,
-    ParamikoFileTransferOperation,
     ParamikoSendCommandArgs,
     ParamikoSendConfigArgs,
 )
@@ -69,12 +69,13 @@ def test_paramiko_send_returns_empty_when_no_commands():
 
 def test_paramiko_send_runs_file_transfer(monkeypatch):
     """Use file_transfer branch instead of executing commands."""
-    op = ParamikoFileTransferOperation(
-        operation="upload", local_path="/tmp/a", remote_path="/tmp/b"
+    op = FileTransferModel(
+        operation="upload", remote_path="/tmp/b", local_path="/tmp/a"
     )
     driver = ParamikoDriver(
-        args=ParamikoSendCommandArgs(file_transfer=op),
+        args=ParamikoSendCommandArgs(),
         conn_args=ParamikoConnectionArgs(host="h", username="u", password="p"),
+        file_transfer=op,
     )
 
     called = {}
@@ -84,14 +85,15 @@ def test_paramiko_send_runs_file_transfer(monkeypatch):
     def fake_handle(self, session, file_transfer_op, skip_exec=False):
         called["session"] = session
         called["op"] = file_transfer_op
-        return {"file_transfer_upload": DriverExecutionResult(output="", error="", exit_status=0)}
+        op_key = f"{file_transfer_op.operation} {file_transfer_op.remote_path}"
+        return {op_key: DriverExecutionResult(output="", error="", exit_status=0)}
 
     monkeypatch.setattr(ParamikoDriver, "_handle_file_transfer", fake_handle)
     fake_session = object()
 
     result = driver.send(fake_session, ["ignored"])  # type: ignore
-    assert hasattr(result["file_transfer_upload"], "exit_status")
-    assert result["file_transfer_upload"].exit_status == 0
+    assert hasattr(result["upload /tmp/b"], "exit_status")
+    assert result["upload /tmp/b"].exit_status == 0
     assert called["session"] is fake_session
     assert called["op"] == op
 

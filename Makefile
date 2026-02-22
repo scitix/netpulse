@@ -1,6 +1,6 @@
 .PHONY: help deploy build up down logs ps watch scale lint format clean clean-all restart shell stats health ai-docs
 .PHONY: dev-up dev-down dev-build dev-logs dev-ps dev-watch dev-restart dev-shell
-.PHONY: prod-up prod-down prod-build prod-logs prod-ps prod-restart prod-shell
+.PHONY: prod-up prod-down prod-build prod-rebuild prod-logs prod-ps prod-restart prod-shell
 
 # Python configuration
 PYTHON := $(shell if [ -d .venv ]; then echo ".venv/bin/python"; else echo "python3"; fi)
@@ -41,6 +41,7 @@ help:
 	@echo "  make prod-restart - Restart all Docker services (production)"
 	@echo "  make prod-logs   - View Docker service logs (production)"
 	@echo "  make prod-ps     - Show Docker service status (production)"
+	@echo "  make prod-rebuild - Rebuild and restart production services (build -> down -> up)"
 	@echo "  make prod-shell <service> - Open shell in production service"
 	@echo ""
 	@echo "Scaling:"
@@ -91,6 +92,9 @@ prod-up:
 prod-down:
 	@echo "⬇️  Stopping Docker services (production)..."
 	docker compose -f docker-compose.yaml down
+
+prod-rebuild: prod-build prod-down prod-up
+	@echo "✅ Production services rebuilt and restarted successfully"
 
 prod-restart:
 	@echo "🔄 Restarting Docker services (production)..."

@@ -25,6 +25,7 @@ CONFIG_PATH = "config/config.yaml"
 class ServerConfig(BaseModel):
     host: str = "0.0.0.0"
     port: int = 9000
+    external_url: Optional[str] = None  # e.g., http://netpulse.example.com:9000
     api_key: str = Field(..., description="API key")
     api_key_name: str = "X-API-KEY"
     gunicorn_worker: int = Field(default_factory=lambda: 2 * os.cpu_count() + 1)  # type: ignore

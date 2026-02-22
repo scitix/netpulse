@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Literal, Optional, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
@@ -186,12 +186,18 @@ class BulkDeviceRequest(DriverConnectionArgs):
         default=None,
         description="Device-specific config override (exclusive with command)",
     )
+    file_transfer: Optional[Any] = Field(
+        default=None,
+        description="Device-specific file transfer override",
+    )
 
     @model_validator(mode="after")
     def check_command_config_exclusivity(self):
-        if self.command is not None and self.config is not None:
+        supplied = sum(x is not None for x in [self.command, self.config, self.file_transfer])
+        if supplied > 1:
             raise ValueError(
-                f"Device {self.host}: cannot specify both 'command' and 'config', choose one"
+                f"Device {self.host}: cannot specify more than one of "
+                "'command', 'config', or 'file_transfer'"
             )
         return self
 
@@ -232,3 +238,49 @@ class BatchFailedItem(BaseModel):
 
     host: str
     reason: str
+
+
+class FileTransferModel(BaseModel):
+    """
+    Standardized model for file transfer operations.
+    Moved to top-level citizen for better API consistency.
+    """
+
+    operation: Literal["upload", "download"] = Field(
+        ..., description="Transfer operation type: upload or download"
+    )
+    remote_path: str = Field(..., description="Remote file path")
+    local_path: Optional[str] = Field(
+        default=None,
+        description="Local file path. For download, use staged task folder if not provided.",
+    )
+
+    # Optional Sync/Optimization settings
+    overwrite: bool = Field(default=True, description="Overwrite destination if exists")
+    resume: bool = Field(default=False, description="Whether to resume interrupted transfer")
+    recursive: bool = Field(default=False, description="Whether to transfer directory recursively")
+    sync_mode: Literal["full", "hash"] = Field(
+        default="full",
+        description="Sync mode: full (always transfer) or hash (skip if MD5 matches)",
+    )
+    hash_algorithm: str = Field(default="md5", description="Hash algorithm for verification")
+    verify_file: bool = Field(default=True, description="Verify file integrity after transfer")
+    chunk_size: int = Field(
+        default=32768, description="Transfer chunk size (bytes), default 32KB"
+    )
+
+    # Post-transfer actions
+    chmod: Optional[str] = Field(
+        default=None, description="Set permissions (e.g., '0755') after transfer"
+    )
+    execute_after_upload: bool = Field(
+        default=False, description="Whether to execute execute_command after upload"
+    )
+    execute_command: Optional[str] = Field(
+        default=None, description="Command to execute after transfer"
+    )
+    cleanup_after_exec: bool = Field(
+        default=True, description="Cleanup the file if execution succeeds"
+    )
+
+    model_config = ConfigDict(extra="allow")

@@ -23,6 +23,8 @@ def test_paramiko_launch_detached():
         re = MagicMock()
         if f"cat {detached_dir}/np_test-123.pid" in cmd:
             ro.read.return_value = b"9999\n"
+        elif "ps -p 9999 -o args=" in cmd:
+            ro.read.return_value = b"np_test-123 bash -c ...\n"
         else:
             ro.read.return_value = b""
         ro.channel.recv_exit_status.return_value = 0
@@ -35,9 +37,12 @@ def test_paramiko_launch_detached():
 
     assert "launch" in res
     launch_res = res["launch"]
-    assert launch_res.telemetry["task_id"] == "test-123"
-    assert launch_res.telemetry["pid"] == 9999
-    assert launch_res.telemetry["log_file"] == f"{detached_dir}/np_test-123.log"
+    assert launch_res.metadata["task_id"] == "test-123"
+    assert launch_res.metadata["pid"] == 9999
+    assert launch_res.metadata["log_file"] == f"{detached_dir}/np_test-123.log"
+    assert "duration_seconds" in launch_res.metadata
+    assert "session_reused" in launch_res.metadata
+    assert launch_res.metadata["is_running"] is True
 
 
 def test_paramiko_is_task_running():
@@ -118,9 +123,9 @@ def test_paramiko_read_logs():
     assert "query" in res
     query_res = res["query"]
     assert query_res.output == "hello\nworld\n"
-    assert query_res.telemetry["next_offset"] == 12
-    assert query_res.telemetry["running"] is True
-    assert query_res.telemetry["completed"] is False
+    assert query_res.metadata["log_offset"] == 12
+    assert query_res.metadata["is_running"] is True
+    assert query_res.metadata["completed"] is False
 
 
 def test_paramiko_kill_task():

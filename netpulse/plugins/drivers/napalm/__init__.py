@@ -174,7 +174,7 @@ class NapalmDriver(BaseDriver):
                     output="",
                     error=f"Failed to open session: {e}",
                     exit_status=1,
-                    telemetry={"duration_seconds": 0.0},
+                    metadata=self._get_base_metadata(time.perf_counter()),
                 )
             }
 
@@ -208,12 +208,12 @@ class NapalmDriver(BaseDriver):
                 error = str(e)
                 exit_status = 1
 
-            duration = time.perf_counter() - start_time
+            duration_metadata = self._get_base_metadata(start_time)
             result[cmd] = DriverExecutionResult(
                 output=str(output),
                 error=error,
                 exit_status=exit_status,
-                telemetry={"duration_seconds": round(duration, 3)},
+                metadata=duration_metadata,
             )
 
         return result
@@ -249,7 +249,7 @@ class NapalmDriver(BaseDriver):
                     output="",
                     error=str(e),
                     exit_status=1,
-                    telemetry={"duration_seconds": 0.0},
+                    metadata=self._get_base_metadata(start_time),
                 )
             }
 
@@ -270,13 +270,13 @@ class NapalmDriver(BaseDriver):
             error = str(e)
             exit_status = 1
 
-        duration = time.perf_counter() - start_time
+
         return {
             cfg_text: DriverExecutionResult(
                 output=diff,
                 error=error,
                 exit_status=exit_status,
-                telemetry={"duration_seconds": round(duration, 3)},
+                metadata=self._get_base_metadata(start_time),
             )
         }
 

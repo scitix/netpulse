@@ -12,13 +12,13 @@ from typing import Any, ClassVar, Dict, List, Optional, Tuple
 
 import paramiko
 
+from ....models.common import FileTransferModel
 from ....models.driver import DriverExecutionResult
 from .. import BaseDriver
 from .model import (
     ParamikoConnectionArgs,
     ParamikoDeviceTestInfo,
     ParamikoExecutionRequest,
-    ParamikoFileTransferOperation,
     ParamikoSendCommandArgs,
     ParamikoSendConfigArgs,
 )
@@ -183,6 +183,7 @@ class ParamikoDriver(BaseDriver):
             conn_args=req.connection_args,
             staged_file_id=req.staged_file_id,
             job_id=getattr(req, "id", None),
+            file_transfer=req.file_transfer,
         )
 
     @classmethod
@@ -199,27 +200,29 @@ class ParamikoDriver(BaseDriver):
         # Validate the request model using Pydantic
         # This will automatically trigger the @model_validator for authentication
         if not isinstance(req, ParamikoExecutionRequest):
-            ParamikoExecutionRequest.model_validate(req.model_dump())
+            req = ParamikoExecutionRequest.model_validate(req.model_dump())
 
     def __init__(
         self,
         args: Optional[ParamikoSendCommandArgs | ParamikoSendConfigArgs],
         conn_args: ParamikoConnectionArgs,
         staged_file_id: Optional[str] = None,
+        file_transfer: Optional[Any] = None,
         **kwargs,
     ):
         super().__init__(staged_file_id=staged_file_id, **kwargs)
         self.args = args
         self.conn_args = conn_args
+        self.file_transfer = file_transfer
 
     def connect(self) -> paramiko.SSHClient:
         try:
-            # Check for persisted session if keepalive is enabled
-            if self.conn_args.keepalive:
-                session = self._get_persisted_session(self.conn_args)
-                if session:
-                    log.info("Reusing existing Paramiko connection")
-                    return session
+            # Optimistically check for persisted session
+            session = self._get_persisted_session(self.conn_args)
+            if session:
+                log.info("Reusing existing Paramiko connection")
+                self._session_reused = True
+                return session
 
             # Create new connection
             log.info(f"Creating new Paramiko connection to {self.conn_args.host}...")
@@ -230,6 +233,7 @@ class ParamikoDriver(BaseDriver):
 
             # Persist session if keepalive is enabled
             if self.conn_args.keepalive:
+                self._session_reused = False  # New connection
                 self._set_persisted_session(session, self.conn_args)
 
             # Cleanup expired task files on the remote host
@@ -370,17 +374,23 @@ class ParamikoDriver(BaseDriver):
                     output=f"Found {len(tasks)} active detached tasks",
                     error="",
                     exit_status=0,
-                    telemetry={"active_tasks": tasks},
+                    metadata={"active_tasks": tasks},
                 )
             }
+
+        # Check for top-level file transfer first
+        if self.file_transfer:
+            log.debug(f"Top-level file transfer detected: {self.file_transfer}")
+            return self._handle_file_transfer(session, self.file_transfer, skip_exec=False)
 
         if (
             self.args
             and isinstance(self.args, ParamikoSendCommandArgs)
-            and self.args.file_transfer is not None
+            and getattr(self.args, "file_transfer", None) is not None
         ):
-            log.debug(f"File transfer detected: {self.args.file_transfer}")
-            return self._handle_file_transfer(session, self.args.file_transfer, skip_exec=False)
+            ft_op = getattr(self.args, "file_transfer")
+            log.debug(f"Nested file transfer detected: {ft_op}")
+            return self._handle_file_transfer(session, ft_op, skip_exec=False)
 
         # Check if script_content is provided for direct script execution
         if (
@@ -395,6 +405,7 @@ class ParamikoDriver(BaseDriver):
             log.warning("No command provided")
             return {}
 
+        start_time = time.perf_counter()
         try:
             result = {}
             for cmd in command:
@@ -409,7 +420,7 @@ class ParamikoDriver(BaseDriver):
                     output="",
                     error=str(e),
                     exit_status=1,
-                    telemetry={},
+                    metadata=self._get_base_metadata(start_time),
                 )
             }
 
@@ -443,39 +454,38 @@ class ParamikoDriver(BaseDriver):
         # Determine the actual command to run
         final_cmd = cmd
 
-        if self.args and isinstance(self.args, ParamikoSendCommandArgs):
-            # Case 1: File Transfer + Detached Execution
-            if self.args.file_transfer and self.args.file_transfer.operation == "upload":
-                log.info(f"Detached: Performing upload before launch for task {task_id}")
-                # Synchronously upload first, skip internal sync execution
-                up_res = self._handle_file_transfer(
-                    session, self.args.file_transfer, skip_exec=True
-                )
-                # Note: _handle_file_transfer might try to execute already if
-                # execute_after_upload is True. However, for detached, we want to
-                # OVERRIDE that sync execution with a detached one.
-                # Let's check if the upload succeeded.
-                up_key = f"file_transfer_{self.args.file_transfer.operation}"
-                if up_res.get(up_key) and up_res[up_key].exit_status == 0:
-                    if (
-                        self.args.file_transfer.execute_after_upload
-                        and self.args.file_transfer.execute_command
-                    ):
-                        final_cmd = self.args.file_transfer.execute_command
-                else:
-                    return up_res  # Return failure immediately if upload failed
+        # Case 1: Standardized Top-level File Transfer + Detached Execution
+        if self.file_transfer and self.file_transfer.operation == "upload":
+            log.info(f"Detached: Performing upload before launch for task {task_id}")
+            up_res = self._handle_file_transfer(session, self.file_transfer, skip_exec=True)
+            up_key = f"file_transfer_{self.file_transfer.operation}"
+            if up_res.get(up_key) and up_res[up_key].exit_status == 0:
+                if self.file_transfer.execute_after_upload and self.file_transfer.execute_command:
+                    final_cmd = self.file_transfer.execute_command
+            else:
+                return up_res
 
-            # Case 2: Script Content + Detached Execution
+        # Case 2: Legacy/Nested File Transfer or Script Content
+        elif self.args and isinstance(self.args, ParamikoSendCommandArgs):
+            # Safe check for nested file_transfer
+            ft_op = getattr(self.args, "file_transfer", None)
+            if ft_op and ft_op.operation == "upload":
+                log.info(f"Detached: Performing nested upload before launch for task {task_id}")
+                up_res = self._handle_file_transfer(session, ft_op, skip_exec=True)
+                up_key = f"file_transfer_{ft_op.operation}"
+                if up_res.get(up_key) and up_res[up_key].exit_status == 0:
+                    if ft_op.execute_after_upload and ft_op.execute_command:
+                        final_cmd = ft_op.execute_command
+                else:
+                    return up_res
+
+            # Case 3: Script Content + Detached Execution
             elif self.args.script_content:
                 log.info(f"Detached: Writing script content for task {task_id}")
                 script_path = f"{detached_dir}/{DETACHED_TASK_FILE_PREFIX}_{task_id}.sh"
-
-                # Write script content via a temporary file or heredoc
-                # For safety with large scripts, we use a simple heredoc or cat
                 content_quoted = shlex.quote(self.args.script_content)
                 write_cmd = f"printf %s {content_quoted} > {script_path} && chmod +x {script_path}"
                 self._execute_command(session, write_cmd, None)
-
                 interpreter = self.args.script_interpreter or "bash"
                 final_cmd = f"{interpreter} {script_path}"
 
@@ -485,7 +495,7 @@ class ParamikoDriver(BaseDriver):
                     output="",
                     error="No command provided for detached execution.",
                     exit_status=1,
-                    telemetry={},
+                    metadata={},
                 )
             }
 
@@ -517,6 +527,7 @@ class ParamikoDriver(BaseDriver):
             sudo_prefix = "sudo -S "
             bg_launch = f"{sudo_prefix}bash -c {shlex.quote(bg_launch)}"
 
+        start_time = time.perf_counter()
         _stdin, stdout, _stderr = session.exec_command(
             bg_launch, get_pty=bool(getattr(self.args, "sudo", False))
         )
@@ -545,7 +556,8 @@ class ParamikoDriver(BaseDriver):
         if pid:
             running, _ = self._is_task_running(session, task_id)
 
-        telemetry = {
+        metadata = self._get_base_metadata(start_time)
+        metadata.update({
             "task_id": task_id,
             "pid": pid,
             "log_file": output_file,
@@ -553,9 +565,9 @@ class ParamikoDriver(BaseDriver):
             "meta_file": meta_file,
             "age_file": age_file,
             "command": cmd,
-            "running": running,
+            "is_running": running,
             "created_at": time.time(),
-        }
+        })
 
         output = f"Task {task_id} launched."
         error = ""
@@ -574,7 +586,7 @@ class ParamikoDriver(BaseDriver):
                 output=output,
                 error=error,
                 exit_status=final_exit,
-                telemetry=telemetry,
+                metadata=metadata,
             )
         }
 
@@ -604,11 +616,11 @@ class ParamikoDriver(BaseDriver):
                 output=output,
                 error="",
                 exit_status=0,
-                telemetry={
+                metadata={
                     "task_id": task_id,
-                    "running": running,
+                    "is_running": running,
                     "pid": pid,
-                    "next_offset": file_size,
+                    "log_offset": file_size,
                     "completed": not running,
                 },
             )
@@ -669,10 +681,12 @@ class ParamikoDriver(BaseDriver):
     def _handle_file_transfer(
         self, session: paramiko.SSHClient, file_transfer_op, skip_exec: bool = False
     ) -> dict:
-        if not isinstance(file_transfer_op, ParamikoFileTransferOperation):
-            file_transfer_op = ParamikoFileTransferOperation.model_validate(file_transfer_op)
+        if not isinstance(file_transfer_op, FileTransferModel):
+            file_transfer_op = FileTransferModel.model_validate(file_transfer_op)
 
         try:
+            import time
+            start_time = time.perf_counter()
             if file_transfer_op.operation == "upload":
                 # Use staged file path if available
                 effective_local_path = self._get_effective_source_path(file_transfer_op.local_path)
@@ -690,7 +704,9 @@ class ParamikoDriver(BaseDriver):
                     file_transfer_op.chmod,
                 )
             elif file_transfer_op.operation == "download":
-                effective_local_path = self._get_effective_dest_path(file_transfer_op.local_path)
+                effective_local_path = self._get_effective_dest_path(
+                    file_transfer_op.local_path, os.path.basename(file_transfer_op.remote_path)
+                )
                 result = self._download_file(
                     session,
                     file_transfer_op.remote_path,
@@ -706,12 +722,24 @@ class ParamikoDriver(BaseDriver):
             bytes_used = result.get("bytes_transferred", 0)
             total_bytes = result.get("total_bytes", 0)
 
+            op_key = f"{file_transfer_op.operation} {file_transfer_op.remote_path}"
+            transfer_metadata = self._get_base_metadata(start_time)
+            transfer_metadata.update({
+                "transferred_bytes": bytes_used,
+                "total_bytes": total_bytes,
+                "transfer_success": bool(result.get("success")),
+                "md5_verified": bool(
+                    result.get("success") and file_transfer_op.sync_mode == "hash"
+                ),
+                "local_path": result.get("local_path"),
+                "remote_path": result.get("remote_path"),
+            })
             transfer_result = {
-                f"file_transfer_{file_transfer_op.operation}": DriverExecutionResult(
+                op_key: DriverExecutionResult(
                     output=f"File transfer completed: {bytes_used}/{total_bytes} bytes",
                     error="",
                     exit_status=0 if result.get("success") else 1,
-                    telemetry={"transfer_result": result},
+                    metadata=transfer_metadata,
                 )
             }
 
@@ -744,7 +772,7 @@ class ParamikoDriver(BaseDriver):
                     output="",
                     error=str(e),
                     exit_status=1,
-                    telemetry={},
+                    metadata={},
                 )
             }
 
@@ -765,8 +793,13 @@ class ParamikoDriver(BaseDriver):
             log.warning("No configuration provided")
             return {}
 
+        config_start_time = time.perf_counter()
         try:
-            result = {}
+            full_output = []
+            full_error = []
+            total_duration = 0.0
+            overall_exit_status = 0
+
             for cfg_line in config:
                 start_time = time.perf_counter()
                 if self.args and isinstance(self.args, ParamikoSendConfigArgs) and self.args.sudo:
@@ -794,7 +827,7 @@ class ParamikoDriver(BaseDriver):
 
                 # Mask sensitive data in logs
                 log.debug(f"Executing config line: {cfg_line}")
-                stdin, stdout, stderr = session.exec_command(cmd, **exec_kwargs)
+                _stdin, stdout, stderr = session.exec_command(cmd, **exec_kwargs)
 
                 if (
                     self.args
@@ -802,13 +835,14 @@ class ParamikoDriver(BaseDriver):
                     and self.args.sudo
                     and self.args.sudo_password
                 ):
-                    stdin.write(f"{self.args.sudo_password}\n")
-                    stdin.flush()
+                    _stdin.write(f"{self.args.sudo_password}\n")
+                    _stdin.flush()
 
-                output = stdout.read().decode("utf-8", errors="replace")
-                error = stderr.read().decode("utf-8", errors="replace")
+                out_chunk = stdout.read().decode("utf-8", errors="replace")
+                err_chunk = stderr.read().decode("utf-8", errors="replace")
                 exit_status = stdout.channel.recv_exit_status()
                 duration = time.perf_counter() - start_time
+                total_duration += duration
 
                 # Clean sudo output
                 if (
@@ -817,20 +851,29 @@ class ParamikoDriver(BaseDriver):
                     and self.args.sudo
                     and self.args.sudo_password
                 ):
-                    output = self._clean_sudo_output(output, self.args.sudo_password)
+                    out_chunk = self._clean_sudo_output(out_chunk, self.args.sudo_password)
 
-                result[cfg_line] = DriverExecutionResult(
-                    output=output,
-                    error=error,
-                    exit_status=exit_status,
-                    telemetry={"duration_seconds": round(duration, 3)},
+                full_output.append(out_chunk)
+                if err_chunk:
+                    full_error.append(err_chunk)
+
+                if exit_status != 0:
+                    overall_exit_status = exit_status
+                    # Fail-fast: Stop if stop_on_error is true (default)
+                    if self.args and getattr(self.args, "stop_on_error", True):
+                        log.warning(f"Config aborted at line due to error: {cfg_line}")
+                        break
+
+            config_key = "\n".join(config)
+            metadata = self._get_base_metadata(config_start_time)
+            return {
+                config_key: DriverExecutionResult(
+                    output="\n".join(full_output),
+                    error="\n".join(full_error),
+                    exit_status=overall_exit_status,
+                    metadata=metadata,
                 )
-
-                # Fail-fast: Stop if stop_on_error is true (default)
-                if exit_status != 0 and self.args and getattr(self.args, "stop_on_error", True):
-                    log.warning(f"Config aborted at line due to error: {cfg_line}")
-                    break
-            return result
+            }
         except Exception as e:
             log.error(f"Error in sending config: {e}")
             error_key = "\n".join(config) if config else "error"
@@ -839,7 +882,7 @@ class ParamikoDriver(BaseDriver):
                     output="",
                     error=str(e),
                     exit_status=1,
-                    telemetry={"duration_seconds": 0.0},
+                    metadata=self._get_base_metadata(config_start_time),
                 )
             }
 
@@ -884,7 +927,7 @@ class ParamikoDriver(BaseDriver):
     def _execute_command(
         self, session: paramiko.SSHClient, cmd: str, args: Optional[ParamikoSendCommandArgs]
     ) -> Dict[str, DriverExecutionResult]:
-        """Execute a single command and return result with telemetry"""
+        """Execute a single command and return result with metadata"""
 
         start_time = time.perf_counter()
 
@@ -913,16 +956,14 @@ class ParamikoDriver(BaseDriver):
             error = stderr.read().decode("utf-8", errors="replace")
             exit_status = stdout.channel.recv_exit_status()
 
-        duration = time.perf_counter() - start_time
+        duration_metadata = self._get_base_metadata(start_time)
 
         return {
             cmd: DriverExecutionResult(
                 output=output,
                 error=error,
                 exit_status=exit_status,
-                telemetry={
-                    "duration_seconds": round(duration, 3),
-                },
+                metadata=duration_metadata,
             )
         }
 
@@ -1038,7 +1079,7 @@ class ParamikoDriver(BaseDriver):
                 output=output,
                 error=error,
                 exit_status=exit_status,
-                telemetry={
+                metadata={
                     "duration_seconds": round(duration, 3),
                     "script_content_length": len(args.script_content),
                 },

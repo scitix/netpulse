@@ -20,6 +20,20 @@ class BaseDriver:
     ):
         self.staged_file_id = staged_file_id
         self.job_id = job_id or "unknown"
+        self._session_reused = False
+
+    def _get_base_metadata(self, start_time: float) -> dict:
+        """
+        Helper to construct a standardized metadata dictionary.
+        """
+        import time
+
+        duration = time.perf_counter() - start_time
+        return {
+            "host": getattr(self.conn_args, "host", "unknown"),
+            "duration_seconds": round(duration, 3),
+            "session_reused": self._session_reused,
+        }
 
     def _get_effective_source_path(self, local_path: Optional[str]) -> Optional[str]:
         """
@@ -30,10 +44,13 @@ class BaseDriver:
             return self.staged_file_id
         return local_path
 
-    def _get_effective_dest_path(self, local_path: Optional[str]) -> str:
+    def _get_effective_dest_path(
+        self, local_path: Optional[str], fallback_name: Optional[str] = None
+    ) -> str:
         """
         Standardized method to get the effective destination path for downloads.
-        If local_path is not absolute, it will be placed in the staging area.
+        If local_path is not absolute, it will be placed in the staging area
+        under a subfolder named by the Job ID to preserve the original filename.
         """
         import os
 
@@ -44,10 +61,13 @@ class BaseDriver:
 
         staging_dir = str(g_config.storage.staging)
         download_dir = os.path.join(staging_dir, "downloads")
-        os.makedirs(download_dir, exist_ok=True)
 
-        filename = os.path.basename(local_path) if local_path else f"download_{self.job_id}"
-        return os.path.join(download_dir, filename)
+        # Professional Design: Isolated subfolder per job to keep original filenames
+        job_dir = os.path.join(download_dir, f"dl_{self.job_id}")
+        os.makedirs(job_dir, exist_ok=True)
+
+        filename = os.path.basename(local_path) if local_path else (fallback_name or "download")
+        return os.path.join(job_dir, filename)
 
     @classmethod
     def from_execution_request(cls, req: ExecutionRequest) -> "BaseDriver":

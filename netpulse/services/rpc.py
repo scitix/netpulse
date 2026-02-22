@@ -70,7 +70,7 @@ def execute(req: ExecutionRequest):
     if not drivers.get(req.driver):
         raise NotImplementedError(f"Unknown 'driver' {req.driver}")
 
-    has_command = req.command is not None
+    has_command = req.command is not None or req.file_transfer is not None
     payload = req.config if req.config is not None else req.command
 
     # Render before execution if specified
@@ -91,21 +91,26 @@ def execute(req: ExecutionRequest):
                 else:
                     template_source = payload
 
-            if template_source is None:
+            if (
+                template_source is None
+                and not req.file_transfer
+                and not getattr(req.driver_args, "script_content", None)
+            ):
                 raise ValueError("Template source is required for rendering.")
 
-            # Do the rendering
-            # Pass the template_source to the renderer if it was missing in req.rendering
-            render_req = req.rendering.model_copy(update={"template": template_source})
-            render = renderers[req.rendering.name].from_rendering_request(render_req)
-            payload = render.render(req.rendering.context)
+            if template_source is not None:
+                # Do the rendering
+                # Pass the template_source to the renderer if it was missing in req.rendering
+                render_req = req.rendering.model_copy(update={"template": template_source})
+                render = renderers[req.rendering.name].from_rendering_request(render_req)
+                payload = render.render(req.rendering.context)
 
-            # Persist rendered payload back to request so downstream validation sees a concrete
-            # command/config instead of the original dict + rendering metadata.
-            if has_command:
-                req.command = payload
-            else:
-                req.config = payload
+                # Persist rendered payload back to request so downstream validation sees a concrete
+                # command/config instead of the original dict + rendering metadata.
+                if has_command:
+                    req.command = payload
+                else:
+                    req.config = payload
 
             if req.driver_args:
                 script_content = getattr(req.driver_args, "script_content", None)
@@ -118,14 +123,29 @@ def execute(req: ExecutionRequest):
                     )
                     req.driver_args.script_content = script_render.render(req.rendering.context)
 
+            if req.file_transfer:
+                if isinstance(req.file_transfer.remote_path, str):
+                    t_req = req.rendering.model_copy(
+                        update={"template": req.file_transfer.remote_path}
+                    )
+                    t_render = renderers[req.rendering.name].from_rendering_request(t_req)
+                    req.file_transfer.remote_path = t_render.render(req.rendering.context)
+                if isinstance(req.file_transfer.local_path, str):
+                    t_req = req.rendering.model_copy(
+                        update={"template": req.file_transfer.local_path}
+                    )
+                    t_render = renderers[req.rendering.name].from_rendering_request(t_req)
+                    req.file_transfer.local_path = t_render.render(req.rendering.context)
+
             # After payload is rendered, payload should be a str or list[str]
             # Besides, we need to delete the rendering field
             req.rendering = None
         except Exception as e:
             log.error(f"Error in rendering: {e}")
             raise e
-
-    if isinstance(payload, str):
+    if payload is None:
+        payload = []
+    elif isinstance(payload, str):
         payload = [payload]
     assert isinstance(payload, list), "Config/command must be str/list[str] after rendering."
 
@@ -166,8 +186,7 @@ def execute(req: ExecutionRequest):
 
             log.info(f"Launching detached task {task_id} on {req.connection_args.host}")
 
-            if not hasattr(dobj, "launch_detached"):
-                raise NotImplementedError(f"Driver {req.driver} does not support detached mode.")
+
 
             # Driver launches the process independently
             # If command list is empty, pass empty string;
@@ -176,8 +195,8 @@ def execute(req: ExecutionRequest):
             result = dobj.launch_detached(session, primary_cmd, task_id)
 
             is_running = True
-            if "launch" in result and result["launch"].telemetry:
-                is_running = result["launch"].telemetry.get("running", True)
+            if "launch" in result and result["launch"].metadata:
+                is_running = result["launch"].metadata.get("running", True)
 
             # Register in Redis for global tracking
             meta = {
@@ -197,6 +216,7 @@ def execute(req: ExecutionRequest):
             return result
 
         if has_command:
+            # send handles both commands and file_transfers
             result = dobj.send(session, payload)
         else:
             result = dobj.config(session, payload)
@@ -218,7 +238,7 @@ def execute(req: ExecutionRequest):
                 output="",
                 error=str(e),
                 exit_status=1,
-                telemetry={"duration_seconds": 0.0},
+                metadata={"duration_seconds": 0.0},
                 **result_data,
             )
         }
@@ -365,17 +385,36 @@ def rpc_webhook_callback(*args):
         download_base = os.path.join(staging_dir, "downloads")
 
         for res in result.values():
-            if hasattr(res, "telemetry") and isinstance(res.telemetry, dict):
-                xfer = res.telemetry.get("transfer_result")
-                if isinstance(xfer, dict) and "local_path" in xfer:
-                    local_path = xfer["local_path"]
-                    if local_path.startswith(download_base):
-                        # It's a staged download, generate a URL
-                        file_id = os.path.relpath(local_path, download_base)
-                        # We use the host from the request or config
-                        base_url = f"http://{g_config.server.host}:{g_config.server.port}"
-                        xfer["download_url"] = f"{base_url}/storage/fetch/{file_id}"
-                        log.info(f"Generated download URL for job {job.id}: {xfer['download_url']}")
+            if hasattr(res, "metadata") and isinstance(res.metadata, dict):
+                # Check for either flattened or nested local_path
+                metadata = res.metadata
+                local_path = metadata.get("local_path")
+
+                if local_path and local_path.startswith(download_base):
+                    # It's a staged download, generate a URL
+                    file_id = os.path.relpath(local_path, download_base)
+
+                    # Determine Base URL for external access
+                    if g_config.server.external_url:
+                        base_url = g_config.server.external_url.rstrip("/")
+                    else:
+                        host = g_config.server.host
+                        # If listening on all interfaces, fallback to a more sensible default
+                        # for the URL, though external_url is preferred.
+                        if host == "0.0.0.0":
+                            import socket
+                            try:
+                                host = socket.gethostname()
+                            except Exception:
+                                host = "localhost"
+                        base_url = f"http://{host}:{g_config.server.port}"
+
+                    download_url = f"{base_url}/storage/fetch/{file_id}"
+
+                    # Assign to the formal field in DriverExecutionResult
+                    res.download_url = download_url
+
+                    log.info(f"Generated download URL for job {job.id}: {download_url}")
 
     # --- New Detach Registry Sync ---
     # If this was a detached task query/execution, update the registry with next_offset
@@ -386,10 +425,10 @@ def rpc_webhook_callback(*args):
             # result is a dict of {cmd: DriverExecutionResult}
             # For management query, it has only one key
             for val in result.values():
-                if hasattr(val, "telemetry") and "task_id" in val.telemetry:
-                    task_id = val.telemetry["task_id"]
-                    next_offset = val.telemetry.get("next_offset")
-                    completed = val.telemetry.get("completed", False)
+                if hasattr(val, "metadata") and "task_id" in val.metadata:
+                    task_id = val.metadata["task_id"]
+                    next_offset = val.metadata.get("next_offset")
+                    completed = val.metadata.get("completed", False)
 
                     meta = g_detached_task_registry.get(task_id)
                     if meta:

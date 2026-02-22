@@ -139,8 +139,8 @@ def test_paramiko_upload_recursive(monkeypatch):
     shutil.rmtree(local_dir)
 
 
-def test_paramiko_telemetry():
-    """Test that command execution returns telemetry data."""
+def test_paramiko_metadata():
+    """Test that command execution returns metadata data."""
     from netpulse.plugins.drivers.paramiko.model import ParamikoSendCommandArgs
 
     class FakeSession:
@@ -158,10 +158,10 @@ def test_paramiko_telemetry():
     )
 
     result = driver._execute_command(FakeSession(), "echo test", ParamikoSendCommandArgs())
-    telemetry = result["echo test"].telemetry
-    assert telemetry is not None
-    assert "duration_seconds" in telemetry
-    assert isinstance(telemetry["duration_seconds"], float)
+    metadata = result["echo test"].metadata
+    assert metadata is not None
+    assert "duration_seconds" in metadata
+    assert isinstance(metadata["duration_seconds"], float)
 
 
 def test_paramiko_interactive_expect():
@@ -235,7 +235,7 @@ def test_paramiko_list_active_detached_tasks():
     results = driver.send(mock_session, [])
 
     assert "list_active_detached_tasks" in results
-    tasks = results["list_active_detached_tasks"].telemetry["active_tasks"]
+    tasks = results["list_active_detached_tasks"].metadata["active_tasks"]
     assert len(tasks) == 1
     assert tasks[0]["task_id"] == "task-xyz"
     assert tasks[0]["pid"] == 9999

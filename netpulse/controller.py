@@ -1,5 +1,4 @@
 import logging
-
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -54,7 +53,7 @@ app.include_router(device, dependencies=[Depends(verify_api_key)])  # Unified de
 app.include_router(template, dependencies=[Depends(verify_api_key)])
 app.include_router(manage, dependencies=[Depends(verify_api_key)])
 app.include_router(detached_task, dependencies=[Depends(verify_api_key)])
-app.include_router(storage, dependencies=[Depends(verify_api_key)])
+app.include_router(storage)  # No auth for storage-fetch to allow wget without headers
 
 # Exception handlers
 app.add_exception_handler(HTTPException, http_exception_handler)

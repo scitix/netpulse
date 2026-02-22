@@ -1,6 +1,6 @@
 from typing import Dict, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
 from ....models import DeviceTestInfo, DriverArgs, DriverConnectionArgs, DriverName
 from ....models.request import ExecutionRequest
@@ -105,47 +105,8 @@ class ParamikoConnectionArgs(DriverConnectionArgs):
     )
 
 
-class ParamikoFileTransferOperation(BaseModel):
-    """File transfer operation parameters"""
+# Standardized FileTransferModel is now used globally
 
-    operation: Literal["upload", "download"] = Field(
-        default=..., description="Transfer operation type: upload or download"
-    )
-    local_path: Optional[str] = Field(default=None, description="Local file path")
-    remote_path: str = Field(default=..., description="Remote file path")
-    resume: bool = Field(default=False, description="Whether to resume interrupted transfer")
-    recursive: bool = Field(default=False, description="Whether to transfer directory recursively")
-    sync_mode: Literal["full", "hash"] = Field(
-        default="full",
-        description="Sync mode: full (always transfer) or hash (skip if MD5 matches)",
-    )
-    chunk_size: int = Field(
-        default=32768, description="Transfer chunk size in bytes (default 32KB)"
-    )
-    timeout: Optional[float] = Field(
-        default=None, description="Transfer timeout (seconds), None means no timeout"
-    )
-    # Execute after upload/download
-    execute_after_upload: bool = Field(
-        default=False,
-        description="Whether to execute command after upload (only for upload operation)",
-    )
-    execute_command: Optional[str] = Field(
-        default=None,
-        description="Command to execute after file transfer (e.g., 'bash /tmp/script.sh')",
-    )
-    cleanup_after_exec: bool = Field(
-        default=True,
-        description=(
-            "Whether to cleanup remote file after execution (only if execute_after_upload is True)"
-        ),
-    )
-    chmod: Optional[str] = Field(
-        default=None,
-        description=(
-            "Optional permissions (octal string like '0755') to set on remote file after transfer"
-        ),
-    )
 
 
 class ParamikoSendCommandArgs(DriverArgs):
@@ -161,13 +122,8 @@ class ParamikoSendCommandArgs(DriverArgs):
         default=None, description="Environment variables dictionary"
     )
     bufsize: int = Field(default=-1, description="Buffer size, -1 means use system default")
-    file_transfer: Optional[ParamikoFileTransferOperation] = Field(
-        default=None,
-        description=(
-            "File transfer operation. If set, file transfer will be performed "
-            "instead of command execution"
-        ),
-    )
+    bufsize: int = Field(default=-1, description="Buffer size, -1 means use system default")
+
     # Script content execution
     script_content: Optional[str] = Field(
         default=None,

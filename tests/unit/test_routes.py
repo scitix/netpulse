@@ -330,7 +330,7 @@ def test_device_bulk_per_device_command_config_conflict(monkeypatch, app_config)
     detail = resp.json()["detail"]
     assert isinstance(detail, list)
     assert len(detail) > 0
-    assert "cannot specify both" in detail[0]["msg"].lower()
+    assert "cannot specify more than one" in detail[0]["msg"].lower()
 
 
 def test_template_render_missing_name(monkeypatch, app_config):

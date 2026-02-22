@@ -8,6 +8,7 @@ from .common import (
     DriverArgs,
     DriverConnectionArgs,
     DriverName,
+    FileTransferModel,
     QueueStrategy,
     WebHook,
 )
@@ -75,6 +76,10 @@ class ExecutionRequest(BaseModel):
         default=None,
         description="Command to execute (exclusive with config field)",
     )
+    file_transfer: Optional[FileTransferModel] = Field(
+        default=None,
+        description="Standardized file transfer operation (top-level citizen)",
+    )
 
     # Template handling
     rendering: Optional[TemplateRenderRequest] = Field(
@@ -128,12 +133,40 @@ class ExecutionRequest(BaseModel):
     def check_detach_args(self):
         if self.push_interval is not None and not self.detach:
             raise ValueError("`push_interval` requires `detach=True`")
+        if self.detach and self.driver != DriverName.PARAMIKO:
+            raise ValueError(
+                "Detached mode is currently only supported by the "
+                f"{DriverName.PARAMIKO.value} driver"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def check_file_transfer_args(self):
+        if self.file_transfer and self.driver not in (DriverName.PARAMIKO, DriverName.NETMIKO):
+            raise ValueError(
+                f"File transfer is currently not supported by the {self.driver.value} driver"
+            )
         return self
 
     @model_validator(mode="after")
     def check_exclusive_fields(self):
-        if (self.config is None) == (self.command is None):
-            raise ValueError("Either `config` or `command` must be set, but not both")
+        # We allow command and config to be None IF we have a primary action like file_transfer,
+        # or if we have driver_args (legacy/other), or if we have a staged_file_id (multipart).
+        is_actionable = (
+            self.file_transfer is not None
+            or self.driver_args is not None
+            or self.staged_file_id is not None
+        )
+
+        # Basic exclusivity: only one of command, config can be set
+        # Note: In future, we might allow command + file_transfer in a sequence
+        if self.config is not None and self.command is not None:
+            raise ValueError("Only one of `config` or `command` can be set")
+
+        if self.config is None and self.command is None and not is_actionable:
+            msg = "Either `config`, `command`, `file_transfer`, or an actionable `driver_args` set."
+            raise ValueError(msg)
+
         return self
 
     @model_validator(mode="after")
@@ -161,6 +194,10 @@ class ExecutionRequest(BaseModel):
                 # Other drivers (including Paramiko) use fifo by default
                 # User can manually select pinned when persistent connection is desired
                 self.queue_strategy = QueueStrategy.FIFO
+
+        if self.queue_strategy == QueueStrategy.PINNED:
+            if getattr(self.connection_args, "keepalive", None) is None:
+                self.connection_args.keepalive = 60
 
         return self
 

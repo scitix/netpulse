@@ -94,6 +94,9 @@ NETPULSE_REDIS__PASSWORD=$redis_password
 # API Key (Required)
 NETPULSE_SERVER__API_KEY=$api_key
 
+# Optional: External URL for downloads (e.g., http://your-ip:9000)
+# NETPULSE_SERVER__EXTERNAL_URL=http://localhost:9000
+
 # Optional: Time Zone
 TZ=Asia/Shanghai
 

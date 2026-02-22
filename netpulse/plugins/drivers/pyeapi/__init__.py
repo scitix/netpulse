@@ -70,13 +70,24 @@ class PyeapiDriver(BaseDriver):
         Connect to the device and return the connection object.
         """
         try:
-            self.connection = pyeapi.connect(
+            if self.conn_args.keepalive:
+                session = self._get_persisted_session(self.conn_args)
+                if session:
+                    log.info("Reusing existing connection")
+                    self._session_reused = True
+                    return session
+
+            log.info(f"Connecting to {self.conn_args.host} with pyeapi...")
+            session = pyeapi.connect(
                 return_node=True, **self.conn_args.model_dump(), **self.args
             )
+            self._session_reused = False
+            if self.conn_args.keepalive:
+                self._set_persisted_session(session, self.conn_args)
+            return session
         except Exception as e:
             log.error(f"Error in connecting: {e}")
             raise e
-        return self.connection
 
     def send(
         self, session: "pyeapi.client.Node", command: list[str]
@@ -99,8 +110,7 @@ class PyeapiDriver(BaseDriver):
             start_time = time.perf_counter()
             # session.enable returns a list of result objects for each command
             raw_results = session.enable(commands=command, send_enable=self.enabled, **self.args)
-            duration = time.perf_counter() - start_time
-
+            duration_metadata = self._get_base_metadata(start_time)
             result = {}
             for i, cmd in enumerate(command):
                 output = raw_results[i]
@@ -108,7 +118,7 @@ class PyeapiDriver(BaseDriver):
                     output=output,
                     error="",
                     exit_status=0,
-                    telemetry={"duration_seconds": round(duration / len(command), 3)},
+                    metadata=duration_metadata,
                 )
             return result
         except Exception as e:
@@ -120,7 +130,7 @@ class PyeapiDriver(BaseDriver):
                     output="",
                     error=str(e),
                     exit_status=1,
-                    telemetry={"duration_seconds": 0.0},
+                    metadata=self._get_base_metadata(start_time),
                 )
             }
 
@@ -148,15 +158,14 @@ class PyeapiDriver(BaseDriver):
                 full_config.append("write memory")
 
             response = session.config(commands=full_config, **self.args)
-            duration = time.perf_counter() - start_time
-
+            duration_metadata = self._get_base_metadata(start_time)
             config_key = "\n".join(config)
             return {
                 config_key: DriverExecutionResult(
                     output=response,
                     error="",
                     exit_status=0,
-                    telemetry={"duration_seconds": round(duration, 3)},
+                    metadata=duration_metadata,
                 )
             }
         except Exception as e:
@@ -168,7 +177,7 @@ class PyeapiDriver(BaseDriver):
                     output="",
                     error=str(e),
                     exit_status=1,
-                    telemetry={"duration_seconds": 0.0},
+                    metadata=self._get_base_metadata(start_time),
                 )
             }
 

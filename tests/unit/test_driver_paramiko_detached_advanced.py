@@ -2,11 +2,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from netpulse.models.common import FileTransferModel
 from netpulse.models.driver import DriverExecutionResult
 from netpulse.plugins.drivers.paramiko import ParamikoDriver
 from netpulse.plugins.drivers.paramiko.model import (
     ParamikoConnectionArgs,
-    ParamikoFileTransferOperation,
     ParamikoSendCommandArgs,
 )
 
@@ -84,17 +84,17 @@ def test_detached_launch_with_binary_upload(mock_transfer, mock_session):
     """
     Test that binary upload correctly transitions to detached execution.
     """
-    args = ParamikoSendCommandArgs(
-        file_transfer=ParamikoFileTransferOperation(
-            operation="upload",
-            local_path="bin/tools",
-            remote_path="/tmp/tools",
-            execute_after_upload=True,
-            execute_command="/tmp/tools --daemon",
-        )
+    file_op = FileTransferModel(
+        operation="upload",
+        local_path="bin/tools",
+        remote_path="/tmp/tools",
+        execute_after_upload=True,
+        execute_command="/tmp/tools --daemon",
     )
     driver = ParamikoDriver(
-        args=args, conn_args=ParamikoConnectionArgs(host="h", username="u", password="p")
+        args=ParamikoSendCommandArgs(),
+        conn_args=ParamikoConnectionArgs(host="h", username="u", password="p"),
+        file_transfer=file_op,
     )
 
     # Mock successful upload

@@ -193,6 +193,7 @@ class Manager:
         func: Callable,
         kwargs: Optional[dict] = None,
         ttl: Optional[int] = None,
+        timeout: Optional[int] = None,
         result_ttl: Optional[int] = None,
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
@@ -202,9 +203,11 @@ class Manager:
         if not on_failure:
             on_failure = rpc_exception_callback
 
+        job_timeout = timeout if timeout is not None else self.job_timeout
+
         # Wraps the function with timeout in a Callback object
-        on_success_cb = rpc_callback_factory(on_success, timeout=self.job_timeout)
-        on_failure_cb = rpc_callback_factory(on_failure, timeout=self.job_timeout)
+        on_success_cb = rpc_callback_factory(on_success, timeout=job_timeout)
+        on_failure_cb = rpc_callback_factory(on_failure, timeout=job_timeout)
 
         # Use request result_ttl if provided, otherwise use system default
         effective_result_ttl = result_ttl if result_ttl is not None else self.job_result_ttl
@@ -212,7 +215,7 @@ class Manager:
         q = Queue(q_name, connection=self.rdb)
         job = q.enqueue_call(
             func=func,
-            timeout=self.job_timeout,  # time limit for job execution
+            timeout=job_timeout,  # time limit for job execution
             ttl=ttl if ttl else self.job_ttl,  # job ttl in redis
             result_ttl=effective_result_ttl,  # result ttl in redis (from request or system default)
             failure_ttl=effective_result_ttl,  # errors ttl in redis
@@ -231,6 +234,7 @@ class Manager:
         funcs: list[Callable],
         kwargses: list[dict],
         ttl: Optional[int] = None,
+        timeout: Optional[int] = None,
         result_ttl: Optional[int] = None,
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
@@ -245,9 +249,11 @@ class Manager:
         if not on_failure:
             on_failure = rpc_exception_callback
 
+        job_timeout = timeout if timeout is not None else self.job_timeout
+
         # Wraps the function with timeout in a Callback object
-        on_success_cb = rpc_callback_factory(on_success, timeout=self.job_timeout)
-        on_failure_cb = rpc_callback_factory(on_failure, timeout=self.job_timeout)
+        on_success_cb = rpc_callback_factory(on_success, timeout=job_timeout)
+        on_failure_cb = rpc_callback_factory(on_failure, timeout=job_timeout)
 
         # Use request result_ttl if provided, otherwise use system default
         effective_result_ttl = result_ttl if result_ttl is not None else self.job_result_ttl
@@ -256,7 +262,7 @@ class Manager:
         for func, kwargs in zip(funcs, kwargses):
             job = Queue.prepare_data(
                 func=func,
-                timeout=self.job_timeout,  # time limit for job execution
+                timeout=job_timeout,  # time limit for job execution
                 ttl=ttl if ttl else self.job_ttl,  # job ttl in redis
                 result_ttl=effective_result_ttl,  # result ttl (from request or default)
                 failure_ttl=effective_result_ttl,  # errors ttl in redis
@@ -301,6 +307,7 @@ class Manager:
         q_strategy: QueueStrategy,
         func: Callable,
         ttl: Optional[int] = None,
+        timeout: Optional[int] = None,
         result_ttl: Optional[int] = None,
         kwargs: Optional[dict] = None,
         on_success: Optional[Callable] = None,
@@ -377,6 +384,7 @@ class Manager:
         job = self._send_job(
             q_name=q_name,
             ttl=ttl,
+            timeout=timeout,
             result_ttl=result_ttl,
             func=func,
             kwargs=kwargs,
@@ -393,6 +401,7 @@ class Manager:
         func: Callable,
         kwargses: list[dict],
         ttl: Optional[int] = None,
+        timeout: Optional[int] = None,
         result_ttl: Optional[int] = None,
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
@@ -410,6 +419,7 @@ class Manager:
                 funcs=[func] * len(conn_args),
                 kwargses=kwargses,
                 ttl=ttl,
+                timeout=timeout,
                 result_ttl=result_ttl,
                 on_success=on_success,
                 on_failure=on_failure,
@@ -494,6 +504,7 @@ class Manager:
                         self._send_job(
                             q_name=g_config.get_host_queue_name(hosts[idx]),
                             ttl=ttl,
+                            timeout=timeout,
                             result_ttl=result_ttl,
                             func=func,
                             kwargs=kwargses[idx],
@@ -550,11 +561,23 @@ class Manager:
         if req.webhook:
             success_handler = failure_handler = rpc_webhook_callback
 
+        # Check if ttl was explicitly set
+        ttl_explicit = "ttl" in req.model_fields_set
+
+        # Use explicitly provided TTL, otherwise use 3600s for file transfer to avoid hard timeout
+        if ttl_explicit:
+            effective_timeout = req.ttl
+        elif req.file_transfer is not None:
+            effective_timeout = 3600
+        else:
+            effective_timeout = None
+
         # NOTE: DO NOT change attr "req". It's hardcoded in webhook handler.
         r = self.dispatch_rpc_job(
             conn_arg=req.connection_args,
             q_strategy=req.queue_strategy,
             ttl=req.ttl,
+            timeout=effective_timeout,
             result_ttl=req.result_ttl,
             func=execute,
             kwargs={"req": req},
@@ -573,11 +596,24 @@ class Manager:
         # Always use rpc_webhook_callback as it now handles generic cleanup
         failure_handler, success_handler = rpc_webhook_callback, rpc_webhook_callback
 
+        # Check if ttl was explicitly set
+        req0 = reqs[0]
+        ttl_explicit = "ttl" in req0.model_fields_set
+
+        # Determine effective timeout from the first request if file transfer
+        if ttl_explicit:
+            effective_timeout = req0.ttl
+        elif req0.file_transfer is not None:
+            effective_timeout = 3600
+        else:
+            effective_timeout = None
+
         # Use first request's result_ttl for all jobs in batch (they should be the same)
         return self.dispatch_bulk_rpc_jobs(
             conn_args=[req.connection_args for req in reqs],
             q_strategy=reqs[0].queue_strategy,
             ttl=reqs[0].ttl,
+            timeout=effective_timeout,
             result_ttl=reqs[0].result_ttl,
             func=execute,
             kwargses=[{"req": req} for req in reqs],
@@ -793,10 +829,10 @@ class Manager:
                 try:
                     # result is {"query": DriverExecutionResult}
                     for val in result.values():
-                        if hasattr(val, "telemetry") and "task_id" in val.telemetry:
-                            task_id = val.telemetry["task_id"]
-                            next_offset = val.telemetry.get("next_offset")
-                            running = val.telemetry.get("running", True)
+                        if hasattr(val, "metadata") and "task_id" in val.metadata:
+                            task_id = val.metadata["task_id"]
+                            next_offset = val.metadata.get("next_offset")
+                            running = val.metadata.get("running", True)
 
                             m = g_detached_task_registry.get(task_id)
                             if m:
@@ -884,7 +920,7 @@ class Manager:
                 result = rq_job.result
                 # result: {"list_active_detached_tasks": DriverExecutionResult}
                 val = next(iter(result.values()))
-                active_tasks = val.telemetry.get("active_tasks", [])
+                active_tasks = val.metadata.get("active_tasks", [])
 
                 # Sync local registry with remote state
                 from .rediz import g_detached_task_registry

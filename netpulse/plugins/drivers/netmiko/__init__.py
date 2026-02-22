@@ -13,7 +13,6 @@ from .model import (
     NetmikoConnectionArgs,
     NetmikoDeviceTestInfo,
     NetmikoExecutionRequest,
-    NetmikoFileTransferOperation,
     NetmikoSendCommandArgs,
     NetmikoSendConfigSetArgs,
 )
@@ -151,7 +150,7 @@ class NetmikoDriver(BaseDriver):
     @classmethod
     def from_execution_request(cls, req: NetmikoExecutionRequest):
         if not isinstance(req, NetmikoExecutionRequest):
-            req = NetmikoExecutionRequest.model_validate(obj=req.model_dump())
+            req = NetmikoExecutionRequest.model_validate(req.model_dump())
         return cls(
             args=req.driver_args,
             conn_args=req.connection_args,
@@ -159,6 +158,7 @@ class NetmikoDriver(BaseDriver):
             save=req.save,
             staged_file_id=req.staged_file_id,
             job_id=getattr(req, "id", None),
+            file_transfer=req.file_transfer,
         )
 
     @classmethod
@@ -172,7 +172,7 @@ class NetmikoDriver(BaseDriver):
         """
         # Validate the request model using Pydantic
         if not isinstance(req, NetmikoExecutionRequest):
-            NetmikoExecutionRequest.model_validate(obj=req.model_dump())
+            NetmikoExecutionRequest.model_validate(req.model_dump())
 
     def __init__(
         self,
@@ -181,6 +181,7 @@ class NetmikoDriver(BaseDriver):
         enabled: bool = False,
         save: bool = True,
         staged_file_id: Optional[str] = None,
+        file_transfer: Optional[Any] = None,
         **kwargs,
     ):
         super().__init__(staged_file_id=staged_file_id, **kwargs)
@@ -188,15 +189,18 @@ class NetmikoDriver(BaseDriver):
         self.conn_args = conn_args
         self.enabled = enabled
         self.save = save
+        self.file_transfer = file_transfer
 
     def connect(self) -> BaseConnection:
         try:
             session = self._get_persisted_session(self.conn_args)
             if session:
                 log.info("Reusing existing connection")
+                self._session_reused = True
             else:
                 log.info(f"Creating new connection to {self.conn_args.host}...")
                 session = ConnectHandler(**self.conn_args.model_dump())
+                self._session_reused = False
                 if self.conn_args.keepalive:
                     self._set_persisted_session(session, self.conn_args)
             return session
@@ -207,7 +211,7 @@ class NetmikoDriver(BaseDriver):
     def send(
         self, session: BaseConnection, command: list[str]
     ) -> "Dict[str, DriverExecutionResult]":
-        """Execute commands and return rich results with telemetry"""
+        """Execute commands and return rich results with metadata"""
         import time
 
         from ....models.driver import DriverExecutionResult
@@ -217,10 +221,18 @@ class NetmikoDriver(BaseDriver):
                 if self.enabled:
                     session.enable()
 
-                # Handle File Transfer
-                if self.args and isinstance(self.args, NetmikoFileTransferOperation):
-                    log.info(f"File transfer detected: {self.args.operation}")
-                    return self._handle_file_transfer(session, self.args)
+                # Handle File Transfer (Top-level first)
+                if self.file_transfer:
+                    log.info(f"Top-level file transfer detected: {self.file_transfer.operation}")
+                    return self._handle_file_transfer(session, self.file_transfer)
+
+                # Legacy check for nested file transfer
+                if (
+                    self.args
+                    and getattr(self.args, "file_transfer", None) is not None
+                ):
+                    log.info("Nested file transfer detected")
+                    return self._handle_file_transfer(session, self.args.file_transfer)
 
                 result = {}
                 for cmd in command:
@@ -247,12 +259,12 @@ class NetmikoDriver(BaseDriver):
                     else:
                         response = session.send_command(cmd)
 
-                    duration = time.perf_counter() - start_time
+                    duration_metadata = self._get_base_metadata(start_time)
                     result[cmd] = DriverExecutionResult(
                         output=response,
                         error="",
                         exit_status=0,
-                        telemetry={"duration_seconds": round(duration, 3)},
+                        metadata=duration_metadata,
                     )
                 if self.enabled:
                     session.exit_enable_mode()
@@ -265,7 +277,7 @@ class NetmikoDriver(BaseDriver):
                     output="",
                     error=str(e),
                     exit_status=1,
-                    telemetry={"duration_seconds": 0.0},
+                    metadata=self._get_base_metadata(start_time),
                 )
             }
 
@@ -284,9 +296,9 @@ class NetmikoDriver(BaseDriver):
                     session.enable()
 
                 # Handle File Transfer (Config mode redirect)
-                if self.args and isinstance(self.args, NetmikoFileTransferOperation):
-                    log.info(f"File transfer (via config) detected: {self.args.operation}")
-                    return self._handle_file_transfer(session, self.args)
+                if self.args and getattr(self.args, "file_transfer", None) is not None:
+                    log.info("File transfer (via config) detected")
+                    return self._handle_file_transfer(session, self.args.file_transfer)
 
                 if self.args:
                     if isinstance(self.args, NetmikoSendConfigSetArgs):
@@ -301,10 +313,11 @@ class NetmikoDriver(BaseDriver):
                             "strip_prompt",
                             "strip_command",
                             "cmd_verify",
+                            "error_pattern",
                         ]:
                             if hasattr(self.args, attr):
                                 val = getattr(self.args, attr)
-                                if val is not None:
+                                if val is not None and val != "":
                                     config_args[attr] = val
                         response = session.send_config_set(config, **config_args)
                 else:
@@ -321,8 +334,6 @@ class NetmikoDriver(BaseDriver):
                 if self.enabled:
                     session.exit_enable_mode()
 
-                duration = time.perf_counter() - start_time
-
             # Harmonize config result as a dict mapping the full set string to result
             # This allows rpc.py parsing to work the same way as send.
             config_key = "\n".join(config)
@@ -331,7 +342,7 @@ class NetmikoDriver(BaseDriver):
                     output=response,
                     error="",
                     exit_status=0,
-                    telemetry={"duration_seconds": round(duration, 3)},
+                    metadata=self._get_base_metadata(start_time),
                 )
             }
         except Exception as e:
@@ -341,7 +352,7 @@ class NetmikoDriver(BaseDriver):
                     output="",
                     error=str(e),
                     exit_status=1,
-                    telemetry={"duration_seconds": 0.0},
+                    metadata=self._get_base_metadata(start_time),
                 )
             }
 
@@ -372,6 +383,8 @@ class NetmikoDriver(BaseDriver):
         from ....models.driver import DriverExecutionResult
 
         try:
+            import time
+            start_time = time.perf_counter()
             if file_transfer_op.operation == "upload":
                 effective_local_path = self._get_effective_source_path(file_transfer_op.local_path)
                 if not effective_local_path:
@@ -380,7 +393,9 @@ class NetmikoDriver(BaseDriver):
                 dest_file = file_transfer_op.remote_path
                 direction = "put"
             else:  # download
-                effective_local_path = self._get_effective_dest_path(file_transfer_op.local_path)
+                effective_local_path = self._get_effective_dest_path(
+                    file_transfer_op.local_path, os.path.basename(file_transfer_op.remote_path)
+                )
                 source_file = file_transfer_op.remote_path
                 dest_file = effective_local_path
                 direction = "get"
@@ -391,23 +406,26 @@ class NetmikoDriver(BaseDriver):
                 "source_file": source_file,
                 "dest_file": dest_file,
                 "direction": direction,
-                "overwrite": file_transfer_op.overwrite,
-                "hash_algorithm": file_transfer_op.hash_algorithm,
-                "verify_file": file_transfer_op.verify_file,
+                "overwrite_file": file_transfer_op.overwrite,
             }
 
             results = file_transfer(**transfer_args)
 
             op_name = f"{file_transfer_op.operation} {file_transfer_op.remote_path}"
+            transfer_metadata = self._get_base_metadata(start_time)
+            transfer_metadata.update({
+                "transferred_bytes": results.get("file_size", 0),
+                "transfer_success": bool(results.get("file_exists")),
+                "md5_verified": bool(results.get("file_verified")),
+                "local_path": dest_file if direction == "get" else source_file,
+                "remote_path": source_file if direction == "get" else dest_file,
+            })
             return {
                 op_name: DriverExecutionResult(
                     output=f"File transfer results: {results}",
                     error="",
                     exit_status=0 if results.get("file_exists") else 1,
-                    telemetry={
-                        "duration_seconds": 0.0,
-                        "transfer_result": {**results, "local_path": dest_file},
-                    },
+                    metadata=transfer_metadata,
                 )
             }
         except Exception as e:
@@ -417,7 +435,7 @@ class NetmikoDriver(BaseDriver):
                     output="",
                     error=str(e),
                     exit_status=1,
-                    telemetry={"duration_seconds": 0.0},
+                    metadata={"duration_seconds": 0.0},
                 )
             }
 

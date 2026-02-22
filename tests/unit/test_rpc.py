@@ -35,7 +35,7 @@ class StubDriver(BaseDriver):
                 "output": f"sent-{cmd}",
                 "error": "",
                 "exit_status": 0,
-                "telemetry": {"duration_seconds": 0.001},
+                "metadata": {"duration_seconds": 0.001},
             }
             for cmd in command
         }
@@ -47,7 +47,7 @@ class StubDriver(BaseDriver):
                 "output": f"cfg-{cfg}",
                 "error": "",
                 "exit_status": 0,
-                "telemetry": {"duration_seconds": 0.001},
+                "metadata": {"duration_seconds": 0.001},
             }
             for cfg in config
         }
