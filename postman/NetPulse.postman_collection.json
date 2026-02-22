@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "e7e04dc9-4375-4bca-8214-2af4ef865e37",
+		"_postman_id": "76728976-0986-4ee8-98e8-f41f0470fe8a",
 		"name": "NetPulse API Collection v0.4.0",
 		"description": "NetPulse 网络设备管理 API",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
@@ -391,202 +391,6 @@
 							]
 						},
 						"description": "扫描设备上活跃的后台任务，重新同步到系统注册表中。"
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Network Storage & File Gateway",
-			"item": [
-				{
-					"name": "Paramiko - 上传文件 (Upload Multipart)",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "formdata",
-							"formdata": [
-								{
-									"key": "request",
-									"value": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"driver_args\": {\n        \"file_transfer\": {\n            \"operation\": \"upload\",\n            \"remote_path\": \"/tmp/test_upload.txt\"\n        }\n    }\n}",
-									"type": "text"
-								},
-								{
-									"key": "file",
-									"type": "file",
-									"src": []
-								}
-							]
-						},
-						"url": {
-							"raw": "{{base_url}}/device/exec",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"device",
-								"exec"
-							]
-						},
-						"description": "使用 Paramiko 通过 Multipart 上传文件到 Linux 服务器。"
-					},
-					"response": []
-				},
-				{
-					"name": "Paramiko - 下载文件 (Download JSON)",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"driver_args\": {\n        \"file_transfer\": {\n            \"operation\": \"download\",\n            \"remote_path\": \"/etc/hosts\"\n        }\n    }\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/device/exec",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"device",
-								"exec"
-							]
-						},
-						"description": "使用 Paramiko 从 Linux 服务器下载文件。任务完成后将生成 download_url。"
-					},
-					"response": []
-				},
-				{
-					"name": "Paramiko - 后台任务组合 (Upload + Detached Exec)",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "formdata",
-							"formdata": [
-								{
-									"key": "request",
-									"value": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"driver_args\": {\n        \"file_transfer\": {\n            \"operation\": \"upload\",\n            \"remote_path\": \"/tmp/background_script.sh\",\n            \"execute_after_upload\": true,\n            \"execute_command\": \"bash /tmp/background_script.sh\"\n        }\n    },\n    \"run_in_background\": true\n}",
-									"type": "text"
-								},
-								{
-									"key": "file",
-									"type": "file",
-									"src": []
-								}
-							]
-						},
-						"url": {
-							"raw": "{{base_url}}/device/exec",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"device",
-								"exec"
-							]
-						},
-						"description": "组合案例：通过 Paramiko 上传脚本并立即以 Detached 模式在后台运行。适用于长时间运行的安装或维护任务。"
-					},
-					"response": []
-				},
-				{
-					"name": "Netmiko - 上传文件 (Upload Multipart)",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "formdata",
-							"formdata": [
-								{
-									"key": "request",
-									"value": "{\n    \"driver\": \"netmiko\",\n    \"connection_args\": {\n        \"device_type\": \"{{device_type}}\",\n        \"host\": \"{{device_host}}\",\n        \"username\": \"{{device_username}}\",\n        \"password\": \"{{device_password}}\"\n    },\n    \"driver_args\": {\n        \"operation\": \"upload\",\n        \"remote_path\": \"flash:test_config.txt\"\n    }\n}",
-									"type": "text"
-								},
-								{
-									"key": "file",
-									"type": "file",
-									"src": []
-								}
-							]
-						},
-						"url": {
-							"raw": "{{base_url}}/device/exec",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"device",
-								"exec"
-							]
-						},
-						"description": "使用 Netmiko 通过 Multipart 上传文件到网络设备 (iOS/Nexus/Arista等)。"
-					},
-					"response": []
-				},
-				{
-					"name": "Netmiko - 下载文件 (Download JSON)",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"driver\": \"netmiko\",\n    \"connection_args\": {\n        \"device_type\": \"{{device_type}}\",\n        \"host\": \"{{device_host}}\",\n        \"username\": \"{{device_username}}\",\n        \"password\": \"{{device_password}}\"\n    },\n    \"driver_args\": {\n        \"operation\": \"download\",\n        \"remote_path\": \"flash:running-config\"\n    }\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/device/exec",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"device",
-								"exec"
-							]
-						},
-						"description": "使用 Netmiko 从网络设备下载文件。任务完成后将生成 download_url。"
-					},
-					"response": []
-				},
-				{
-					"name": "PyEAPI (Arista) - 模拟下载 (via Command)",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"driver\": \"pyeapi\",\n    \"connection_args\": {\n        \"host\": \"{{device_host}}\",\n        \"username\": \"{{device_username}}\",\n        \"password\": \"{{device_password}}\",\n        \"transport\": \"https\"\n    },\n    \"command\": \"copy running-config sftp://{{server_host}}/tmp/arista_backup.txt\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/device/exec",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"device",
-								"exec"
-							]
-						},
-						"description": "由于 PyEAPI 是基于 HTTP 的，通常使用设备原生的 copy 命令将文件推送到外部服务器。如果需要直接获取文件流，建议切换到 Netmiko 驱动进行 File Transfer 操作。"
-					},
-					"response": []
-				},
-				{
-					"name": "取回已下载文件 (Storage Gateway Fetch)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/storage/fetch/{{file_id}}",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"storage",
-								"fetch",
-								"{{file_id}}"
-							]
-						},
-						"description": "真正取回存储在 NetPulse 服务器中的二进制文件。file_id 可以从任务执行结果的 download_url 中获得。"
 					},
 					"response": []
 				}
@@ -2276,7 +2080,7 @@
 									"formdata": [
 										{
 											"key": "request",
-											"value": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"driver_args\": {\n        \"file_transfer\": {\n            \"operation\": \"upload\",\n            \"remote_path\": \"/tmp/uploaded_postman_test.txt\"\n        }\n    },\n    \"command\": []\n}",
+											"value": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"file_transfer\": {\n        \"operation\": \"upload\",\n        \"remote_path\": \"/tmp/uploaded_postman_test.txt\"\n    }\n}",
 											"type": "text"
 										},
 										{
@@ -2315,13 +2119,13 @@
 									"formdata": [
 										{
 											"key": "request",
-											"value": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"driver_args\": {\n        \"file_transfer\": {\n            \"operation\": \"upload\",\n            \"remote_path\": \"/tmp/uploaded_postman_test.txt\",\n            \"chmod\": \"0755\",\n            \"execute_after_upload\": true,\n            \"execute_command\": \"bash /tmp/uploaded_postman_test.txt\",\n            \"cleanup_after_exec\": true\n        }\n    },\n    \"command\": []\n}",
+											"value": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"file_transfer\": {\n        \"operation\": \"upload\",\n        \"remote_path\": \"/tmp/netpulse/sys_check.sh\",\n        \"chmod\": \"0755\",\n        \"execute_after_upload\": true,\n        \"execute_command\": \"bash /tmp/netpulse/sys_check.sh\",\n        \"cleanup_after_exec\": false\n    }\n}",
 											"type": "text"
 										},
 										{
 											"key": "file",
 											"type": "file",
-											"src": []
+											"src": "/Users/wli04/Desktop/sys_check.sh"
 										}
 									]
 								},
@@ -2351,7 +2155,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"driver_args\": {\n        \"file_transfer\": {\n            \"operation\": \"download\",\n            \"remote_path\": \"/var/log/syslog\",\n            \"local_path\": \"/app/storage/staging/syslog_backup.log\"\n        }\n    },\n    \"command\": [\n        \"__FILE_TRANSFER__\"\n    ],\n    \"queue_strategy\": \"fifo\"\n}"
+									"raw": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"queue_strategy\": \"fifo\",\n    \"file_transfer\": {\n        \"operation\": \"download\",\n        \"remote_path\": \"/var/log/syslog\",\n        \"local_path\": \"/app/storage/staging/syslog_backup.log\"\n    }\n}"
 								},
 								"url": {
 									"raw": "{{base_url}}/device/exec",
@@ -2686,6 +2490,192 @@
 							]
 						},
 						"description": "在目标服务器后台启动长时间运行的任务（如ping、stress），并返回 Task ID。"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Network Storage & File Gateway",
+			"item": [
+				{
+					"name": "Paramiko - 上传文件 (Upload Multipart)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "request",
+									"value": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"file_transfer\": {\n        \"operation\": \"upload\",\n        \"remote_path\": \"/tmp/test_upload.txt\"\n    }\n}",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/device/exec",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"exec"
+							]
+						},
+						"description": "使用 Paramiko 通过 Multipart 上传文件到 Linux 服务器。"
+					},
+					"response": []
+				},
+				{
+					"name": "Paramiko - 下载文件 (Download JSON)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"file_transfer\": {\n        \"operation\": \"download\",\n        \"remote_path\": \"/etc/hosts\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/device/exec",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"exec"
+							]
+						},
+						"description": "使用 Paramiko 从 Linux 服务器下载文件。任务完成后将生成 download_url。"
+					},
+					"response": []
+				},
+				{
+					"name": "Paramiko - 后台任务组合 (Upload + Detached Exec)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "request",
+									"value": "{\n    \"driver\": \"paramiko\",\n    \"connection_args\": {\n        \"host\": \"{{server_host}}\",\n        \"username\": \"{{server_username}}\",\n        \"password\": \"{{server_password}}\"\n    },\n    \"run_in_background\": true,\n    \"file_transfer\": {\n        \"operation\": \"upload\",\n        \"remote_path\": \"/tmp/background_script.sh\",\n        \"execute_after_upload\": true,\n        \"execute_command\": \"bash /tmp/background_script.sh\"\n    }\n}",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/device/exec",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"exec"
+							]
+						},
+						"description": "组合案例：通过 Paramiko 上传脚本并立即以 Detached 模式在后台运行。适用于长时间运行的安装或维护任务。"
+					},
+					"response": []
+				},
+				{
+					"name": "Netmiko - 上传文件 (Upload Multipart)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "request",
+									"value": "{\n    \"driver\": \"netmiko\",\n    \"connection_args\": {\n        \"device_type\": \"{{device_type}}\",\n        \"host\": \"{{device_host}}\",\n        \"username\": \"{{device_username}}\",\n        \"password\": \"{{device_password}}\"\n    },\n    \"file_transfer\": {\n        \"operation\": \"upload\",\n        \"remote_path\": \"flash:test_config.txt\"\n    }\n}",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/device/exec",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"exec"
+							]
+						},
+						"description": "使用 Netmiko 通过 Multipart 上传文件到网络设备 (iOS/Nexus/Arista等)。"
+					},
+					"response": []
+				},
+				{
+					"name": "Netmiko - 下载文件 (Download JSON)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"driver\": \"netmiko\",\n    \"connection_args\": {\n        \"device_type\": \"{{device_type}}\",\n        \"host\": \"{{device_host}}\",\n        \"username\": \"{{device_username}}\",\n        \"password\": \"{{device_password}}\"\n    },\n    \"file_transfer\": {\n        \"operation\": \"download\",\n        \"remote_path\": \"flash:startup.cfg\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/device/exec",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"exec"
+							]
+						},
+						"description": "使用 Netmiko 从网络设备下载文件。任务完成后将生成 download_url。"
+					},
+					"response": []
+				},
+				{
+					"name": "PyEAPI (Arista) - 模拟下载 (via Command)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"driver\": \"pyeapi\",\n    \"connection_args\": {\n        \"host\": \"{{device_host}}\",\n        \"username\": \"{{device_username}}\",\n        \"password\": \"{{device_password}}\",\n        \"transport\": \"https\"\n    },\n    \"command\": \"copy running-config sftp://{{server_host}}/tmp/arista_backup.txt\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/device/exec",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"device",
+								"exec"
+							]
+						},
+						"description": "由于 PyEAPI 是基于 HTTP 的，通常使用设备原生的 copy 命令将文件推送到外部服务器。如果需要直接获取文件流，建议切换到 Netmiko 驱动进行 File Transfer 操作。"
 					},
 					"response": []
 				}
