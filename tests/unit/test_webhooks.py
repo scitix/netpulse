@@ -44,11 +44,7 @@ def test_basic_webhook_calls_requests(monkeypatch):
     caller = BasicWebHookCaller(hook)
     caller = BasicWebHookCaller(hook)
     # Use a DriverExecutionResult object that simulates command output
-    result = {
-        "show version": DriverExecutionResult(
-            output="Cisco IOS Software", exit_status=0
-        )
-    }
+    result = {"show version": DriverExecutionResult(output="Cisco IOS Software", exit_status=0)}
     caller.call(req=req, job=MockJob(id="job-1"), result=result)
 
     assert captured["method"] == hook.method.value
@@ -146,9 +142,7 @@ def test_basic_webhook_formats_multiple_commands(monkeypatch):
         "show version": DriverExecutionResult(
             output="Cisco IOS Software, Version 15.1", exit_status=0
         ),
-        "show interfaces": DriverExecutionResult(
-            output="GigabitEthernet0/0 is up", exit_status=0
-        ),
+        "show interfaces": DriverExecutionResult(output="GigabitEthernet0/0 is up", exit_status=0),
     }
     caller.call(req=req, job=MockJob(id="job-4"), result=multi_cmd_result)
 

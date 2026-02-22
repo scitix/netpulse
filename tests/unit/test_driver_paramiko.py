@@ -80,7 +80,8 @@ def test_paramiko_send_runs_file_transfer(monkeypatch):
     called = {}
 
     from netpulse.models.driver import DriverExecutionResult
-    def fake_handle(self, session, file_transfer_op):
+
+    def fake_handle(self, session, file_transfer_op, skip_exec=False):
         called["session"] = session
         called["op"] = file_transfer_op
         return {"file_transfer_upload": DriverExecutionResult(output="", error="", exit_status=0)}

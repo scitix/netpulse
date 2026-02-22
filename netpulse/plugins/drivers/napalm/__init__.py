@@ -1,6 +1,6 @@
 import logging
 from inspect import signature
-from typing import Dict
+from typing import Dict, Optional
 
 from napalm.base import NetworkDriver, get_network_driver
 
@@ -45,7 +45,13 @@ class NapalmDriver(BaseDriver):
         if req.driver_args is None:
             req.driver_args = NapalmCliArgs() if req.command else NapalmCommitConfigArgs()
 
-        return cls(conn_args=req.connection_args, args=req.driver_args, dry_run=req.dry_run)
+        return cls(
+            args=req.driver_args,
+            conn_args=req.connection_args,
+            enabled=req.enable_mode,
+            dry_run=req.dry_run,
+            staged_file_id=req.staged_file_id,
+        )
 
     @classmethod
     def validate(cls, req: NapalmExecutionRequest) -> None:
@@ -91,12 +97,20 @@ class NapalmDriver(BaseDriver):
         self,
         conn_args: NapalmConnectionArgs,
         args: NapalmCliArgs | NapalmCommitConfigArgs,
+        enabled: bool = False,
         dry_run: bool = False,
+        staged_file_id: Optional[str] = None,
         **kwargs,
     ):
         """
         Initialize the NAPALM driver.
         """
+        super().__init__(staged_file_id=staged_file_id, **kwargs)
+        self.args = args
+        self.conn_args = conn_args
+        self.enabled = enabled
+        self.dry_run = dry_run
+
         log.debug(f"Initializing NAPALM driver with {conn_args}")
 
         self.device = conn_args.device_type
@@ -133,7 +147,6 @@ class NapalmDriver(BaseDriver):
         except Exception as e:
             log.error(f"Connection failed: {e}")
             raise e
-
 
     def send(
         self, session: NetworkDriver, command: list[str]

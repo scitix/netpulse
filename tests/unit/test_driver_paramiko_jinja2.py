@@ -13,11 +13,7 @@ from netpulse.services import rpc
 
 class TestParamikoJinja2(unittest.TestCase):
     def setUp(self):
-        self.conn_args = ParamikoConnectionArgs(
-            host="1.1.1.1",
-            username="test",
-            password="test"
-        )
+        self.conn_args = ParamikoConnectionArgs(host="1.1.1.1", username="test", password="test")
 
     @patch("netpulse.plugins.drivers.paramiko.ParamikoDriver.connect")
     @patch("netpulse.plugins.drivers.paramiko.ParamikoDriver.disconnect")
@@ -40,10 +36,7 @@ class TestParamikoJinja2(unittest.TestCase):
             connection_args=self.conn_args,
             command="echo {{ foo }}",
             driver_args=ParamikoSendCommandArgs(),
-            rendering=TemplateRenderRequest(
-                name="jinja2",
-                context={"foo": "bar"}
-            )
+            rendering=TemplateRenderRequest(name="jinja2", context={"foo": "bar"}),
         )
 
         # Test rendering through rpc.execute
@@ -74,10 +67,7 @@ class TestParamikoJinja2(unittest.TestCase):
             connection_args=self.conn_args,
             config=["vlan {{ vlan_id }}"],
             driver_args=ParamikoSendConfigArgs(),
-            rendering=TemplateRenderRequest(
-                name="jinja2",
-                context={"vlan_id": 100}
-            )
+            rendering=TemplateRenderRequest(name="jinja2", context={"vlan_id": 100}),
         )
 
         # Test rendering through rpc.execute
@@ -86,6 +76,7 @@ class TestParamikoJinja2(unittest.TestCase):
         # Verify rendering
         mock_session.exec_command.assert_called_with("vlan 100", get_pty=False)
         self.assertIn("vlan 100", result)
+
 
 if __name__ == "__main__":
     unittest.main()

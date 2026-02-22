@@ -106,6 +106,30 @@ class ExecutionRequest(BaseModel):
         default=None, description="Webhook callback after Job completion"
     )
 
+    # Detached Task Control (System-level)
+    detach: bool = Field(
+        default=False,
+        description="Run command in background and return a Task ID immediately",
+    )
+    push_interval: Optional[int] = Field(
+        default=None,
+        ge=5,
+        le=3600,
+        description="Interval (seconds) for incremental webhook log pushes. Requires detach=True",
+    )
+
+    # Internal field for file transfer bridge
+    staged_file_id: Optional[str] = Field(
+        default=None,
+        description="Internal reference to the staged file (Multipart mode)",
+    )
+
+    @model_validator(mode="after")
+    def check_detach_args(self):
+        if self.push_interval is not None and not self.detach:
+            raise ValueError("`push_interval` requires `detach=True`")
+        return self
+
     @model_validator(mode="after")
     def check_exclusive_fields(self):
         if (self.config is None) == (self.command is None):
@@ -126,7 +150,11 @@ class ExecutionRequest(BaseModel):
     def infer_defaults(self):
         """Auto-select default values based on other fields"""
         if self.queue_strategy is None:
-            if self.driver in [DriverName.NETMIKO]:
+            if self.detach:
+                # Detached tasks should pin to a worker to reuse persistent SSH connections
+                # for querying/killing.
+                self.queue_strategy = QueueStrategy.PINNED
+            elif self.driver in [DriverName.NETMIKO]:
                 # Netmiko uses pinned strategy by default for persistent connections
                 self.queue_strategy = QueueStrategy.PINNED
             else:
@@ -186,6 +214,30 @@ class ConnectionTestRequest(BaseModel):
                     "username": "admin",
                     "password": "admin",
                     "timeout": 30,
+                },
+            }
+        },
+    )
+
+
+class DetachedTaskDiscoveryRequest(BaseModel):
+    """Request model for detached task discovery on a device"""
+
+    driver: DriverName = Field(..., description="Device driver")
+    connection_args: DriverConnectionArgs = Field(..., description="Device connection parameters")
+    credential: Optional[CredentialRef] = Field(
+        default=None, description="External credential reference to populate connection_args"
+    )
+
+    model_config = ConfigDict(
+        extra="allow",
+        json_schema_extra={
+            "example": {
+                "driver": "paramiko",
+                "connection_args": {
+                    "host": "192.168.1.1",
+                    "username": "admin",
+                    "password": "admin",
                 },
             }
         },

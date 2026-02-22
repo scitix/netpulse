@@ -2,7 +2,6 @@ import logging
 from typing import Any
 
 import requests
-import rq
 
 from netpulse.models.driver import DriverExecutionResult
 
@@ -17,19 +16,34 @@ class BasicWebHookCaller(BaseWebHookCaller):
     def __init__(self, hook: WebHook):
         self.config = hook
 
-    def call(self, req: Any, job: rq.job.Job, result: Any, **kwargs):
+    def call(self, req: Any, job: Any, result: Any, **kwargs):
         # Determine success status and format result
-        is_success = job.get_status() == "finished"
+        is_success = kwargs.get("is_success")
+        if is_success is None:
+            # Fallback logic if is_success not explicitly passed
+            if hasattr(job, "get_status"):
+                status = job.get_status()
+                # Handle RQ JobStatus enum (which has .value) or raw string
+                status_str = status.value if hasattr(status, "value") else str(status)
+                is_success = status_str == "finished"
+            else:
+                # JobInResponse or other objects
+                is_success = getattr(job, "status", "unknown") == "finished"
 
-        # If result is an exception tuple from rpc_exception_callback
+        # If result is an exception tuple or JobAdditionalData (containing error)
         if isinstance(result, tuple) and len(result) == 2:
             is_success = False
             result_payload = f"{result[0]}: {result[1]}"
+        elif hasattr(result, "error") and result.error:
+            # Handle JobAdditionalData or similar models
+            is_success = False
+            exc_type, exc_msg = result.error
+            result_payload = f"{exc_type}: {exc_msg}"
         elif isinstance(result, dict):
             # Use the formatting logic for dictionary results
             result_payload = self._format_dict_result(result)
         else:
-            result_payload = result
+            result_payload = str(result)
 
         # Build webhook payload with comprehensive information
         data = {

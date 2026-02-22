@@ -4,7 +4,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from pydantic import ValidationError
 
 from . import __version__
-from .routes import device, manage, template
+from .routes import detached_task, device, manage, storage, template
 from .server import (
     general_exception_handler,
     http_exception_handler,
@@ -12,6 +12,7 @@ from .server import (
     value_error_handler,
     verify_api_key,
 )
+from .services.supervisor import g_supervisor
 from .utils import g_config
 from .utils.logger import setup_logging
 
@@ -25,6 +26,20 @@ app = FastAPI(
     contact={"name": "NetPulse"},
 )
 
+
+@app.on_event("startup")
+def startup_event():
+    import threading
+
+    supervisor_thread = threading.Thread(target=g_supervisor.start, daemon=True)
+    supervisor_thread.start()
+
+
+@app.on_event("shutdown")
+def shutdown_event():
+    g_supervisor.stop()
+
+
 # Static files
 # app.mount("/static", StaticFiles(directory="netpulse/static"), name="static")
 
@@ -32,6 +47,8 @@ app = FastAPI(
 app.include_router(device, dependencies=[Depends(verify_api_key)])  # Unified device operation
 app.include_router(template, dependencies=[Depends(verify_api_key)])
 app.include_router(manage, dependencies=[Depends(verify_api_key)])
+app.include_router(detached_task, dependencies=[Depends(verify_api_key)])
+app.include_router(storage, dependencies=[Depends(verify_api_key)])
 
 # Exception handlers
 app.add_exception_handler(HTTPException, http_exception_handler)

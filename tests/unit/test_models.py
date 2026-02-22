@@ -79,9 +79,7 @@ def test_job_in_response_serialization(monkeypatch):
 
             self.type = Result.Type.SUCCESSFUL
             self.return_value = {
-                "show version": DriverExecutionResult(
-                    output="Cisco IOS", error="", exit_status=0
-                )
+                "show version": DriverExecutionResult(output="Cisco IOS", error="", exit_status=0)
             }
 
     class DummyJob:

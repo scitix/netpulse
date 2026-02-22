@@ -27,6 +27,7 @@ from ..utils.exceptions import JobOperationError, WorkerUnavailableError
 from .rediz import g_rdb
 from .rpc import (
     execute,
+    manage_detached_task,
     rpc_callback_factory,
     rpc_exception_callback,
     rpc_webhook_callback,
@@ -196,6 +197,7 @@ class Manager:
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
         pipeline: Optional[Pipeline] = None,
+        meta: Optional[dict] = None,
     ):
         if not on_failure:
             on_failure = rpc_exception_callback
@@ -215,7 +217,7 @@ class Manager:
             result_ttl=effective_result_ttl,  # result ttl in redis (from request or system default)
             failure_ttl=effective_result_ttl,  # errors ttl in redis
             kwargs=kwargs,
-            meta=JobAdditionalData().model_dump(),
+            meta=meta if meta else JobAdditionalData().model_dump(),
             on_success=on_success_cb,
             on_failure=on_failure_cb,
             pipeline=pipeline,
@@ -232,6 +234,7 @@ class Manager:
         result_ttl: Optional[int] = None,
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
+        meta: Optional[dict] = None,
     ):
         """
         Send multiple jobs to a single queue.
@@ -258,7 +261,7 @@ class Manager:
                 result_ttl=effective_result_ttl,  # result ttl (from request or default)
                 failure_ttl=effective_result_ttl,  # errors ttl in redis
                 kwargs=kwargs,
-                meta=JobAdditionalData().model_dump(),
+                meta=meta if meta else JobAdditionalData().model_dump(),
                 on_success=on_success_cb,
                 on_failure=on_failure_cb,
             )
@@ -302,6 +305,7 @@ class Manager:
         kwargs: Optional[dict] = None,
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
+        meta: Optional[dict] = None,
     ):
         """
         Entry point for RPC calls
@@ -378,6 +382,7 @@ class Manager:
             kwargs=kwargs,
             on_success=on_success,
             on_failure=on_failure,
+            meta=meta,
         )
         return JobInResponse.from_job(job)
 
@@ -391,6 +396,7 @@ class Manager:
         result_ttl: Optional[int] = None,
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
+        meta: Optional[dict] = None,
     ) -> tuple[list[JobInResponse], list[BatchFailedItem]]:
         assert len(conn_args) == len(kwargses), "conn_args and kwargs mismatch"
 
@@ -407,6 +413,7 @@ class Manager:
                 result_ttl=result_ttl,
                 on_success=on_success,
                 on_failure=on_failure,
+                meta=meta,
             )
             return [JobInResponse.from_job(job) for job in jobs], []
 
@@ -493,6 +500,7 @@ class Manager:
                             on_success=on_success,
                             on_failure=on_failure,
                             pipeline=pipe,
+                            meta=meta,
                         )
                         for idx in ready_idx
                     ]
@@ -509,7 +517,34 @@ class Manager:
         # q_strategy must be set before calling. Assert for robustness.
         assert req.queue_strategy, "Queue strategy is required for execution request"
 
-        failure_handler, success_handler = None, None
+        # Always use rpc_webhook_callback as it now handles generic cleanup
+        failure_handler, success_handler = rpc_webhook_callback, rpc_webhook_callback
+        meta = JobAdditionalData()
+
+        # Generate task_id early if detach is requested
+        if req.detach:
+            import time
+            import uuid
+
+            meta.task_id = str(uuid.uuid4())[:12]
+            # Pre-register in registry so it's immediately visible
+            from .rediz import g_detached_task_registry
+
+            g_detached_task_registry.register(
+                meta.task_id,
+                {
+                    "task_id": meta.task_id,
+                    "status": "launching",
+                    "host": req.connection_args.host,
+                    "driver": req.driver,
+                    "worker_id": None,
+                    "push_interval": req.push_interval,
+                    "webhook": req.webhook.model_dump(mode="json") if req.webhook else None,
+                    "connection_args": req.connection_args.model_dump(mode="json"),
+                    "last_sync": 0,
+                    "created_at": time.time(),
+                },
+            )
 
         # Add webhook handler
         if req.webhook:
@@ -525,6 +560,7 @@ class Manager:
             kwargs={"req": req},
             on_success=success_handler,
             on_failure=failure_handler,
+            meta=meta.model_dump(),
         )
 
         return r
@@ -534,9 +570,8 @@ class Manager:
         assert reqs and len(reqs) > 0, "Empty execution request list"
         assert reqs[0].queue_strategy, "Queue strategy is required for execution request"
 
-        failure_handler, success_handler = None, None
-        if reqs[0].webhook:
-            success_handler = failure_handler = rpc_webhook_callback
+        # Always use rpc_webhook_callback as it now handles generic cleanup
+        failure_handler, success_handler = rpc_webhook_callback, rpc_webhook_callback
 
         # Use first request's result_ttl for all jobs in batch (they should be the same)
         return self.dispatch_bulk_rpc_jobs(
@@ -707,6 +742,176 @@ class Manager:
             killed.append(w.name)
 
         return killed
+
+    def list_detached_tasks(self, status: Optional[str] = None) -> dict:
+        """List all detached tasks from registry, optionally filtered by status."""
+        from .rediz import g_detached_task_registry
+
+        tasks = g_detached_task_registry.list_all()
+        if status:
+            return {k: v for k, v in tasks.items() if v.get("status") == status}
+        return tasks
+
+    def query_detached_task(self, task_id: str, offset: Optional[int] = None) -> dict:
+        """
+        Synchronously query detached task logs/status.
+        Automatically uses last offset from registry if not provided.
+        """
+        from .rediz import g_detached_task_registry
+
+        meta = g_detached_task_registry.get(task_id)
+        if not meta:
+            raise ValueError(f"Detached Task {task_id} not found in registry")
+
+        if offset is None:
+            offset = meta.get("last_offset", 0)
+
+        from ..models.common import DriverConnectionArgs
+
+        conn_arg = DriverConnectionArgs(**meta["connection_args"])
+
+        job = self.dispatch_rpc_job(
+            conn_arg=conn_arg,
+            q_strategy=QueueStrategy.PINNED,
+            func=manage_detached_task,
+            kwargs={"task_id": task_id, "action": "query", "params": {"offset": offset}},
+            # Short TTL for management jobs
+            ttl=30,
+            result_ttl=60,
+        )
+
+        # Wait for result (simulate synchronous)
+        import time
+
+        start = time.time()
+        while time.time() - start < 5.0:  # 5s timeout
+            # Fetch the actual RQ job object
+            rq_job = Job.fetch(job.id, connection=self.rdb)
+            if rq_job.is_finished:
+                result = rq_job.result
+                # Update registry after successful query to move the offset
+                try:
+                    # result is {"query": DriverExecutionResult}
+                    for val in result.values():
+                        if hasattr(val, "telemetry") and "task_id" in val.telemetry:
+                            task_id = val.telemetry["task_id"]
+                            next_offset = val.telemetry.get("next_offset")
+                            running = val.telemetry.get("running", True)
+
+                            m = g_detached_task_registry.get(task_id)
+                            if m:
+                                if next_offset is not None:
+                                    m["last_offset"] = next_offset
+                                m["last_sync"] = time.time()
+                                m["status"] = "running" if running else "completed"
+                                g_detached_task_registry.register(task_id, m)
+                            break
+                except Exception as e:
+                    log.warning(f"Failed to update registry after sync query: {e}")
+
+                return result
+            if rq_job.is_failed:
+                raise JobOperationError(f"Detached Task query failed: {rq_job.exc_info}")
+            time.sleep(0.1)
+
+        raise JobOperationError("Detached Task query timed out")
+
+    def kill_detached_task(self, task_id: str) -> bool:
+        """Synchronously kill a detached task."""
+        from ..models.common import DriverConnectionArgs
+        from .rediz import g_detached_task_registry
+
+        meta = g_detached_task_registry.get(task_id)
+        if not meta:
+            return False
+
+        conn_arg = DriverConnectionArgs(**meta["connection_args"])
+
+        job = self.dispatch_rpc_job(
+            conn_arg=conn_arg,
+            q_strategy=QueueStrategy.PINNED,
+            func=manage_detached_task,
+            kwargs={"task_id": task_id, "action": "kill"},
+            ttl=30,
+            result_ttl=60,
+        )
+
+        # Wait for result
+        import time
+
+        start = time.time()
+        while time.time() - start < 10.0:
+            rq_job = Job.fetch(job.id, connection=self.rdb)
+            if rq_job.is_finished:
+                # Cleanup registry if killed successfully
+                from .rediz import g_detached_task_registry
+
+                g_detached_task_registry.unregister(task_id)
+                return rq_job.result
+            if rq_job.is_failed:
+                return False
+            time.sleep(0.1)
+
+        return False
+
+    def discover_detached_tasks(self, conn_arg: DriverConnectionArgs, driver: str) -> dict:
+        """
+        Ask the driver to scan the remote host for active detached tasks and sync with registry.
+        """
+        job = self.dispatch_rpc_job(
+            conn_arg=conn_arg,
+            q_strategy=QueueStrategy.PINNED,
+            func=execute,  # Use execute directly to call driver.send
+            kwargs={
+                "req": ExecutionRequest(
+                    driver=driver,
+                    connection_args=conn_arg,
+                    command=[],
+                    driver_args={"list_active_detached_tasks": True},
+                )
+            },
+            ttl=30,
+            result_ttl=60,
+        )
+
+        # Synchronous wait for discovery
+        import time
+
+        start = time.time()
+        while time.time() - start < 10.0:
+            rq_job = Job.fetch(job.id, connection=self.rdb)
+            if rq_job.is_finished:
+                result = rq_job.result
+                # result: {"list_active_detached_tasks": DriverExecutionResult}
+                val = next(iter(result.values()))
+                active_tasks = val.telemetry.get("active_tasks", [])
+
+                # Sync local registry with remote state
+                from .rediz import g_detached_task_registry
+
+                all_tasks = g_detached_task_registry.list_all()
+                host = conn_arg.host
+
+                updated_count = 0
+                for tid, meta in all_tasks.items():
+                    if meta.get("host") == host and meta.get("status") == "running":
+                        found = any(at["task_id"] == tid for at in active_tasks)
+                        if not found:
+                            meta["status"] = "completed"
+                            meta["last_sync"] = time.time()
+                            g_detached_task_registry.register(tid, meta)
+                            updated_count += 1
+
+                return {
+                    "discovered": len(active_tasks),
+                    "synced_off": updated_count,
+                    "tasks": active_tasks,
+                }
+            if rq_job.is_failed:
+                raise JobOperationError("Detached Task discovery failed")
+            time.sleep(0.1)
+
+        raise JobOperationError("Detached Task discovery timed out")
 
 
 g_mgr = Manager()

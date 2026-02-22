@@ -28,6 +28,7 @@ class JobAdditionalData(BaseModel):
     """
 
     error: Optional[Tuple[str, str]] = None  # 0: exc_type, 1: exc_value
+    task_id: Optional[str] = None
 
 
 class JobResult(BaseModel):
@@ -53,7 +54,7 @@ class JobResult(BaseModel):
                     "show version": {
                         "output": "Interface GigabitEthernet1/0/1",
                         "error": "",
-                        "exit_status": 0
+                        "exit_status": 0,
                     }
                 },
                 "error": {

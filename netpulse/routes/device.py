@@ -1,13 +1,16 @@
 import logging
 import time
+import uuid
 from datetime import datetime
+from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
 from ..models import DriverConnectionArgs
 from ..models.request import (
     BulkExecutionRequest,
     ConnectionTestRequest,
+    DetachedTaskDiscoveryRequest,
     ExecutionRequest,
 )
 from ..models.response import BatchSubmitJobResponse, ConnectionTestResponse, JobInResponse
@@ -20,7 +23,9 @@ log = logging.getLogger(__name__)
 router = APIRouter(prefix="/device", tags=["device"])
 
 
-def _resolve_request_credentials(req: ExecutionRequest | ConnectionTestRequest) -> None:
+def _resolve_request_credentials(
+    req: ExecutionRequest | ConnectionTestRequest | DetachedTaskDiscoveryRequest,
+) -> None:
     """
     Hydrate req.connection_args using a credential provider, then drop the reference.
     """
@@ -67,7 +72,52 @@ def _resolve_request_credentials(req: ExecutionRequest | ConnectionTestRequest) 
 
 
 @router.post("/exec", response_model=JobInResponse, status_code=201)
-def execute_on_device(req: ExecutionRequest):
+async def execute_on_device(
+    request: Request,
+    file: Optional[UploadFile] = File(None),
+    request_data: Optional[str] = Form(None, alias="request"),
+):
+    # Determine input mode
+    content_type = request.headers.get("content-type", "")
+
+    if "multipart/form-data" in content_type:
+        if not request_data:
+            raise HTTPException(
+                status_code=422, detail="Field 'request' is required in multipart mode"
+            )
+        try:
+            req = ExecutionRequest.model_validate_json(request_data)
+        except Exception as e:
+            raise HTTPException(status_code=422, detail=f"Invalid 'request' JSON: {e}")
+
+        if file:
+            staged_id = str(uuid.uuid4())[:8]
+            safe_filename = "".join(
+                [c if c.isalnum() or c in ".-_" else "_" for c in (file.filename or "file")]
+            )
+            staged_path = g_config.storage.staging / f"{staged_id}_{safe_filename}"
+
+            # Ensure staging directory exists
+            staged_path.parent.mkdir(parents=True, exist_ok=True)
+
+            try:
+                content = await file.read()
+                with open(staged_path, "wb") as f:
+                    f.write(content)
+                req.staged_file_id = str(staged_path)
+                log.info(f"Dynamically staged file {file.filename} -> {staged_path}")
+            except Exception as e:
+                log.error(f"Failed to stage file: {e}")
+                raise HTTPException(status_code=500, detail="Internal file staging failure")
+    else:
+        # Standard JSON mode
+        try:
+            req_json = await request.json()
+            req = ExecutionRequest.model_validate(req_json)
+        except Exception as e:
+            # If body is empty and not multipart, it might be a malformed request
+            raise HTTPException(status_code=422, detail=f"Invalid JSON request: {e}")
+
     _resolve_request_credentials(req)
 
     if req.connection_args.host is None:

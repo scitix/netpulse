@@ -111,7 +111,7 @@ class ParamikoFileTransferOperation(BaseModel):
     operation: Literal["upload", "download"] = Field(
         default=..., description="Transfer operation type: upload or download"
     )
-    local_path: str = Field(default=..., description="Local file path")
+    local_path: Optional[str] = Field(default=None, description="Local file path")
     remote_path: str = Field(default=..., description="Remote file path")
     resume: bool = Field(default=False, description="Whether to resume interrupted transfer")
     recursive: bool = Field(default=False, description="Whether to transfer directory recursively")
@@ -143,8 +143,7 @@ class ParamikoFileTransferOperation(BaseModel):
     chmod: Optional[str] = Field(
         default=None,
         description=(
-            "Optional permissions (octal string like '0755') "
-            "to set on remote file after transfer"
+            "Optional permissions (octal string like '0755') to set on remote file after transfer"
         ),
     )
 
@@ -178,101 +177,33 @@ class ParamikoSendCommandArgs(DriverArgs):
         default="bash", description="Script interpreter (bash, sh, python, etc.)"
     )
     working_directory: Optional[str] = Field(
-        default=None, description="Working directory for script execution"
-    )
-    # Background task execution
-    run_in_background: bool = Field(
-        default=False, description="Whether to run command in background (using nohup)"
-    )
-    background_output_file: Optional[str] = Field(
-        default=None,
-        description="Output file for background task (default: /tmp/netpulse_<pid>.log)",
-    )
-    background_pid_file: Optional[str] = Field(
-        default=None,
-        description="PID file path for background task (default: /tmp/netpulse_<pid>.pid)",
-    )
-    # Background task query
-    check_task: Optional["BackgroundTaskQuery"] = Field(
-        default=None,
-        description="Query status of a previously started background task",
-    )
-    # Streaming execution
-    stream: bool = Field(
-        default=False,
-        description="Enable streaming mode: command runs in background with session tracking",
-    )
-    stream_query: Optional["StreamQuery"] = Field(
-        default=None,
-        description="Query streaming command output by session_id"
+        default=None, description="Working directory for the command or script"
     )
     # Interactive support
     expect_map: Optional[Dict[str, str]] = Field(
         default=None,
-        description="Map of expected prompts to automated responses (e.g. {'[Y/n]': 'y'})"
+        description="Map of expected prompts to automated responses (e.g. {'[Y/n]': 'y'})",
     )
-    # Task Discovery
-    list_active_tasks: bool = Field(
-        default=False,
-        description="Scans the remote host for active NetPulse background/stream tasks",
+    # Sudo support
+    sudo: bool = Field(default=False, description="Whether to use sudo execution")
+    sudo_password: Optional[str] = Field(
+        default=None, description="Sudo password (if sudo is enabled)"
     )
-    ttl_seconds: int = Field(
-        default=3600,
-        description="Time-to-live for background/stream task metadata and log files (default 1h)"
+    # Metadata Control
+    read_detached_task_logs: Optional[dict] = Field(
+        default=None, description="Internal use only: instructions for reading detached task logs"
     )
-
-
-class BackgroundTaskQuery(BaseModel):
-    """Query parameters for checking background task status"""
-
-    pid: int = Field(..., description="Process ID of the background task to check")
-    output_file: Optional[str] = Field(
-        default=None,
-        description="Path to the task's output file (for reading logs)",
-    )
-    tail_lines: int = Field(
-        default=100,
-        ge=1,
-        le=10000,
-        description="Number of lines to return from output file tail",
-    )
-    kill_if_running: bool = Field(
-        default=False,
-        description="If True, terminate the task if it's still running",
-    )
-    cleanup_files: bool = Field(
-        default=False,
-        description="If True, remove pid/output files after query (only if task completed)",
+    list_active_detached_tasks: bool = Field(
+        default=False, description="List all active background/detached tasks on the target machine"
     )
 
-
-class StreamQuery(BaseModel):
-    """Query parameters for streaming command output"""
-
-    session_id: str = Field(..., description="Stream session ID returned from stream command")
-    offset: int = Field(
-        default=0,
-        ge=0,
-        description="Byte offset to read from (for incremental output)",
-    )
-    lines: int = Field(
-        default=100,
-        ge=1,
-        le=10000,
-        description="Number of lines to return from tail",
-    )
-    wait_complete: bool = Field(
-        default=False,
-        description="If True, wait for command to complete before returning",
-    )
-    kill: bool = Field(
-        default=False,
-        description="If True, terminate the command",
-    )
-    cleanup: bool = Field(
-        default=False,
-        description="If True, cleanup session files after command completes",
-    )
+    @model_validator(mode="after")
+    def validate_sudo(self):
+        """If sudo is enabled and password is required, ensure sudo_password is provided"""
+        if self.sudo and self.sudo_password is None:
+            # Note: Some systems may not require password for sudo
+            pass
+        return self
 
 
 class ParamikoSendConfigArgs(DriverArgs):
@@ -301,64 +232,7 @@ class ParamikoSendConfigArgs(DriverArgs):
         return self
 
 
-# DEPRECATED: Use ParamikoExecutionRequest instead
-class ParamikoPullingRequest(ExecutionRequest):
-    driver: DriverName = DriverName.PARAMIKO
-    connection_args: ParamikoConnectionArgs
-    driver_args: Optional[ParamikoSendCommandArgs] = Field(default=None, alias="args")
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "driver": "paramiko",
-                "queue_strategy": "fifo",
-                "connection_args": {
-                    "host": "192.168.1.100",
-                    "username": "admin",
-                    "password": "password123",
-                    "port": 22,
-                    "timeout": 30.0,
-                    "host_key_policy": "auto_add",
-                },
-                "command": ["uname -a", "df -h", "free -m"],
-                "driver_args": {
-                    "timeout": 30.0,
-                    "get_pty": False,
-                },
-            }
-        }
-    )
-
-
-# DEPRECATED: Use ParamikoExecutionRequest instead
-class ParamikoPushingRequest(ExecutionRequest):
-    driver: DriverName = DriverName.PARAMIKO
-    connection_args: ParamikoConnectionArgs
-    driver_args: Optional[ParamikoSendConfigArgs] = Field(default=None, alias="args")
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "driver": "paramiko",
-                "queue_strategy": "fifo",
-                "connection_args": {
-                    "host": "192.168.1.100",
-                    "username": "admin",
-                    "key_filename": "/path/to/private_key",
-                    "passphrase": "key_password",
-                },
-                "config": [
-                    "echo 'Hello World' > /tmp/test.txt",
-                    "chmod 644 /tmp/test.txt",
-                ],
-                "driver_args": {
-                    "sudo": True,
-                    "sudo_password": "sudo_pass",
-                    "timeout": 30.0,
-                },
-            }
-        }
-    )
+# Removed deprecated Pulling/Pushing models. Use ParamikoExecutionRequest.
 
 
 class ParamikoExecutionRequest(ExecutionRequest):

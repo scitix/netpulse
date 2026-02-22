@@ -6,26 +6,29 @@ import signal
 import sys
 import threading
 import time
-import uuid
 from io import StringIO
 from stat import S_ISDIR
-from typing import Any, ClassVar, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional, Tuple
 
 import paramiko
 
 from ....models.driver import DriverExecutionResult
 from .. import BaseDriver
 from .model import (
-    BackgroundTaskQuery,
     ParamikoConnectionArgs,
     ParamikoDeviceTestInfo,
     ParamikoExecutionRequest,
+    ParamikoFileTransferOperation,
     ParamikoSendCommandArgs,
     ParamikoSendConfigArgs,
-    StreamQuery,
 )
 
 log = logging.getLogger(__name__)
+
+# File and process prefix for detached tasks
+DETACHED_TASK_FILE_PREFIX = "np"
+# Process name prefix for easy identification via `ps`
+DETACHED_TASK_PROCESS_PREFIX = "np_"
 
 
 class ParamikoDriver(BaseDriver):
@@ -175,7 +178,12 @@ class ParamikoDriver(BaseDriver):
     def from_execution_request(cls, req: ParamikoExecutionRequest) -> "ParamikoDriver":
         if not isinstance(req, ParamikoExecutionRequest):
             req = ParamikoExecutionRequest.model_validate(req.model_dump())
-        return cls(args=req.driver_args, conn_args=req.connection_args)
+        return cls(
+            args=req.driver_args,
+            conn_args=req.connection_args,
+            staged_file_id=req.staged_file_id,
+            job_id=getattr(req, "id", None),
+        )
 
     @classmethod
     def validate(cls, req) -> None:
@@ -197,8 +205,10 @@ class ParamikoDriver(BaseDriver):
         self,
         args: Optional[ParamikoSendCommandArgs | ParamikoSendConfigArgs],
         conn_args: ParamikoConnectionArgs,
+        staged_file_id: Optional[str] = None,
         **kwargs,
     ):
+        super().__init__(staged_file_id=staged_file_id, **kwargs)
         self.args = args
         self.conn_args = conn_args
 
@@ -221,6 +231,9 @@ class ParamikoDriver(BaseDriver):
             # Persist session if keepalive is enabled
             if self.conn_args.keepalive:
                 self._set_persisted_session(session, self.conn_args)
+
+            # Cleanup expired task files on the remote host
+            self._cleanup_expired_tasks(session)
 
             return session
         except Exception as e:
@@ -337,36 +350,27 @@ class ParamikoDriver(BaseDriver):
         raise ValueError("Unsupported key format")
 
     def send(self, session: paramiko.SSHClient, command: list[str]) -> dict:
-        # Check if stream query is requested (highest priority)
+        # Check if log reading is requested (for task management)
         if (
             self.args
             and isinstance(self.args, ParamikoSendCommandArgs)
-            and self.args.stream_query is not None
+            and self.args.read_detached_task_logs is not None
         ):
-            log.debug(f"Stream query detected: {self.args.stream_query}")
-            return self._query_stream(session, self.args.stream_query)
+            log_query = self.args.read_detached_task_logs
+            return self._read_logs(session, log_query.get("task_id"), log_query.get("offset", 0))
 
-        # Check if task query is requested
         if (
             self.args
             and isinstance(self.args, ParamikoSendCommandArgs)
-            and self.args.check_task is not None
+            and getattr(self.args, "list_active_detached_tasks", False)
         ):
-            log.debug(f"Background task query detected: {self.args.check_task}")
-            return self._check_background_task(session, self.args.check_task)
-
-        # Check if task listing is requested
-        if (
-            self.args
-            and isinstance(self.args, ParamikoSendCommandArgs)
-            and self.args.list_active_tasks
-        ):
-            log.debug("Active task listing requested")
             tasks = self._list_active_tasks(session)
             return {
-                "task_list": DriverExecutionResult(
-                    output=f"Found {len(tasks)} active tasks",
-                    telemetry={"active_tasks": tasks}
+                "list_active_detached_tasks": DriverExecutionResult(
+                    output=f"Found {len(tasks)} active detached tasks",
+                    error="",
+                    exit_status=0,
+                    telemetry={"active_tasks": tasks},
                 )
             }
 
@@ -376,7 +380,7 @@ class ParamikoDriver(BaseDriver):
             and self.args.file_transfer is not None
         ):
             log.debug(f"File transfer detected: {self.args.file_transfer}")
-            return self._handle_file_transfer(session, self.args.file_transfer)
+            return self._handle_file_transfer(session, self.args.file_transfer, skip_exec=False)
 
         # Check if script_content is provided for direct script execution
         if (
@@ -391,42 +395,268 @@ class ParamikoDriver(BaseDriver):
             log.warning("No command provided")
             return {}
 
-
         try:
             result = {}
             for cmd in command:
-                # Check if streaming execution is requested
-                if (
-                    self.args
-                    and isinstance(self.args, ParamikoSendCommandArgs)
-                    and self.args.stream
-                ):
-                    log.debug(f"Stream execution requested for: {cmd}")
-                    stream_result = self._execute_stream_command(session, cmd, self.args)
-                    result.update(stream_result)
-                # Check if background execution is requested
-                elif (
-                    self.args
-                    and isinstance(self.args, ParamikoSendCommandArgs)
-                    and self.args.run_in_background
-                ):
-                    log.debug(f"Background execution requested for: {cmd}")
-                    bg_result = self._execute_background_command(session, cmd, self.args)
-                    result.update(bg_result)
-                else:
-                    exec_result = self._execute_command(session, cmd, self.args)
-                    result.update(exec_result)
+                exec_result = self._execute_command(session, cmd, self.args)
+                result.update(exec_result)
             return result
         except Exception as e:
-            log.error(f"Error in sending command: {e}")
+            log.error(f"Error in send: {e}")
+            error_key = " ".join(command) if command else "error"
             return {
-                " ".join(command): DriverExecutionResult(
+                error_key: DriverExecutionResult(
                     output="",
                     error=str(e),
                     exit_status=1,
-                    telemetry={"duration_seconds": 0.0},
+                    telemetry={},
                 )
             }
+
+    def _get_detached_dir(self) -> str:
+        """Get the user-isolated directory for detached task files."""
+        user = self.conn_args.username
+        return f"/tmp/np-detached-{user}"
+
+    # =========================================================================
+    # New Detach Implementation (Standardized)
+    # =========================================================================
+
+    def launch_detached(
+        self, session: paramiko.SSHClient, cmd: str, task_id: str
+    ) -> Dict[str, DriverExecutionResult]:
+        """
+        Launch a command in the background on the remote host with advanced features.
+        Supports standard commands, script content, or execution after file transfer.
+        """
+        detached_dir = self._get_detached_dir()
+        # Ensure detached task directory exists with correct permissions
+        self._execute_command(session, f"mkdir -p {detached_dir} && chmod 700 {detached_dir}", None)
+
+        output_file = f"{detached_dir}/{DETACHED_TASK_FILE_PREFIX}_{task_id}.log"
+        pid_file = f"{detached_dir}/{DETACHED_TASK_FILE_PREFIX}_{task_id}.pid"
+        meta_file = f"{pid_file}.meta"
+        age_file = f"{pid_file}.age"
+
+        proc_name = f"{DETACHED_TASK_PROCESS_PREFIX}{task_id}"
+
+        # Determine the actual command to run
+        final_cmd = cmd
+
+        if self.args and isinstance(self.args, ParamikoSendCommandArgs):
+            # Case 1: File Transfer + Detached Execution
+            if self.args.file_transfer and self.args.file_transfer.operation == "upload":
+                log.info(f"Detached: Performing upload before launch for task {task_id}")
+                # Synchronously upload first, skip internal sync execution
+                up_res = self._handle_file_transfer(
+                    session, self.args.file_transfer, skip_exec=True
+                )
+                # Note: _handle_file_transfer might try to execute already if
+                # execute_after_upload is True. However, for detached, we want to
+                # OVERRIDE that sync execution with a detached one.
+                # Let's check if the upload succeeded.
+                up_key = f"file_transfer_{self.args.file_transfer.operation}"
+                if up_res.get(up_key) and up_res[up_key].exit_status == 0:
+                    if (
+                        self.args.file_transfer.execute_after_upload
+                        and self.args.file_transfer.execute_command
+                    ):
+                        final_cmd = self.args.file_transfer.execute_command
+                else:
+                    return up_res  # Return failure immediately if upload failed
+
+            # Case 2: Script Content + Detached Execution
+            elif self.args.script_content:
+                log.info(f"Detached: Writing script content for task {task_id}")
+                script_path = f"{detached_dir}/{DETACHED_TASK_FILE_PREFIX}_{task_id}.sh"
+
+                # Write script content via a temporary file or heredoc
+                # For safety with large scripts, we use a simple heredoc or cat
+                content_quoted = shlex.quote(self.args.script_content)
+                write_cmd = f"printf %s {content_quoted} > {script_path} && chmod +x {script_path}"
+                self._execute_command(session, write_cmd, None)
+
+                interpreter = self.args.script_interpreter or "bash"
+                final_cmd = f"{interpreter} {script_path}"
+
+        if not final_cmd:
+            return {
+                "launch": DriverExecutionResult(
+                    output="",
+                    error="No command provided for detached execution.",
+                    exit_status=1,
+                    telemetry={},
+                )
+            }
+
+        # Handle working directory
+        if self.args and getattr(self.args, "working_directory", None):
+            final_cmd = f"cd {self.args.working_directory} && {final_cmd}"
+
+        # 1. Handle Environment Variables Persistence
+        if self.args and getattr(self.args, "environment", None):
+            final_cmd = self._apply_env_to_command(final_cmd, self.args.environment)
+
+        # 2. Handle Sudo if requested
+        safe_cmd = shlex.quote(f"{final_cmd} ; exit $?")
+        wrapped_cmd = f"exec -a {proc_name} bash -c {safe_cmd}"
+
+        # 3. Construct the background launch wrapper
+        helper_cmd = f"{wrapped_cmd} ; echo $? > {pid_file}.exit ; date +%s >> {age_file}"
+
+        bg_launch = (
+            f"echo {int(time.time())} > {age_file}; "
+            f"nohup setsid bash -c {shlex.quote(helper_cmd)} "
+            f"</dev/null > {output_file} 2>&1 & "
+            f"echo $! > {pid_file}; "
+            f"echo {task_id} > {meta_file}"
+        )
+
+        # Apply sudo wrapping
+        if self.args and getattr(self.args, "sudo", False):
+            sudo_prefix = "sudo -S "
+            bg_launch = f"{sudo_prefix}bash -c {shlex.quote(bg_launch)}"
+
+        _stdin, stdout, _stderr = session.exec_command(
+            bg_launch, get_pty=bool(getattr(self.args, "sudo", False))
+        )
+
+        if (
+            self.args
+            and getattr(self.args, "sudo", False)
+            and getattr(self.args, "sudo_password", None)
+        ):
+            _stdin.write(f"{self.args.sudo_password}\n")
+            _stdin.flush()
+
+        exit_status = stdout.channel.recv_exit_status()
+
+        # Read PID from file
+        pid = None
+        if exit_status == 0:
+            pid_out = self._read_remote_file(session, pid_file)
+            if pid_out and pid_out.isdigit():
+                pid = int(pid_out)
+
+        # Wait a brief moment to catch immediate failures (command not found, syntax errors, etc.)
+        time.sleep(0.5)
+
+        running = False
+        if pid:
+            running, _ = self._is_task_running(session, task_id)
+
+        telemetry = {
+            "task_id": task_id,
+            "pid": pid,
+            "log_file": output_file,
+            "pid_file": pid_file,
+            "meta_file": meta_file,
+            "age_file": age_file,
+            "command": cmd,
+            "running": running,
+            "created_at": time.time(),
+        }
+
+        output = f"Task {task_id} launched."
+        error = ""
+        final_exit = exit_status
+
+        if exit_status == 0 and pid and not running:
+            # Task exited rapidly (either failed or completed super fast)
+            log_output = self._read_remote_file(session, output_file) or ""
+            exit_code_str = self._read_remote_file(session, f"{pid_file}.exit")
+            final_exit = int(exit_code_str) if exit_code_str and exit_code_str.isdigit() else 1
+            output = log_output.strip() or f"Task {task_id} exited rapidly."
+            error = log_output.strip() if final_exit != 0 else ""
+
+        return {
+            "launch": DriverExecutionResult(
+                output=output,
+                error=error,
+                exit_status=final_exit,
+                telemetry=telemetry,
+            )
+        }
+
+    def _read_logs(
+        self, session: paramiko.SSHClient, task_id: str, offset: int = 0
+    ) -> Dict[str, DriverExecutionResult]:
+        """Read log delta from the remote log file."""
+        detached_dir = self._get_detached_dir()
+        log_f = f"{detached_dir}/{DETACHED_TASK_FILE_PREFIX}_{task_id}.log"
+
+        # Check if process is still running
+        running, pid = self._is_task_running(session, task_id)
+
+        # Read with tail from offset (more efficient than dd bs=1 for large files)
+        # tail -c +N starts at byte N (one-indexed)
+        read_c = f"tail -c +{offset + 1} {log_f} 2>/dev/null" if offset > 0 else f"cat {log_f}"
+        result = self._execute_command(session, read_c, None)
+        output = result[read_c].output
+
+        # Get current file size for next offset
+        size_c = f"stat -c%s {log_f} 2>/dev/null || echo 0"
+        size_res = self._execute_command(session, size_c, None)
+        file_size = int(size_res[size_c].output.strip() or 0)
+
+        return {
+            "query": DriverExecutionResult(
+                output=output,
+                error="",
+                exit_status=0,
+                telemetry={
+                    "task_id": task_id,
+                    "running": running,
+                    "pid": pid,
+                    "next_offset": file_size,
+                    "completed": not running,
+                },
+            )
+        }
+
+    def kill_task(self, session: paramiko.SSHClient, task_id: str) -> bool:
+        """Kill the detached task and cleanup files."""
+        running, pid = self._is_task_running(session, task_id)
+
+        if running and pid:
+            kill_c = f"kill -15 {pid} 2>/dev/null; sleep 0.2; kill -9 {pid} 2>/dev/null"
+            self._execute_command(session, kill_c, None)
+
+        # Cleanup files
+        detached_dir = self._get_detached_dir()
+        prefix = f"{DETACHED_TASK_FILE_PREFIX}_{task_id}"
+        # We also cleanup potential script files (.sh)
+        cleanup_c = (
+            f"rm -f {detached_dir}/{prefix}.log {detached_dir}/{prefix}.pid* "
+            f"{detached_dir}/{prefix}.sh 2>/dev/null"
+        )
+        self._execute_command(session, cleanup_c, None)
+        return True
+
+    def _is_task_running(
+        self, session: paramiko.SSHClient, task_id: str
+    ) -> Tuple[bool, Optional[int]]:
+        """Verify process status using PID and command identity."""
+        detached_dir = self._get_detached_dir()
+        pid_f = f"{detached_dir}/{DETACHED_TASK_FILE_PREFIX}_{task_id}.pid"
+        pid_out = self._read_remote_file(session, pid_f)
+        if not pid_out or not pid_out.isdigit():
+            return False, None
+
+        pid = int(pid_out)
+        proc_name = f"{DETACHED_TASK_PROCESS_PREFIX}{task_id}"
+        check_c = f"ps -p {pid} -o args= 2>/dev/null"
+        check_res = self._execute_command(session, check_c, None)
+        comm = check_res[check_c].output.strip()
+
+        # PID matches and the command line contains our injected process name
+        return (proc_name in comm, pid)
+
+    def _read_remote_file(self, session: paramiko.SSHClient, path: str) -> Optional[str]:
+        """Helper to read a small remote file."""
+        cmd = f"cat {path} 2>/dev/null"
+        _stdin, stdout, _stderr = session.exec_command(cmd)
+        return stdout.read().decode().strip() or None
 
     def _apply_env_to_command(self, command: str, env: Optional[Dict[str, str]]) -> str:
         """Helper to prepend environment variables to a command string"""
@@ -436,17 +666,22 @@ class ParamikoDriver(BaseDriver):
         env_exports = [f"export {k}='{v}'" for k, v in env.items()]
         return f"{' && '.join(env_exports)} && {command}"
 
-    def _handle_file_transfer(self, session: paramiko.SSHClient, file_transfer_op) -> dict:
-        from .model import ParamikoFileTransferOperation
-
+    def _handle_file_transfer(
+        self, session: paramiko.SSHClient, file_transfer_op, skip_exec: bool = False
+    ) -> dict:
         if not isinstance(file_transfer_op, ParamikoFileTransferOperation):
             file_transfer_op = ParamikoFileTransferOperation.model_validate(file_transfer_op)
 
         try:
             if file_transfer_op.operation == "upload":
+                # Use staged file path if available
+                effective_local_path = self._get_effective_source_path(file_transfer_op.local_path)
+                if not effective_local_path:
+                    raise ValueError("No local path or staged file provided for upload.")
+
                 result = self._upload_file(
                     session,
-                    file_transfer_op.local_path,
+                    effective_local_path,
                     file_transfer_op.remote_path,
                     file_transfer_op.resume,
                     file_transfer_op.recursive,
@@ -455,14 +690,15 @@ class ParamikoDriver(BaseDriver):
                     file_transfer_op.chmod,
                 )
             elif file_transfer_op.operation == "download":
+                effective_local_path = self._get_effective_dest_path(file_transfer_op.local_path)
                 result = self._download_file(
                     session,
                     file_transfer_op.remote_path,
-                    file_transfer_op.local_path,
-                    file_transfer_op.resume,
-                    file_transfer_op.recursive,
-                    file_transfer_op.sync_mode,
-                    file_transfer_op.chunk_size,
+                    effective_local_path,
+                    resume=file_transfer_op.resume,
+                    recursive=file_transfer_op.recursive,
+                    sync_mode=file_transfer_op.sync_mode,
+                    chunk_size=file_transfer_op.chunk_size,
                 )
             else:
                 raise ValueError(f"Unsupported operation: {file_transfer_op.operation}")
@@ -481,7 +717,8 @@ class ParamikoDriver(BaseDriver):
 
             # Execute command after upload if requested
             if (
-                file_transfer_op.operation == "upload"
+                not skip_exec
+                and file_transfer_op.operation == "upload"
                 and file_transfer_op.execute_after_upload
                 and file_transfer_op.execute_command
             ):
@@ -514,10 +751,19 @@ class ParamikoDriver(BaseDriver):
     def config(
         self, session: paramiko.SSHClient, config: list[str]
     ) -> Dict[str, DriverExecutionResult]:
+        """Execute configuration lines and return unified rich result"""
+        if self.args and isinstance(self.args, ParamikoSendConfigArgs) and self.args.sudo:
+            if not self.args.sudo_password and self.conn_args.password:
+                self.args.sudo_password = self.conn_args.password
+
+        # Handle File Transfer (Config path redirect)
+        if self.args and getattr(self.args, "file_transfer", None):
+            log.info(f"File transfer (via config) detected: {self.args.file_transfer.operation}")
+            return self._handle_file_transfer(session, self.args.file_transfer, skip_exec=False)
+
         if not config:
             log.warning("No configuration provided")
             return {}
-
 
         try:
             result = {}
@@ -587,8 +833,9 @@ class ParamikoDriver(BaseDriver):
             return result
         except Exception as e:
             log.error(f"Error in sending config: {e}")
+            error_key = "\n".join(config) if config else "error"
             return {
-                "\n".join(config): DriverExecutionResult(
+                error_key: DriverExecutionResult(
                     output="",
                     error=str(e),
                     exit_status=1,
@@ -633,7 +880,6 @@ class ParamikoDriver(BaseDriver):
             cleaned_lines.append(line)
 
         return "\n".join(cleaned_lines).lstrip()
-
 
     def _execute_command(
         self, session: paramiko.SSHClient, cmd: str, args: Optional[ParamikoSendCommandArgs]
@@ -684,8 +930,6 @@ class ParamikoDriver(BaseDriver):
         self, session: paramiko.SSHClient, cmd: str, expect_map: dict, **kwargs
     ) -> tuple[str, str, int]:
         """Execute a command in an interactive session with prompt handling"""
-
-
         # We need a PTY for interactive interaction
         kwargs["get_pty"] = True
         timeout = kwargs.get("timeout", 60.0)
@@ -758,7 +1002,6 @@ class ParamikoDriver(BaseDriver):
         if not args.script_content:
             return {}
 
-
         start_time = time.perf_counter()
 
         # Build command with interpreter
@@ -802,293 +1045,6 @@ class ParamikoDriver(BaseDriver):
             )
         }
 
-    def _execute_background_command(
-        self, session: paramiko.SSHClient, cmd: str, args: ParamikoSendCommandArgs
-    ) -> Dict[str, DriverExecutionResult]:
-        """Execute command in background and return PID"""
-
-
-        task_id = str(uuid.uuid4())[:8]
-        output_file = args.background_output_file or f"/tmp/netpulse_{task_id}.log"
-        pid_file = args.background_pid_file or f"/tmp/netpulse_{task_id}.pid"
-        meta_file = f"{pid_file}.meta"
-
-        # exec -a sets the process name in 'comm' for later validation
-        bg_cmd = (
-            f'nohup bash -c "exec -a {task_id} {cmd}" > {output_file} 2>&1 & '
-            f"echo $! > {pid_file}; "
-            f"echo {int(time.time())} > {pid_file}.ttl; "
-            f"echo {task_id} > {meta_file}"
-        )
-
-        # Cleanup expired tasks occasionally
-        self._cleanup_expired_tasks(session, args.ttl_seconds)
-
-        # Execute the background command
-        exec_result = self._execute_command(session, bg_cmd, args)
-
-        # Read PID from remote file
-        pid = None
-        if exec_result[bg_cmd].exit_status == 0:
-            try:
-                # Read PID file
-                read_pid_cmd = f"cat {pid_file}"
-                pid_result = self._execute_command(session, read_pid_cmd, args)
-                if read_pid_cmd in pid_result:
-                    pid_output = pid_result[read_pid_cmd].output.strip()
-                    if pid_output:
-                        pid = int(pid_output)
-            except (ValueError, KeyError) as e:
-                log.warning(f"Failed to read PID from {pid_file}: {e}")
-
-        # Update result with background task info
-        result_key = next(iter(exec_result.keys()))
-        exec_result[result_key].telemetry.update({
-            "pid": pid,
-            "pid_file": pid_file,
-            "output_file": output_file,
-            "command": cmd,
-        })
-
-        return exec_result
-
-    def _execute_stream_command(
-        self, session: paramiko.SSHClient, cmd: str, args: ParamikoSendCommandArgs
-    ) -> Dict[str, DriverExecutionResult]:
-        """Execute command in streaming mode (returns session_id for polling output)"""
-
-
-        session_id = str(uuid.uuid4())[:12]
-        output_file = f"/tmp/netpulse_stream_{session_id}.log"
-        pid_file = f"/tmp/netpulse_stream_{session_id}.pid"
-        meta_file = f"{pid_file}.meta"
-
-        bg_cmd = (
-            f'nohup bash -c "exec -a {session_id} {cmd}" > {output_file} 2>&1 & '
-            f"echo $! > {pid_file}; "
-            f"echo {int(time.time())} > {pid_file}.ttl; "
-            f"echo {session_id} > {meta_file}"
-        )
-
-        # Cleanup expired tasks on this host occasionally
-        self._cleanup_expired_tasks(session, args.ttl_seconds if args else 3600)
-
-        # Execute the background command
-        exec_result = self._execute_command(session, bg_cmd, args)
-
-        # Read PID from remote file
-        pid = None
-        if exec_result[bg_cmd].exit_status == 0:
-            try:
-                read_pid_cmd = f"cat {pid_file}"
-                pid_result = self._execute_command(session, read_pid_cmd, args)
-                if read_pid_cmd in pid_result:
-                    pid_output = pid_result[read_pid_cmd].output.strip()
-                    if pid_output:
-                        pid = int(pid_output)
-            except (ValueError, KeyError) as e:
-                log.warning(f"Failed to read PID from {pid_file}: {e}")
-
-        # Since stream command doesn't actually produce output in this call, we return metadata
-        return {
-            "stream": DriverExecutionResult(
-                output=f"Stream session started: {session_id}",
-                error="",
-                exit_status=0,
-                telemetry={
-                    "session_id": session_id,
-                    "pid": pid,
-                    "output_file": output_file,
-                    "command": cmd,
-                },
-            )
-        }
-
-    def _query_stream(
-        self, session: paramiko.SSHClient, query: StreamQuery
-    ) -> Dict[str, DriverExecutionResult]:
-        """Query streaming command output with identity verification"""
-        start_time = time.perf_counter()
-        sid = query.session_id
-        log_f, pid_f = f"/tmp/netpulse_stream_{sid}.log", f"/tmp/netpulse_stream_{sid}.pid"
-        meta_f = f"{pid_f}.meta"
-
-        data = {
-            "session_id": sid, "completed": False, "exit_code": None, "output": None,
-            "output_bytes": 0, "runtime_seconds": None, "killed": False,
-            "cleaned": False, "identity_verified": False,
-        }
-
-        try:
-            # Check PID and verify process identity (comm)
-            cmd_pid = f"cat {pid_f} 2>/dev/null"
-            res_pid = self._execute_command(session, cmd_pid, None)
-            pid = res_pid[cmd_pid].output.strip() if cmd_pid in res_pid else None
-
-            if pid and pid.isdigit():
-                check_c = f"ps -p {pid} -o pid,etime,comm --no-headers 2>/dev/null"
-                res_check = self._execute_command(session, check_c, None)
-                out = res_check[check_c].output.strip()
-
-                if out:
-                    # Logic: Try matching against comm (parts[2]) OR searching for sid in the
-                    # full ARGS. This handles environments where 'exec -a' doesn't change
-                    # 'comm' output.
-                    parts = out.split(None, 2)
-                    matched = False
-                    if len(parts) >= 3:
-                        if parts[2] == sid: # Direct comm match
-                            matched = True
-                        elif sid in parts[2]: # Found in args
-                            matched = True
-
-                    if matched:
-                        data.update({"completed": False, "identity_verified": True})
-                        try:
-                            # Use etime from middle column
-                            data["runtime_seconds"] = self._parse_etime(parts[1])
-                        except Exception:
-                            pass
-
-                        if query.kill:
-                            kill_c = (
-                                f"kill -15 {pid} 2>/dev/null; "
-                                "sleep 0.5; "
-                                f"kill -9 {pid} 2>/dev/null"
-                            )
-                            self._execute_command(session, kill_c, None)
-                            data.update({"killed": True, "completed": True})
-                    else:
-                        msg = f"Stream PID {pid} identity mismatch! Out: '{out}' exp: '{sid}'"
-                        log.warning(msg)
-                        data["completed"] = True
-                else:
-                    data.update({"completed": True, "exit_code": 0})
-
-            # Read output
-            read_c = f"tail -n {query.lines} {log_f} 2>/dev/null"
-            if query.offset > 0:
-                read_c = (
-                    f"dd if={log_f} bs=1 skip={query.offset} 2>/dev/null "
-                    f"| tail -n {query.lines}"
-                )
-
-            data["output"] = self._execute_command(session, read_c, None)[read_c].output
-
-            # Update sizing
-            size_c = f"stat -c%s {log_f} 2>/dev/null || echo 0"
-            size_out = self._execute_command(session, size_c, None)[size_c].output.strip()
-            data["output_bytes"] = data["next_offset"] = int(size_out) if size_out.isdigit() else 0
-
-            if query.cleanup and data["completed"]:
-                clean_c = f"rm -f {log_f} {pid_f} {pid_f}.ttl {meta_f} 2>/dev/null"
-                self._execute_command(session, clean_c, None)
-                data["cleaned"] = True
-
-        except Exception as e:
-            log.error(f"Error querying stream: {e}")
-            data["error"] = str(e)
-
-        # Remove redundant data from telemetry to save bandwidth
-        telemetry_data = data.copy()
-        telemetry_data.pop("output", None)
-        telemetry_data.pop("error", None)
-        telemetry_data["duration_seconds"] = round(time.perf_counter() - start_time, 3)
-
-        return {
-            "stream_result": DriverExecutionResult(
-                output=data.get("output") or "",
-                error=data.get("error", ""),
-                exit_status=data.get("exit_code") or 0,
-                telemetry=telemetry_data,
-            )
-        }
-
-    def _check_background_task(
-        self, session: paramiko.SSHClient, query: BackgroundTaskQuery
-    ) -> Dict[str, DriverExecutionResult]:
-        """Check status of a background task by PID with identity verification"""
-        start_time = time.perf_counter()
-        pid = query.pid
-        data = {
-            "pid": pid, "running": False, "exit_code": 0, "output_tail": None,
-            "runtime_seconds": None, "killed": False, "cleaned": False,
-            "identity_verified": False,
-        }
-
-        try:
-            # Verify process against comm AND args via ps
-            cmd_check = f"ps -p {pid} -o pid,etime,args --no-headers 2>/dev/null"
-            out = self._execute_command(session, cmd_check, None)[cmd_check].output.strip()
-
-            if out:
-                parts = out.split()
-                if len(parts) >= 3 and parts[0] == str(pid):
-                    # Pull expected task ID from meta file if available
-                    ident = None
-                    if query.output_file:
-                        meta_p = query.output_file.replace(".log", ".pid.meta")
-                        cmd_m = f"cat {meta_p} 2>/dev/null"
-                        res_m = self._execute_command(session, cmd_m, None)
-                        ident = res_m[cmd_m].output.strip() if cmd_m in res_m else None
-
-                    if ident:
-                        # Logic: match ident against args part (parts[2])
-                        if ident not in parts[2]:
-                            msg = f"PID {pid} identity mismatch! '{parts[2]}' no '{ident}'"
-                            log.warning(msg)
-                        else:
-                            data.update({
-                                "running": True,
-                                "identity_verified": True
-                            })
-                        try:
-                            data["runtime_seconds"] = self._parse_etime(parts[1])
-                        except Exception:
-                            pass
-
-                        if query.kill_if_running:
-                            kill_c = (
-                                f"kill -15 {pid} 2>/dev/null; "
-                                "sleep 0.5; "
-                                f"kill -9 {pid} 2>/dev/null"
-                            )
-                            self._execute_command(session, kill_c, None)
-                            data.update({"killed": True, "running": False})
-
-            if query.output_file:
-                tail_c = f"tail -n {query.tail_lines} {query.output_file} 2>/dev/null"
-                data["output_tail"] = self._execute_command(session, tail_c, None)[tail_c].output
-
-            if query.cleanup_files and not data["running"]:
-                if query.output_file:
-                    base = query.output_file.replace(".log", "")
-                    clean_c = (
-                        f"rm -f {base}.log {base}.pid "
-                        f"{base}.pid.ttl {base}.pid.meta 2>/dev/null"
-                    )
-                    self._execute_command(session, clean_c, None)
-                    data["cleaned"] = True
-
-        except Exception as e:
-            log.error(f"Error checking background task: {e}")
-            data["error"] = str(e)
-
-        # Remove redundant output from telemetry
-        telemetry_data = data.copy()
-        telemetry_data.pop("output_tail", None)
-        telemetry_data.pop("error", None)
-        telemetry_data["duration_seconds"] = round(time.perf_counter() - start_time, 3)
-
-        return {
-            "task_query": DriverExecutionResult(
-                output=data.get("output_tail") or "",
-                error=data.get("error", ""),
-                exit_status=data.get("exit_code") or 0,
-                telemetry=telemetry_data,
-            )
-        }
-
     def _parse_etime(self, etime: str) -> int:
         """Parse ps etime format to seconds"""
         # Format: [[DD-]HH:]MM:SS
@@ -1109,60 +1065,44 @@ class ParamikoDriver(BaseDriver):
 
         return total_seconds
 
-    def _cleanup_expired_tasks(self, session: paramiko.SSHClient, ttl: int):
-        """Clean up expired temporary files on the remote host"""
+    def _cleanup_expired_tasks(self, session: paramiko.SSHClient, retention_seconds: int = 86400):
+        """
+        Clean up expired detached task files on the remote host.
+        A task is considered expired if it has finished and the retention period has passed.
+        """
         try:
-            # Find all .ttl files in /tmp/netpulse_*
-            find_cmd = "ls /tmp/netpulse_*.ttl 2>/dev/null"
-            find_result = self._execute_command(session, find_cmd, None)
-            ttl_files = find_result[find_cmd].output.strip().split()
-
-            if not ttl_files:
-                return
-
-            current_time = int(time.time())
-            files_to_remove = []
-
-            for ttl_file in ttl_files:
-                try:
-                    # Read creation time
-                    read_cmd = f"cat {ttl_file} 2>/dev/null"
-                    read_result = self._execute_command(session, read_cmd, None)
-                    creation_time_str = read_result[read_cmd].output.strip()
-                    if not creation_time_str:
-                        continue
-
-                    creation_time = int(creation_time_str)
-                    if current_time - creation_time > ttl:
-                        # Expired, mark for removal
-                        # ttl_file is like /tmp/netpulse_xxx.pid.ttl or /tmp/netpulse_xxx.ttl
-                        base_path = ttl_file.replace(".ttl", "")
-                        files_to_remove.extend([
-                            ttl_file,
-                            base_path,                       # The .pid file
-                            base_path.replace(".pid", ".log"), # The .log file
-                            base_path + ".meta"              # The .meta file
-                        ])
-                except Exception:
-                    continue
-
-            if files_to_remove:
-                rm_cmd = f"rm -f {' '.join(files_to_remove)} 2>/dev/null"
-                self._execute_command(session, rm_cmd, None)
+            detached_dir = self._get_detached_dir()
+            cleanup_cmd = (
+                f"now=$(date +%s); "
+                f"if [ -d {detached_dir} ]; then "
+                f"  for f in {detached_dir}/{DETACHED_TASK_FILE_PREFIX}_*.pid.age; do "
+                f'    if [ -f \\"$f\\" ]; then '
+                f'      line_count=$(wc -l < \\"$f\\"); '
+                f'      if [ \\"$line_count\\" -ge 2 ]; then '
+                f'        end_time=$(tail -n 1 \\"$f\\"); '
+                f"        if [ $((now - end_time)) -gt {retention_seconds} ]; then "
+                f'          base=\\"${{f%.pid.age}}\\"; '
+                f'          rm -f \\"$base\\".log \\"$base\\".pid \\"$base\\".pid.*; '
+                f"        fi; "
+                f"      fi; "
+                f"    fi; "
+                f"  done; "
+                f"fi"
+            )
+            session.exec_command(cleanup_cmd, timeout=5)
         except Exception as e:
-            log.warning(f"Failed to cleanup expired tasks: {e}")
+            log.warning(f"Failed to cleanup expired detached tasks: {e}")
 
     def _list_active_tasks(self, session: paramiko.SSHClient) -> List[Dict[str, Any]]:
-        """List all active background tasks on the remote host by scanning meta files"""
+        """List active detached tasks on remote host."""
         tasks = []
+        detached_dir = self._get_detached_dir()
         try:
-            # 1. Scan for all .meta files
-            ls_cmd = "ls /tmp/netpulse_*.pid.meta 2>/dev/null"
+            ls_cmd = f"ls {detached_dir}/{DETACHED_TASK_FILE_PREFIX}_*.pid.meta 2>/dev/null"
             meta_files = self._execute_command(session, ls_cmd, None)[ls_cmd].output.strip().split()
 
             for meta_f in meta_files:
                 try:
-                    # 2. Get task identity and PID
                     cmd_m = f"cat {meta_f}"
                     task_id = self._execute_command(session, cmd_m, None)[cmd_m].output.strip()
                     pid_f = meta_f.replace(".meta", "")
@@ -1173,24 +1113,25 @@ class ParamikoDriver(BaseDriver):
                         continue
 
                     pid = int(pid_out)
-
-                    # 3. Verify process is still running with this identity
-                    ps_cmd = f"ps -p {pid} -o comm= --no-headers 2>/dev/null"
+                    ps_cmd = f"ps -p {pid} -o args= --no-headers 2>/dev/null"
                     comm = self._execute_command(session, ps_cmd, None)[ps_cmd].output.strip()
 
-                    if comm == task_id:
-                        tasks.append({
-                            "task_id": task_id,
-                            "pid": pid,
-                            "type": "stream" if "stream" in meta_f else "background",
-                            "pid_file": pid_f,
-                            "meta_file": meta_f,
-                            "log_file": pid_f.replace(".pid", ".log")
-                        })
+                    if f"{DETACHED_TASK_PROCESS_PREFIX}{task_id}" in comm:
+                        tasks.append(
+                            {
+                                "task_id": task_id,
+                                "pid": pid,
+                                "status": "running",
+                                "pid_file": pid_f,
+                                "meta_file": meta_f,
+                                "log_file": pid_f.replace(".pid", ".log"),
+                                "age_file": f"{pid_f}.age",
+                            }
+                        )
                 except Exception:
                     continue
         except Exception as e:
-            log.warning(f"Error listing active tasks: {e}")
+            log.warning(f"Error listing active detached tasks: {e}")
 
         return tasks
 

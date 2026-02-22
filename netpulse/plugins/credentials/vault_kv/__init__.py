@@ -36,7 +36,6 @@ OPTIONAL_FIELD_MAPPING: dict[str, str] = {
 }
 
 
-
 class VaultKvConfig(BaseModel):
     """Global Vault configuration loaded from config.yaml."""
 

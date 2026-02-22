@@ -100,12 +100,17 @@ class LogConfig(BaseModel):
     level: str = "INFO"
 
 
+class StorageConfig(BaseModel):
+    staging: Path = Path("/app/storage/staging")
+
+
 class AppConfig(BaseSettings):
     # Must be provided fields
     server: ServerConfig
     worker: WorkerConfig
     redis: RedisConfig
     plugin: PluginConfig
+    storage: StorageConfig = StorageConfig()
 
     # With default values
     job: JobConfig = JobConfig()

@@ -30,6 +30,7 @@ class PyeapiDriver(BaseDriver):
             enabled=req.enable_mode,
             save=req.save,
             args=req.driver_args,
+            staged_file_id=req.staged_file_id,
         )
 
     @classmethod
@@ -51,11 +52,13 @@ class PyeapiDriver(BaseDriver):
         enabled: bool,
         save: bool = True,
         args: Optional[PyeapiArg] = None,
+        staged_file_id: Optional[str] = None,
         **kwargs,
     ):
         """
         Init the driver with arguments.
         """
+        super().__init__(staged_file_id=staged_file_id, **kwargs)
         self.conn_args = conn_args
         self.enabled = enabled
         self.save = save

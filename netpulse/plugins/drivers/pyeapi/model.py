@@ -37,6 +37,12 @@ class PyeapiExecutionRequest(ExecutionRequest):
     enable_mode: bool = Field(True, description="Enter privileged mode for execution")
     save: bool = Field(False, description="Save configuration after execution")
 
+    # Internal field for file transfer bridge
+    staged_file_id: Optional[str] = Field(
+        default=None,
+        description="Internal reference to the staged file (Multipart mode)",
+    )
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {

@@ -6,9 +6,12 @@ services:
       dockerfile: ./docker/controller.dockerfile
     env_file:
       - .env
+    environment:
+      - NETPULSE_STORAGE__STAGING=/app/storage/staging
     volumes:
       - ./config:/app/config:z
       - ./redis/tls:/app/redis/tls:ro,z
+      - netpulse_staging:/app/storage/staging:z
     ports:
       - "9000:9000"
     networks:
@@ -25,9 +28,12 @@ services:
       dockerfile: ./docker/node_worker.dockerfile
     env_file:
       - .env
+    environment:
+      - NETPULSE_STORAGE__STAGING=/app/storage/staging
     volumes:
       - ./config:/app/config:z
       - ./redis/tls:/app/redis/tls:ro,z
+      - netpulse_staging:/app/storage/staging:z
     depends_on:
       redis:
         condition: service_healthy
@@ -44,9 +50,12 @@ services:
       dockerfile: docker/fifo_worker.dockerfile
     env_file:
       - .env
+    environment:
+      - NETPULSE_STORAGE__STAGING=/app/storage/staging
     volumes:
       - ./config:/app/config:z
       - ./redis/tls:/app/redis/tls:ro,z
+      - netpulse_staging:/app/storage/staging:z
     depends_on:
       redis:
         condition: service_healthy
@@ -128,3 +137,5 @@ volumes:
     name: "netpulse-vault-data"
   vault_logs:
     name: "netpulse-vault-logs"
+  netpulse_staging:
+    name: "netpulse-staging"

@@ -4,7 +4,14 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 import rq
-from pydantic import BaseModel, Field, ValidationError, computed_field, field_serializer
+from pydantic import (
+    BaseModel,
+    Field,
+    ValidationError,
+    computed_field,
+    field_serializer,
+    model_validator,
+)
 
 from .common import BatchFailedItem, DeviceTestInfo, JobAdditionalData, JobResult
 
@@ -47,6 +54,7 @@ class JobInResponse(BaseModel):
     queue: str
     worker: Optional[str] = None
     result: Optional[JobResult] = None
+    task_id: Optional[str] = None
 
     @field_serializer("created_at", "enqueued_at", "started_at", "ended_at")
     def serialize_datetime(self, dt: Optional[datetime], _info):
@@ -116,6 +124,7 @@ class JobInResponse(BaseModel):
             ended_at=job.ended_at,
             worker=job.worker_name,
             result=result,
+            task_id=meta.task_id if meta else None,
         )
 
 
@@ -174,3 +183,44 @@ class ConnectionTestResponse(BaseModel):
     @field_serializer("timestamp")
     def serialize_datetime(self, dt: Optional[datetime], _info):
         return _serialize_datetime_with_tz(dt, _info)
+
+
+class DetachedTaskInResponse(BaseModel):
+    """Metadata for a detached task, with sensitive data masked."""
+
+    task_id: str
+    command: List[str]
+    host: str
+    driver: str
+    status: str
+    last_sync: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    push_interval: Optional[int] = None
+    last_offset: Optional[int] = None
+    connection_args: dict
+
+    @field_serializer("last_sync", "created_at")
+    def serialize_datetime(self, dt: Optional[datetime], _info):
+        return _serialize_datetime_with_tz(dt, _info)
+
+    @field_serializer("connection_args")
+    def mask_password(self, args: dict, _info):
+        """Mask sensitive information in connection_args."""
+        if not args or not isinstance(args, dict):
+            return args
+        masked = args.copy()
+        for key in ["password", "secret", "private_key"]:
+            if masked.get(key):
+                masked[key] = "******"
+        return masked
+
+    @model_validator(mode="before")
+    @classmethod
+    def convert_timestamps(cls, data: dict):
+        if not isinstance(data, dict):
+            return data
+        for field in ["last_sync", "created_at"]:
+            val = data.get(field)
+            if isinstance(val, (int, float)):
+                data[field] = datetime.fromtimestamp(val, tz=timezone.utc)
+        return data

@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Optional
 
 from redis import Redis
 from redis.sentinel import Sentinel
@@ -155,4 +156,53 @@ class Rediz:
                 log.error(f"Redis connection failed: {e!s}")
 
 
+class DetachedTaskRegistry:
+    """
+    Manages metadata for detached tasks in Redis.
+    Structure: Hash `netpulse:detached_task_registry` -> {task_id: JSON_encoded_metadata}
+    """
+
+    KEY = "netpulse:detached_task_registry"
+
+    def __init__(self, rediz: Rediz):
+        self.rdb = rediz.conn
+
+    def register(self, task_id: str, metadata: dict):
+        """Register a new task with its metadata."""
+        import json
+
+        self.rdb.hset(self.KEY, task_id, json.dumps(metadata))
+        log.info(f"Detached Task {task_id} registered in Registry.")
+
+    def get(self, task_id: str) -> Optional[dict]:
+        """Retrieve task metadata by ID."""
+        import json
+
+        data = self.rdb.hget(self.KEY, task_id)
+        if not data:
+            return None
+        # Handle bytes or str
+        if isinstance(data, bytes):
+            data = data.decode("utf-8")
+        return json.loads(data)
+
+    def unregister(self, task_id: str):
+        """Remove a task from the registry."""
+        self.rdb.hdel(self.KEY, task_id)
+        log.info(f"Detached Task {task_id} removed from Registry.")
+
+    def list_all(self) -> dict:
+        """List all registered tasks."""
+        import json
+
+        raw = self.rdb.hgetall(self.KEY)
+        result = {}
+        for k, v in raw.items():
+            key = k.decode("utf-8") if isinstance(k, bytes) else k
+            val = v.decode("utf-8") if isinstance(v, bytes) else v
+            result[key] = json.loads(val)
+        return result
+
+
 g_rdb = Rediz(g_config.redis)
+g_detached_task_registry = DetachedTaskRegistry(g_rdb)

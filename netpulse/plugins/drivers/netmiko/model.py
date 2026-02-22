@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 
 from pydantic import ConfigDict, Field, model_validator
 
@@ -106,13 +106,37 @@ class NetmikoSendConfigSetArgs(DriverArgs):
     bypass_commands: Optional[str] = None
 
 
+class NetmikoFileTransferOperation(DriverArgs):
+    """
+    Operation arguments for Netmiko file_transfer method.
+    """
+
+    operation: Literal["upload", "download"] = Field(
+        default=..., description="Transfer operation type: upload or download"
+    )
+    local_path: Optional[str] = Field(default=None, description="Local file path")
+    remote_path: str = Field(default=..., description="Remote file path")
+    direction: Optional[str] = "put"  # Standardized to Netmiko's expectation
+    overwrite: bool = True
+    hash_algorithm: str = "md5"
+    verify_file: bool = True
+
+
 class NetmikoExecutionRequest(ExecutionRequest):
     driver: DriverName = DriverName.NETMIKO
     connection_args: NetmikoConnectionArgs
-    driver_args: Optional[NetmikoSendConfigSetArgs | NetmikoSendCommandArgs] = None
+    driver_args: Optional[
+        NetmikoSendConfigSetArgs | NetmikoSendCommandArgs | NetmikoFileTransferOperation
+    ] = None
 
     save: bool = Field(default=False, description="Save configuration after execution")
     enable_mode: bool = Field(default=False, description="Enter privileged mode for execution")
+
+    # Internal field for file transfer bridge
+    staged_file_id: Optional[str] = Field(
+        default=None,
+        description="Internal reference to the staged file (Multipart mode)",
+    )
 
     @model_validator(mode="after")
     def validate_driver_args_type(self):
@@ -135,7 +159,18 @@ class NetmikoExecutionRequest(ExecutionRequest):
             elif is_config:
                 # For config operations, use NetmikoSendConfigSetArgs
                 self.driver_args = NetmikoSendConfigSetArgs(**self.driver_args)
-        # If driver_args is already an instance, verify it matches the operation type
+            elif self.staged_file_id or "operation" in self.driver_args:
+                # For file transfer operations (identified by staged_file_id or explicit operation)
+                from .model import NetmikoFileTransferOperation
+
+                self.driver_args = NetmikoFileTransferOperation(**self.driver_args)
+        elif (
+            isinstance(self.driver_args, NetmikoSendCommandArgs)
+            or isinstance(self.driver_args, NetmikoSendConfigSetArgs)
+            or isinstance(self.driver_args, NetmikoFileTransferOperation)
+        ):
+            # Already an instance of one of our models, no conversion needed
+            pass
         elif is_command and isinstance(self.driver_args, NetmikoSendConfigSetArgs):
             # Convert NetmikoSendConfigSetArgs to NetmikoSendCommandArgs for command operations
             # Only keep common parameters

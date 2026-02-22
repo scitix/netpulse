@@ -16,7 +16,7 @@ class TestParamikoProxy(unittest.TestCase):
             password="target_password",
             proxy_host="jump.example.com",
             proxy_username="jump_user",
-            proxy_password="jump_password"
+            proxy_password="jump_password",
         )
 
     @patch("paramiko.SSHClient")
@@ -45,14 +45,12 @@ class TestParamikoProxy(unittest.TestCase):
             port=22,
             timeout=30.0,
             password="jump_password",
-            username="jump_user"
+            username="jump_user",
         )
 
         # Verify channel opening
         mock_transport.open_channel.assert_called_with(
-            "direct-tcpip",
-            ("target.example.com", 22),
-            ("jump.example.com", 22)
+            "direct-tcpip", ("target.example.com", 22), ("jump.example.com", 22)
         )
 
         # Verify target connection via channel
@@ -63,12 +61,13 @@ class TestParamikoProxy(unittest.TestCase):
             sock=mock_channel,
             timeout=30.0,
             look_for_keys=True,  # Now correctly respects conn_args
-            allow_agent=False,   # Now correctly respects conn_args
-            password="target_password"
+            allow_agent=False,  # Now correctly respects conn_args
+            password="target_password",
         )
 
         self.assertEqual(session, target_client)
         self.assertEqual(target_client._proxy_client, proxy_client)
+
 
 if __name__ == "__main__":
     unittest.main()

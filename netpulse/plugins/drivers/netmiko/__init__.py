@@ -3,18 +3,17 @@ import os
 import signal
 import sys
 import threading
-from typing import TYPE_CHECKING, Dict, Optional
-
-if TYPE_CHECKING:
-    from ....models.driver import DriverExecutionResult
+from typing import Any, Dict, Optional
 
 from netmiko import BaseConnection, ConnectHandler
 
+from ....models.driver import DriverExecutionResult
 from .. import BaseDriver
 from .model import (
     NetmikoConnectionArgs,
     NetmikoDeviceTestInfo,
     NetmikoExecutionRequest,
+    NetmikoFileTransferOperation,
     NetmikoSendCommandArgs,
     NetmikoSendConfigSetArgs,
 )
@@ -158,6 +157,8 @@ class NetmikoDriver(BaseDriver):
             conn_args=req.connection_args,
             enabled=req.enable_mode,
             save=req.save,
+            staged_file_id=req.staged_file_id,
+            job_id=getattr(req, "id", None),
         )
 
     @classmethod
@@ -175,12 +176,14 @@ class NetmikoDriver(BaseDriver):
 
     def __init__(
         self,
-        args: NetmikoSendCommandArgs | NetmikoSendConfigSetArgs | None,
+        args: Optional[Any],
         conn_args: NetmikoConnectionArgs,
         enabled: bool = False,
         save: bool = True,
+        staged_file_id: Optional[str] = None,
         **kwargs,
     ):
+        super().__init__(staged_file_id=staged_file_id, **kwargs)
         self.args = args
         self.conn_args = conn_args
         self.enabled = enabled
@@ -213,6 +216,11 @@ class NetmikoDriver(BaseDriver):
             with self._monitor_lock:
                 if self.enabled:
                     session.enable()
+
+                # Handle File Transfer
+                if self.args and isinstance(self.args, NetmikoFileTransferOperation):
+                    log.info(f"File transfer detected: {self.args.operation}")
+                    return self._handle_file_transfer(session, self.args)
 
                 result = {}
                 for cmd in command:
@@ -274,6 +282,11 @@ class NetmikoDriver(BaseDriver):
                 start_time = time.perf_counter()
                 if self.enabled:
                     session.enable()
+
+                # Handle File Transfer (Config mode redirect)
+                if self.args and isinstance(self.args, NetmikoFileTransferOperation):
+                    log.info(f"File transfer (via config) detected: {self.args.operation}")
+                    return self._handle_file_transfer(session, self.args)
 
                 if self.args:
                     if isinstance(self.args, NetmikoSendConfigSetArgs):
@@ -347,6 +360,66 @@ class NetmikoDriver(BaseDriver):
         except (NotImplementedError, AttributeError):
             pass
         return result
+
+    def _handle_file_transfer(
+        self, session: BaseConnection, file_transfer_op: Any
+    ) -> Dict[str, DriverExecutionResult]:
+        """
+        Handle file transfer using Netmiko's file_transfer function.
+        """
+        from netmiko import file_transfer
+
+        from ....models.driver import DriverExecutionResult
+
+        try:
+            if file_transfer_op.operation == "upload":
+                effective_local_path = self._get_effective_source_path(file_transfer_op.local_path)
+                if not effective_local_path:
+                    raise ValueError("No local path or staged file provided for upload.")
+                source_file = effective_local_path
+                dest_file = file_transfer_op.remote_path
+                direction = "put"
+            else:  # download
+                effective_local_path = self._get_effective_dest_path(file_transfer_op.local_path)
+                source_file = file_transfer_op.remote_path
+                dest_file = effective_local_path
+                direction = "get"
+
+            # Netmiko file_transfer arguments
+            transfer_args = {
+                "ssh_conn": session,
+                "source_file": source_file,
+                "dest_file": dest_file,
+                "direction": direction,
+                "overwrite": file_transfer_op.overwrite,
+                "hash_algorithm": file_transfer_op.hash_algorithm,
+                "verify_file": file_transfer_op.verify_file,
+            }
+
+            results = file_transfer(**transfer_args)
+
+            op_name = f"{file_transfer_op.operation} {file_transfer_op.remote_path}"
+            return {
+                op_name: DriverExecutionResult(
+                    output=f"File transfer results: {results}",
+                    error="",
+                    exit_status=0 if results.get("file_exists") else 1,
+                    telemetry={
+                        "duration_seconds": 0.0,
+                        "transfer_result": {**results, "local_path": dest_file},
+                    },
+                )
+            }
+        except Exception as e:
+            log.error(f"Error in Netmiko file transfer: {e}")
+            return {
+                "file_transfer": DriverExecutionResult(
+                    output="",
+                    error=str(e),
+                    exit_status=1,
+                    telemetry={"duration_seconds": 0.0},
+                )
+            }
 
     def disconnect(self, session: BaseConnection, reset=False):
         """

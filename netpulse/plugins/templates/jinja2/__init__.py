@@ -14,14 +14,12 @@ class Jinja2Renderer(BaseTemplateRenderer):
     @classmethod
     def from_rendering_request(cls, req: Jinja2RenderRequest):
         if not isinstance(req, Jinja2RenderRequest):
-            # Python don't have implicit type conversion
+            # Python doesn't have implicit type conversion
             req = Jinja2RenderRequest.model_validate(req.model_dump())
         return cls(source=req.template, options=req.args)
 
     def __init__(self, source: str, options: Jinja2Args | None = None):
-        options_dict = (
-            options.model_dump(exclude_none=True) if options else {}
-        )
+        options_dict = options.model_dump(exclude_none=True) if options else {}
 
         try:
             s = TemplateSource(source)

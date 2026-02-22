@@ -104,6 +104,7 @@ def test_vault_provider_resolves_and_populates(runtime_loader, monkeypatch):
     import fakeredis
 
     from netpulse.services.rediz import g_rdb
+
     monkeypatch.setattr(g_rdb, "conn", fakeredis.FakeRedis())
     vault_kv.VaultKvCredentialProvider._cache.clear()
     monkeypatch.setattr(vault_kv, "hvac", SimpleNamespace(Client=FakeClient))
@@ -163,6 +164,7 @@ def test_vault_provider_respects_cache(runtime_loader, monkeypatch):
     import fakeredis
 
     from netpulse.services.rediz import g_rdb
+
     monkeypatch.setattr(g_rdb, "conn", fakeredis.FakeRedis())
     vault_kv.VaultKvCredentialProvider._cache.clear()
     monkeypatch.setattr(vault_kv, "hvac", SimpleNamespace(Client=FakeClient))
@@ -222,6 +224,7 @@ def test_vault_provider_reads_version_and_mapping(runtime_loader, monkeypatch):
     import fakeredis
 
     from netpulse.services.rediz import g_rdb
+
     monkeypatch.setattr(g_rdb, "conn", fakeredis.FakeRedis())
     vault_kv.VaultKvCredentialProvider._cache.clear()
     monkeypatch.setattr(vault_kv, "hvac", SimpleNamespace(Client=FakeClient))
@@ -280,6 +283,7 @@ def test_vault_provider_missing_required_field(runtime_loader, monkeypatch):
     import fakeredis
 
     from netpulse.services.rediz import g_rdb
+
     monkeypatch.setattr(g_rdb, "conn", fakeredis.FakeRedis())
     vault_kv.VaultKvCredentialProvider._cache.clear()
     monkeypatch.setattr(vault_kv, "hvac", SimpleNamespace(Client=FakeClient))

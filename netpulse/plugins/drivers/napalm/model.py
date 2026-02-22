@@ -57,6 +57,12 @@ class NapalmExecutionRequest(ExecutionRequest):
         description="If True, the config will not be pushed to the device.",
     )
 
+    # Internal field for file transfer bridge
+    staged_file_id: Optional[str] = Field(
+        default=None,
+        description="Internal reference to the staged file (Multipart mode)",
+    )
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {

@@ -84,10 +84,10 @@ def test_paramiko_upload_hash_sync(monkeypatch):
 
     # Run upload with hash sync
     result = driver._upload_file(
-        session, # type: ignore
+        session,  # type: ignore
         local_file,
         "/tmp/test.txt",
-        sync_mode="hash"
+        sync_mode="hash",
     )
 
     assert result["success"] is True
@@ -113,6 +113,7 @@ def test_paramiko_upload_recursive(monkeypatch):
     class FakeSession:
         def open_sftp(self):
             return fake_sftp
+
         def exec_command(self, cmd):
             return None, MagicMock(), None
 
@@ -124,10 +125,10 @@ def test_paramiko_upload_recursive(monkeypatch):
     session = FakeSession()
 
     result = driver._upload_file(
-        session, # type: ignore
+        session,  # type: ignore
         local_dir,
         "/remote/path",
-        recursive=True
+        recursive=True,
     )
 
     assert result["success"] is True
@@ -161,36 +162,6 @@ def test_paramiko_telemetry():
     assert telemetry is not None
     assert "duration_seconds" in telemetry
     assert isinstance(telemetry["duration_seconds"], float)
-
-
-def test_paramiko_stream_cursor():
-    """Test that stream query returns next_offset."""
-    from netpulse.plugins.drivers.paramiko.model import StreamQuery
-
-    class FakeSession:
-        def exec_command(self, cmd, **kwargs):
-            stdout = MagicMock()
-            # If it's a 'stat -c%s' command, return a mock file size
-            if "stat -c%s" in cmd:
-                stdout.read.return_value = b"1024\n"
-            else:
-                stdout.read.return_value = b"log content"
-            stdout.channel.recv_exit_status.return_value = 0
-            stderr = MagicMock()
-            stderr.read.return_value = b""
-            return MagicMock(), stdout, stderr
-
-    driver = ParamikoDriver(
-        args=None,
-        conn_args=ParamikoConnectionArgs(host="h", username="u", password="p"),
-    )
-
-    query = StreamQuery(session_id="test-session", offset=0, lines=10)
-    result = driver._query_stream(FakeSession(), query)
-
-    stream_res = result["stream_result"]
-    assert stream_res.telemetry["output_bytes"] == 1024
-    assert stream_res.telemetry["next_offset"] == 1024
 
 
 def test_paramiko_interactive_expect():
@@ -231,188 +202,28 @@ def test_paramiko_interactive_expect():
     assert status == 0
 
 
-def test_paramiko_ttl_metadata():
-    """Test that background tasks include TTL metadata in commands."""
+def test_paramiko_list_active_detached_tasks():
+    """Test that active detached tasks can be discovered on the remote host."""
     from netpulse.plugins.drivers.paramiko.model import ParamikoSendCommandArgs
 
     mock_session = MagicMock()
-    # Mock successful execution
-    mock_stdout = MagicMock()
-    mock_stdout.read.return_value = b"1234\n"  # PID
-    mock_stdout.channel.recv_exit_status.return_value = 0
-    mock_stderr = MagicMock()
-    mock_stderr.read.return_value = b""
-    mock_session.exec_command.return_value = (MagicMock(), mock_stdout, mock_stderr)
-
+    # The expected directory for user 'u'
+    detached_dir = "/tmp/np-detached-u"
     driver = ParamikoDriver(
-        args=None,
-        conn_args=ParamikoConnectionArgs(host="h", username="u", password="p"),
-    )
-
-    args = ParamikoSendCommandArgs(run_in_background=True, ttl_seconds=1800)
-
-    # We need to mock _cleanup_expired_tasks to avoid side effects during test
-    driver._cleanup_expired_tasks = MagicMock()
-
-    driver._execute_background_command(mock_session, "sleep 100", args)
-
-    # Check the actual bg_cmd sent
-    # It should look for something containing '.ttl' and the creation timestamp
-    calls = mock_session.exec_command.mock_calls
-    found_ttl_logic = False
-    for call in calls:
-        cmd_sent = call[1][0]
-        if ".ttl" in cmd_sent and "echo" in cmd_sent:
-            found_ttl_logic = True
-            break
-
-    assert found_ttl_logic is True
-    # Verify cleanup was called
-    driver._cleanup_expired_tasks.assert_called_with(mock_session, 1800)
-
-
-def test_paramiko_pid_reuse_detection():
-    """Test that background task check detects PID reuse via comm verification."""
-    from netpulse.plugins.drivers.paramiko.model import BackgroundTaskQuery
-
-    mock_session = MagicMock()
-    mock_stdout = MagicMock()
-    mock_stderr = MagicMock()
-    mock_session.exec_command.return_value = (MagicMock(), mock_stdout, mock_stderr)
-
-    driver = ParamikoDriver(
-        args=None,
-        conn_args=ParamikoConnectionArgs(host="h", username="u", password="p"),
-    )
-
-    # 1. Setup: Case where comm matches (Identity Verified)
-    # Commands: ps -p ... and cat ...pid.meta
-    task_id = "task123"
-    pid = 12345
-
-    def side_effect(cmd, **kwargs):
-        ro = MagicMock()
-        re = MagicMock()
-        if "ps -p" in cmd:
-            ro.read.return_value = f"{pid} 00:01 {task_id}".encode()
-        elif ".meta" in cmd:
-            ro.read.return_value = f"{task_id}\n".encode()
-        else:
-            ro.read.return_value = b""
-
-        re.read.return_value = b""
-        ro.channel.recv_exit_status.return_value = 0
-        return MagicMock(), ro, re
-
-    mock_session.exec_command.side_effect = side_effect
-
-    query = BackgroundTaskQuery(pid=pid, output_file="/tmp/test.log")
-    result = driver._check_background_task(mock_session, query)["task_query"]
-
-    assert result.telemetry["running"] is True
-    assert result.telemetry["identity_verified"] is True
-
-    # 2. Setup: Case where comm mismatch (PID Reuse)
-    def side_effect_reuse(cmd, **kwargs):
-        ro = MagicMock()
-        re = MagicMock()
-        if "ps -p" in cmd:
-            ro.read.return_value = f"{pid} 10:00:00 nginx".encode() # Reuse by nginx
-        elif ".meta" in cmd:
-            ro.read.return_value = f"{task_id}\n".encode()
-        else:
-            ro.read.return_value = b""
-
-        re.read.return_value = b""
-        ro.channel.recv_exit_status.return_value = 0
-        return MagicMock(), ro, re
-
-    mock_session.exec_command.side_effect = side_effect_reuse
-    result_reuse = driver._check_background_task(mock_session, query)["task_query"]
-
-    assert result_reuse.telemetry["running"] is False
-    assert result_reuse.telemetry["identity_verified"] is False
-
-
-def test_paramiko_stream_identity_verification():
-    """Test that stream query detects PID reuse and handles results correctly."""
-    from netpulse.plugins.drivers.paramiko.model import StreamQuery
-
-    mock_session = MagicMock()
-    driver = ParamikoDriver(
-        args=None,
-        conn_args=ParamikoConnectionArgs(host="h", username="u", password="p"),
-    )
-
-    sid = "stream123"
-    pid = "5555"
-
-    def side_effect(cmd, **kwargs):
-        ro, re = MagicMock(), MagicMock()
-        if f"cat /tmp/netpulse_stream_{sid}.pid" in cmd:
-            ro.read.return_value = f"{pid}\n".encode()
-        elif "ps -p" in cmd:
-            # Case 1: Identity match
-            ro.read.return_value = f"{pid} 00:05 {sid}".encode()
-        elif "stat -c%s" in cmd:
-            ro.read.return_value = b"500\n"
-        else:
-            ro.read.return_value = b"some output"
-        ro.channel.recv_exit_status.return_value = 0
-        re.read.return_value = b""
-        return MagicMock(), ro, re
-
-    mock_session.exec_command.side_effect = side_effect
-    query = StreamQuery(session_id=sid, offset=0, lines=10)
-
-    # 1. Test Success Case
-    res = driver._query_stream(mock_session, query)["stream_result"]
-    assert res.telemetry["identity_verified"] is True
-    assert res.telemetry["completed"] is False
-    assert res.telemetry["output_bytes"] == 500
-
-    # 2. Test PID Reuse Case
-    def side_effect_reuse(cmd, **kwargs):
-        ro, re = MagicMock(), MagicMock()
-        if f"cat /tmp/netpulse_stream_{sid}.pid" in cmd:
-            ro.read.return_value = f"{pid}\n".encode()
-        elif "ps -p" in cmd:
-            # Identity mismatch (reused by python)
-            ro.read.return_value = f"{pid} 01:00 python".encode()
-        elif "stat -c%s" in cmd:
-            ro.read.return_value = b"500\n"
-        else:
-            ro.read.return_value = b""
-        ro.channel.recv_exit_status.return_value = 0
-        re.read.return_value = b""
-        return MagicMock(), ro, re
-
-    mock_session.exec_command.side_effect = side_effect_reuse
-    res_reuse = driver._query_stream(mock_session, query)["stream_result"]
-    assert res_reuse.telemetry["identity_verified"] is False
-    assert res_reuse.telemetry["completed"] is True
-
-
-def test_paramiko_list_active_tasks():
-    """Test that active tasks can be discovered on the remote host."""
-    from netpulse.plugins.drivers.paramiko.model import ParamikoSendCommandArgs
-
-    mock_session = MagicMock()
-    driver = ParamikoDriver(
-        args=ParamikoSendCommandArgs(list_active_tasks=True),
+        args=ParamikoSendCommandArgs(list_active_detached_tasks=True),
         conn_args=ParamikoConnectionArgs(host="h", username="u", password="p"),
     )
 
     def side_effect(cmd, **kwargs):
         ro, re = MagicMock(), MagicMock()
-        if "ls /tmp/netpulse_*.pid.meta" in cmd:
-            ro.read.return_value = b"/tmp/netpulse_bg_123.pid.meta\n"
-        elif "cat /tmp/netpulse_bg_123.pid.meta" in cmd:
+        if f"ls {detached_dir}/np_*.pid.meta" in cmd:
+            ro.read.return_value = f"{detached_dir}/np_123.pid.meta\n".encode()
+        elif f"cat {detached_dir}/np_123.pid.meta" in cmd:
             ro.read.return_value = b"task-xyz\n"
-        elif "cat /tmp/netpulse_bg_123.pid" in cmd:
+        elif f"cat {detached_dir}/np_123.pid" in cmd:
             ro.read.return_value = b"9999\n"
         elif "ps -p 9999" in cmd:
-            ro.read.return_value = b"task-xyz\n"
+            ro.read.return_value = b"np_task-xyz\n"
 
         ro.channel.recv_exit_status.return_value = 0
         re.read.return_value = b""
@@ -423,8 +234,8 @@ def test_paramiko_list_active_tasks():
     # Execute via the public send() method
     results = driver.send(mock_session, [])
 
-    assert "task_list" in results
-    tasks = results["task_list"].telemetry["active_tasks"]
+    assert "list_active_detached_tasks" in results
+    tasks = results["list_active_detached_tasks"].telemetry["active_tasks"]
     assert len(tasks) == 1
     assert tasks[0]["task_id"] == "task-xyz"
     assert tasks[0]["pid"] == 9999
