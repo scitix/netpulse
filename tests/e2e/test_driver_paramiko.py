@@ -132,7 +132,7 @@ def test_paramiko_file_transfer_upload_and_download(tmp_path):
         ),
     )
     upload_result = rpc.execute(upload_req)
-    res = next(x for x in upload_result if "file_transfer_upload" in x.command)
+    res = next(x for x in upload_result if x.command.startswith("upload"))
     assert res.exit_status == 0
 
     download_path = tmp_path / "paramiko-download.txt"
@@ -149,7 +149,7 @@ def test_paramiko_file_transfer_upload_and_download(tmp_path):
         ),
     )
     download_result = rpc.execute(download_req)
-    res = next(x for x in download_result if "file_transfer_download" in x.command)
+    res = next(x for x in download_result if x.command.startswith("download"))
     assert res.exit_status == 0
     assert download_path.read_text() == upload_payload
 
@@ -187,7 +187,7 @@ def test_api_exec_paramiko_fifo(fifo_worker, api_server, wait_for_job):
 
     assert resp.status_code == 201, resp.text
     body = resp.json()
-    job = body["data"]
+    job = body
     assert job["queue"] == "FifoQ"
 
     finished = wait_for_job(job_id=job["id"])

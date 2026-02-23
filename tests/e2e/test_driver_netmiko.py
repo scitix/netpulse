@@ -54,8 +54,8 @@ def test_netmiko_exec_on_linux_ssh():
 
     result = rpc.execute(req)
 
-    assert target.command in result
-    assert "netpulse-e2e" in result[target.command]
+    res = next(x for x in result if x.command == target.command)
+    assert "netpulse-e2e" in res.output
 
 
 def test_netmiko_exec_on_srlinux(monkeypatch):
@@ -87,9 +87,9 @@ def test_netmiko_exec_on_srlinux(monkeypatch):
     except Exception as exc:
         pytest.skip(f"SR Linux auth/connection failed: {exc}")
 
-    assert target.command in result
-    assert isinstance(result[target.command], str)
-    assert result[target.command].strip()
+    res = next(x for x in result if x.command == target.command)
+    assert isinstance(res.output, str)
+    assert res.output.strip()
 
 
 def test_netmiko_config_on_srlinux(monkeypatch):
@@ -126,7 +126,7 @@ def test_netmiko_config_on_srlinux(monkeypatch):
         pytest.skip(f"SR Linux auth/connection failed: {exc}")
 
     assert isinstance(result, list)
-    assert result and all(isinstance(item, str) for item in result)
+    assert result and all(isinstance(res.output, str) for res in result)
 
 
 def test_netmiko_reuses_persisted_session(monkeypatch):
@@ -175,8 +175,8 @@ def test_netmiko_reuses_persisted_session(monkeypatch):
                 command=cmd,
             )
             result = rpc.execute(req)
-            assert cmd in result
-            assert "reuse" in result[cmd]
+            res = next(x for x in result if x.command == cmd)
+            assert "reuse" in res.output
 
         non_none_sets = [s for s in set_calls if s]
         assert len(non_none_sets) == 1, "persisted session should be set once"
@@ -219,14 +219,14 @@ def test_api_exec_netmiko_pinned(node_worker, api_server, wait_for_job):
 
     assert resp.status_code == 201, resp.text
     body = resp.json()
-    job = body["data"]
+    job = body
     assert job["queue"] == f"HostQ_{target.host}"
 
     finished = wait_for_job(job_id=job["id"])
     assert finished["status"] == "finished"
     result = finished["result"]["retval"]
-    assert cmd in result
-    assert "api-netmiko-e2e" in result[cmd]
+    res = next(x for x in result if x["command"] == cmd)
+    assert "api-netmiko-e2e" in res["output"]
 
 
 def test_api_netmiko_srl_render_and_parse(node_worker, api_server, wait_for_job):
@@ -271,15 +271,14 @@ def test_api_netmiko_srl_render_and_parse(node_worker, api_server, wait_for_job)
         pytest.skip(f"API unreachable at {API_BASE}: {exc}")
 
     assert resp.status_code == 201, resp.text
-    job = resp.json()["data"]
+    job = resp.json()
     assert job["queue"] == f"HostQ_{target.host}"
 
     finished = wait_for_job(job_id=job["id"], timeout=120)
     assert finished["status"] == "finished"
     retval = finished["result"]["retval"]
-    assert isinstance(retval, dict) and retval, "expected parsed output keyed by command"
-    rendered_cmd = next(iter(retval.keys()))
-    parsed = retval[rendered_cmd]
+    res_dict = retval[0]
+    parsed = res_dict.get("parsed")
     assert isinstance(parsed, list), "TextFSM parser should return a list of records"
 
 
@@ -328,7 +327,7 @@ def test_api_netmiko_srl_bulk_exec(node_worker, api_server, wait_for_job):
         timeout=15,
     )
     assert resp.status_code == 201, resp.text
-    body = resp.json()["data"]
+    body = resp.json()
     succeeded = body["succeeded"]
     failed = body["failed"]
 
@@ -339,6 +338,6 @@ def test_api_netmiko_srl_bulk_exec(node_worker, api_server, wait_for_job):
         finished = wait_for_job(job_id=job["id"], timeout=120)
         assert finished["status"] == "finished"
         retval = finished["result"]["retval"]
-        assert isinstance(retval, dict) and retval, "expected command output per host"
-        # Since bulk returns list in order, ensure each job got output for the issued command.
-        assert cmd in retval
+        res_dict = next((x for x in retval if x["command"] == cmd), None)
+        assert res_dict is not None, "expected command output per host"
+        assert res_dict["output"]
