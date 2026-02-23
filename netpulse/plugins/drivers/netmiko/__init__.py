@@ -14,7 +14,6 @@ from .model import (
     NetmikoDeviceTestInfo,
     NetmikoExecutionRequest,
     NetmikoSendCommandArgs,
-    NetmikoSendConfigSetArgs,
 )
 
 log = logging.getLogger(__name__)
@@ -237,19 +236,19 @@ class NetmikoDriver(BaseDriver):
                 result = []
                 for cmd in command:
                     start_time = time.perf_counter()
+                    cmd_args = {"cmd_verify": False} # Default to False for exec mode
                     if self.args:
                         if isinstance(self.args, NetmikoSendCommandArgs):
-                            response = session.send_command(cmd, **self.args.model_dump())
+                            user_args = self.args.model_dump()
+                            # If user didn't explicitly set cmd_verify, we use our default False
+                            if "cmd_verify" not in user_args or self.args.cmd_verify is True:
+                                user_args["cmd_verify"] = False
+                            response = session.send_command(cmd, **user_args)
                         else:
                             # Filter parameters for send_command
-                            cmd_args = {}
                             for attr in [
-                                "read_timeout",
-                                "delay_factor",
-                                "max_loops",
-                                "strip_prompt",
-                                "strip_command",
-                                "cmd_verify",
+                                "read_timeout", "delay_factor", "max_loops",
+                                "strip_prompt", "strip_command",
                             ]:
                                 if hasattr(self.args, attr):
                                     val = getattr(self.args, attr)
@@ -257,7 +256,7 @@ class NetmikoDriver(BaseDriver):
                                         cmd_args[attr] = val
                             response = session.send_command(cmd, **cmd_args)
                     else:
-                        response = session.send_command(cmd)
+                        response = session.send_command(cmd, **cmd_args)
 
                     duration_metadata = self._get_base_metadata(start_time)
                     result.append(DriverExecutionResult(
@@ -286,7 +285,7 @@ class NetmikoDriver(BaseDriver):
     def config(
         self, session: BaseConnection, config: list[str]
     ) -> list[DriverExecutionResult]:
-        """Execute configuration set and return unified rich result"""
+        """Execute configuration set and return a list of granular results"""
         import time
 
         from ....models.driver import DriverExecutionResult
@@ -294,6 +293,10 @@ class NetmikoDriver(BaseDriver):
         try:
             with self._monitor_lock:
                 start_time = time.perf_counter()
+
+                # Proactive insurance: Clear any stale hostname/prompt from session persistence
+                session.set_base_prompt()
+
                 if self.enabled:
                     session.enable()
 
@@ -302,51 +305,134 @@ class NetmikoDriver(BaseDriver):
                     log.info("File transfer (via config) detected")
                     return self._handle_file_transfer(session, self.args.file_transfer)
 
+                # Prepare config arguments
+                config_args = {}
                 if self.args:
-                    if isinstance(self.args, NetmikoSendConfigSetArgs):
-                        response = session.send_config_set(config, **self.args.model_dump())
-                    else:
-                        # Filter parameters for send_config_set
-                        config_args = {}
-                        for attr in [
-                            "read_timeout",
-                            "delay_factor",
-                            "max_loops",
-                            "strip_prompt",
-                            "strip_command",
-                            "cmd_verify",
-                            "error_pattern",
-                        ]:
-                            if hasattr(self.args, attr):
-                                val = getattr(self.args, attr)
-                                if val is not None and val != "":
-                                    config_args[attr] = val
-                        response = session.send_config_set(config, **config_args)
-                else:
-                    response = session.send_config_set(config)
+                    attrs = [
+                        "read_timeout", "delay_factor", "max_loops",
+                        "strip_prompt", "strip_command", "cmd_verify",
+                        "error_pattern", "config_mode_command"
+                    ]
+                    for attr in attrs:
+                        if hasattr(self.args, attr):
+                            val = getattr(self.args, attr)
+                            if val is not None and val != "":
+                                config_args[attr] = val
 
+                # 1. Enter config mode once
+                config_cmd = config_args.get("config_mode_command")
+                if config_cmd:
+                    session.config_mode(config_cmd)
+                else:
+                    session.config_mode()
+
+                results = []
+                # 2. Execute commands one by one for granular reporting
+                import re
+
+                # Base error patterns for CLI validation
+                ERROR_PATTERNS = [
+                    (
+                        r"% (Unrecognized command|Wrong parameter|Incomplete command|"
+                        r"Invalid input|Ambiguous command)"
+                    ),
+                    r"\^",  # Pointer to error position
+                    r"Invalid input detected",
+                    r"Error:",
+                ]
+
+                for i, cmd in enumerate(config):
+                    line_start = time.perf_counter()
+                    try:
+                        # Use the original config_args without manual delay_factor overrides
+                        response = session.send_config_set(
+                            [cmd],
+                            enter_config_mode=False,
+                            exit_config_mode=False,
+                            **config_args
+                        )
+
+                        exit_status = 0
+                        error_msg = ""
+                        output_str = response if response is not None else ""
+
+                        # Validate output for device-side errors
+                        check_patterns = ERROR_PATTERNS
+                        if "error_pattern" in config_args:
+                            check_patterns = [config_args["error_pattern"]]
+
+                        for pattern in check_patterns:
+                            if re.search(pattern, output_str, re.IGNORECASE):
+                                exit_status = 1
+                                last_line = (
+                                    output_str.strip().splitlines()[-1]
+                                    if output_str.strip()
+                                    else "Error detected"
+                                )
+                                error_msg = f"Device reported configuration error: {last_line}"
+                                break
+
+                        results.append(DriverExecutionResult(
+                            command=cmd,
+                            output=output_str,
+                            error=error_msg,
+                            exit_status=exit_status,
+                            metadata=self._get_base_metadata(line_start),
+                        ))
+
+                        # Atomic: stop if a line failed validation
+                        if exit_status != 0:
+                            # Correctly fill in ALL remaining commands as "Skipped"
+                            for skipped_cmd in config[i+1:]:
+                                results.append(DriverExecutionResult(
+                                    command=skipped_cmd,
+                                    output="",
+                                    error=f"Skipped due to previous error in execution of '{cmd}'",
+                                    exit_status=1,
+                                    metadata=self._get_base_metadata(time.perf_counter()),
+                                ))
+                            break
+
+                    except Exception as e:
+                        log.warning(f"Exception executing config line '{cmd}': {e}")
+                        results.append(DriverExecutionResult(
+                            command=cmd,
+                            output="",
+                            error=str(e),
+                            exit_status=1,
+                            metadata=self._get_base_metadata(line_start),
+                        ))
+                        # Also fill in skipped for exceptions
+                        for skipped_cmd in config[i+1:]:
+                            results.append(DriverExecutionResult(
+                                command=skipped_cmd,
+                                output="",
+                                error=f"Skipped due to exception in execution of '{cmd}'",
+                                exit_status=1,
+                                metadata=self._get_base_metadata(time.perf_counter()),
+                            ))
+                        break
+                    finally:
+                        # Maintain prompt synchronization to handle sub-view changes
+                        session.set_base_prompt()
+
+                # 3. Post-execution operations (Commit/Save)
                 if commit := self._commit(session):
-                    response += f"\n{commit}"
+                    if results:
+                        results[-1].output += f"\n{commit}"
 
                 if self.save:
                     session.set_base_prompt()
                     save_res = session.save_config()
-                    response += f"\n{save_res}"
+                    if results and save_res:
+                        results[-1].output += f"\n{save_res}"
 
+                # 4. Exit config mode once
+                session.exit_config_mode()
                 if self.enabled:
                     session.exit_enable_mode()
 
-            # Harmonize config result as a list
-            config_key = "\n".join(config)
-            return [
-                DriverExecutionResult(
-                    command=config_key,
-                    output=response,
-                    error="",
-                    exit_status=0,
-                    metadata=self._get_base_metadata(start_time),
-                )
-            ]
+                return results
         except Exception as e:
             log.error(f"Error in sending config: {e}")
             return [

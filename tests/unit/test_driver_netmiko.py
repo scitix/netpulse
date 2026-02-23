@@ -42,6 +42,12 @@ def test_netmiko_send_and_config_with_stub(monkeypatch):
         def set_base_prompt(self):
             calls["save"] += 0  # noop
 
+        def config_mode(self, config_command=None):
+            calls["config_mode"] = calls.get("config_mode", 0) + 1
+
+        def exit_config_mode(self):
+            calls["exit_config_mode"] = calls.get("exit_config_mode", 0) + 1
+
         def enable(self):
             calls["enable"] += 1
 
@@ -69,15 +75,23 @@ def test_netmiko_send_and_config_with_stub(monkeypatch):
     assert send_result[0].metadata is not None
     assert send_result[1].command == "b"
     assert send_result[1].output == "resp-b"
-    assert calls["send"] and all(kwargs["cmd_verify"] is True for _, kwargs in calls["send"])
+    # New performance default: cmd_verify is False for send mode
+    assert calls["send"] and all(kwargs["cmd_verify"] is False for _, kwargs in calls["send"])
 
     driver.args = NetmikoSendConfigSetArgs(exit_config_mode=True)
     config_result = driver.config(session, ["int lo0", "desc test"])  # type: ignore
-    cfg_key = "int lo0\ndesc test"
-    assert config_result[0].command == cfg_key
-    assert config_result[0].output == "applied\ncommitted\nsaved"
-    assert config_result[0].exit_status == 0
-    assert config_result[0].metadata is not None
+
+    # New behavior: results are a list of individual command results
+    assert len(config_result) == 2
+    assert config_result[0].command == "int lo0"
+    assert config_result[0].output == "applied"
+    assert config_result[1].command == "desc test"
+    assert config_result[1].output == "applied\ncommitted\nsaved"
+    assert all(r.exit_status == 0 for r in config_result)
+
+    assert len(calls["config"]) == 2
+    assert calls["config"][0][0] == ("int lo0",)
+    assert calls["config"][1][0] == ("desc test",)
 
     assert calls["commit"] == 1
     assert calls["save"] >= 1
