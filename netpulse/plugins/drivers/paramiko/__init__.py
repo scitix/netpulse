@@ -719,7 +719,7 @@ class ParamikoDriver(BaseDriver):
             else:
                 raise ValueError(f"Unsupported operation: {file_transfer_op.operation}")
 
-            bytes_used = result.get("bytes_transferred", 0)
+            bytes_used = result.get("transferred_bytes", 0)
             total_bytes = result.get("total_bytes", 0)
 
             op_key = f"{file_transfer_op.operation} {file_transfer_op.remote_path}"
@@ -1250,7 +1250,7 @@ class ParamikoDriver(BaseDriver):
                                 chmod=chmod,
                             )
                             if res.get("success"):
-                                total_bytes += res.get("bytes_transferred", 0)
+                                total_bytes += res.get("transferred_bytes", 0)
                                 if res.get("skipped"):
                                     files_skipped += 1
                                 else:
@@ -1260,7 +1260,7 @@ class ParamikoDriver(BaseDriver):
                         "success": True,
                         "local_path": local_path,
                         "remote_path": remote_path,
-                        "bytes_transferred": total_bytes,
+                        "transferred_bytes": total_bytes,
                         "files_transferred": files_transferred,
                         "files_skipped": files_skipped,
                         "recursive": True,
@@ -1290,7 +1290,7 @@ class ParamikoDriver(BaseDriver):
                             "success": True,
                             "local_path": local_path,
                             "remote_path": remote_path,
-                            "bytes_transferred": 0,
+                            "transferred_bytes": 0,
                             "total_bytes": local_size,
                             "skipped": True,
                             "sync_mode": "hash",
@@ -1302,7 +1302,7 @@ class ParamikoDriver(BaseDriver):
                             "success": True,
                             "local_path": local_path,
                             "remote_path": remote_path,
-                            "bytes_transferred": local_size,
+                            "transferred_bytes": local_size,
                             "total_bytes": local_size,
                             "resumed": False,
                         }
@@ -1315,13 +1315,13 @@ class ParamikoDriver(BaseDriver):
                     remote_file = sftp.file(remote_path, mode)
 
                     try:
-                        bytes_transferred = remote_size
+                        transferred_bytes = remote_size
                         while True:
                             chunk = local_file.read(chunk_size)
                             if not chunk:
                                 break
                             remote_file.write(chunk)
-                            bytes_transferred += len(chunk)
+                            transferred_bytes += len(chunk)
 
                         remote_file.close()
 
@@ -1338,7 +1338,7 @@ class ParamikoDriver(BaseDriver):
                             "success": True,
                             "local_path": local_path,
                             "remote_path": remote_path,
-                            "bytes_transferred": bytes_transferred,
+                            "transferred_bytes": transferred_bytes,
                             "total_bytes": local_size,
                             "resumed": resume and remote_size > 0,
                         }
@@ -1403,7 +1403,7 @@ class ParamikoDriver(BaseDriver):
                                 )
 
                             if res.get("success"):
-                                total_bytes += res.get("bytes_transferred", 0)
+                                total_bytes += res.get("transferred_bytes", 0)
                                 if res.get("skipped"):
                                     files_skipped += 1
                                 else:
@@ -1413,7 +1413,7 @@ class ParamikoDriver(BaseDriver):
                             "success": True,
                             "local_path": local_path,
                             "remote_path": remote_path,
-                            "bytes_transferred": total_bytes,
+                            "transferred_bytes": total_bytes,
                             "files_transferred": files_transferred,
                             "files_skipped": files_skipped,
                             "recursive": True,
@@ -1435,7 +1435,7 @@ class ParamikoDriver(BaseDriver):
                             "success": True,
                             "local_path": local_path,
                             "remote_path": remote_path,
-                            "bytes_transferred": 0,
+                            "transferred_bytes": 0,
                             "total_bytes": remote_size,
                             "skipped": True,
                             "sync_mode": "hash",
@@ -1448,7 +1448,7 @@ class ParamikoDriver(BaseDriver):
                             "success": True,
                             "local_path": local_path,
                             "remote_path": remote_path,
-                            "bytes_transferred": remote_size,
+                            "transferred_bytes": remote_size,
                             "total_bytes": remote_size,
                             "resumed": False,
                         }
@@ -1459,14 +1459,14 @@ class ParamikoDriver(BaseDriver):
 
                 mode = "ab" if (resume and local_size > 0) else "wb"
                 with open(local_path, mode) as local_file:
-                    bytes_transferred = local_size
+                    transferred_bytes = local_size
                     try:
                         while True:
                             chunk = remote_file.read(chunk_size)
                             if not chunk:
                                 break
                             local_file.write(chunk)
-                            bytes_transferred += len(chunk)
+                            transferred_bytes += len(chunk)
 
                         remote_file.close()
 
@@ -1474,7 +1474,7 @@ class ParamikoDriver(BaseDriver):
                             "success": True,
                             "local_path": local_path,
                             "remote_path": remote_path,
-                            "bytes_transferred": bytes_transferred,
+                            "transferred_bytes": transferred_bytes,
                             "total_bytes": remote_size,
                             "resumed": resume and local_size > 0,
                         }

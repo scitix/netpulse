@@ -92,7 +92,7 @@ def test_paramiko_upload_hash_sync(monkeypatch):
 
     assert result["success"] is True
     assert result.get("skipped") is True
-    assert result["bytes_transferred"] == 0
+    assert result["transferred_bytes"] == 0
 
     shutil.rmtree(local_dir)
 
