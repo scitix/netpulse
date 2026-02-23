@@ -121,7 +121,7 @@ def test_paramiko_read_logs():
 
     query_res = next(x for x in res if x.command == "query")
     assert query_res.output == "hello\nworld\n"
-    assert query_res.metadata["log_offset"] == 12
+    assert query_res.metadata["next_offset"] == 12
     assert query_res.metadata["is_running"] is True
     assert query_res.metadata["completed"] is False
 
