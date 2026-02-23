@@ -1,34 +1,37 @@
 # Changelog
 
-## [0.4.0] - 2026-02-20
+## [0.4.0] - 2026-02-23
 
 > [!CAUTION]
-> **BREAKING CHANGES**: This version introduces major refactoring of API paths and response structures. It is NOT backward compatible.
+> **BREAKING CHANGES**: This version introduces a major update with significant refactoring of the API and Response structures. It is NOT backward compatible.
 
 ### Added
 
-- **API Evolution**: Adopted flattened response structures and standard RESTful resource paths (`/jobs/{id}`, `/workers/{name}`).
-- **Unified Driver Format**: Standardized driver responses with `output`, `error`, `exit_status`, and `telemetry`.
-- **Paramiko Unified Async Task Engine**:
-  - **Merge Refactor**: Unified the former background tasks (`run_in_background`) and streaming tasks (`stream`) into a single async task engine (`async_task` + `task_query`), eliminating code duplication and simplifying the API.
-  - **Non-blocking Launch**: Introduced `_execute_command_nonblocking` to completely resolve Worker deadlocks caused by `stdout.read()` blocking on background processes.
-  - **Reliable Identity Verification**: Unified all identity checks to use `ps -o args` with `exec -a` injected task IDs, replacing the unreliable `ps -o comm` approach.
-  - **Safe Cleanup Strategy**: Cleanup of remote files is now only permitted when identity is verified AND the task has completed, preventing orphaned processes from losing their tracking metadata.
-  - **Task Discovery**: Added `list_tasks` API to scan and recover orphaned async tasks on remote hosts.
-- **Paramiko Enhancements**: Added support for interactive sessions (`expect_map`), incremental output reading, and improved SFTP stability.
-- **Vault Credential Caching**: Added support for in-memory caching logic with Vault credentials, enhancing stability by reducing API calls.
-- **Improved Reliability**: Implemented defensive exception wrapping; bulk APIs now provide structured failure reasons (`reason`).
-- **AI Native Support**: Established an AI knowledge kit (integrating `llms.txt`, `openapi.json`, and `repomix` source context) to significantly enhance LLM comprehension and assistive development efficiency.
+- **API Structure Flattening**: Refactored response models and removed redundant nesting layers. API results are now more intuitive, significantly reducing development complexity for third-party integrations and frontend displays.
+- **Standardized Driver Output**: Unified the execution result models (`list[DriverExecutionResult]`) across various drivers including Arista, Cisco, and Linux. Developers can now use consistent logic to process execution results from cross-vendor devices.
+- **Enhanced Background Async Task System (Paramiko)**:
+  - **Non-blocking Task Initialization**: Optimized the startup process, completely resolving the main process blocking and deadlock issues when Workers initiate long-running tasks.
+  - **Task Auto-Discovery and Recovery**: Introduced a task scanning mechanism that supports automatically finding and re-tracking task progress from remote hosts after service restarts or connection disruptions.
+  - **Efficient Incremental Log Tracking**: Introduced a read algorithm based on byte offsets, supporting "incremental pulling" of background task outputs, drastically reducing network overhead when viewing GB-level log files.
+  - **Precise ID-based Process Identification**: Adopted Task ID injection technology (`exec -a`) to ensure the uniqueness of background process identification, eliminating false positives and cleanup conflicts that occur with process name-based checks.
+- **Operations Automation and Security Enhancements**:
+  - **Dynamic Path Template Rendering**: Enabled the use of Jinja2 templates in file transfer paths to automatically generate storage directories based on metadata such as hostnames and dates, facilitating automated file archiving.
+  - **Secure Credential Asset Lifecycle**: Deeply integrated with the Vault credential system to support the secure transmission of encrypted private keys or authorization files to target devices, ensuring the safety of sensitive assets during transit.
+  - **Command-Level Structured Parsing**: Supported independent parsing for each output in batch commands, achieving precise mapping between execution sequences and structured data (JSON).
+- **Multi-level Persistent Credential Caching**: Implemented a two-tier persistent caching mechanism based on Memory + Redis. This effectively reduces Vault server load and improves overall connection stability when managing large-scale infrastructure.
+- **AI-Native Support**: Built an AI knowledge base system (including `llms.txt`, `openapi.json`, and `repomix` source context), significantly enhancing LLMs' understanding of complex systems and boosting AI-assisted development efficiency.
 
 ### Changed
 
-- **Behavior Cleanup**: Removed non-standard automatic JSON detection in favor of dedicated parsing engines.
-- **Collection Upgrade**: Fully updated the Postman API Collection to align with the new RESTful standards.
+- **Logic Cleanup**: Removed non-standard automatic JSON detection logic, centralizing it to be handled by parsing plugins.
+- **API Collection Synchronization**: Fully updated the Postman API Collection to the latest RESTful standards, covering all background task management endpoints.
 
 ### Fixed
 
-- Fixed inconsistent return formats in Netmiko driver under config mode.
-- Fixed potential Worker crashes caused by unhandled connection exceptions at the driver level.
+- **Runtime NameError Fix**: Resolved a critical NameError in the driver layer caused by circular imports and Pydantic validation timing.
+- **Background Task Tracking Fix**: Fixed a bug where async task log offsets and running statuses could not be correctly synchronized in the Redis registry.
+- **Unified Model Paths**: Resolved the import conflict for `ParamikoFileTransferOperation`, which is now merged into the cross-platform universal `FileTransferModel`.
+- **Driver Return Consistency**: Fixed the issue where the Napalm driver returned a dictionary instead of a list for empty commands, eliminating format discrepancies across drivers.
 
 
 ## [0.3.0] - 2025-12-15
@@ -94,7 +97,7 @@
 
 - **Paramiko Driver**: New Paramiko driver supporting Linux server management
   - Support for multiple authentication methods (password, key file, key content)
-  - Support for SFTP file transfer (upload/download/resume)
+  - SFTP file transfer (upload/download/resume)
   - Support for SSH proxy/jump host connections
   - Support for sudo privilege execution and PTY mode
 
