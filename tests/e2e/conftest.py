@@ -197,21 +197,22 @@ def wait_for_job(api_headers: dict[str, str]) -> Callable[[str, float], dict]:
         deadline = time.time() + timeout
         while time.time() < deadline:
             resp = requests.get(
-                f"{API_BASE}/job", params={"id": job_id}, headers=api_headers, timeout=5
+                f"{API_BASE}/jobs/{job_id}", headers=api_headers, timeout=5
             )
 
             try:
                 resp.raise_for_status()
             except requests.HTTPError:
+                if resp.status_code == 404:
+                    time.sleep(2)
+                    continue
                 pytest.fail(f"Job status check failed with {resp.status_code}, resp:\n{resp.text}")
 
-            data = resp.json().get("data") or []
-            if data:
-                job = data[0]
-                if job["status"] in {"finished", "failed", "stopped"}:
-                    return job
-                if job["status"] == "unknown":
-                    pytest.fail(f"Job {job_id} has unknown status")
+            job = resp.json()
+            if job["status"] in {"finished", "failed", "stopped"}:
+                return job
+            if job["status"] == "unknown":
+                pytest.fail(f"Job {job_id} has unknown status")
 
             time.sleep(2)
         pytest.fail(f"Job {job_id} did not complete within {timeout}s")
@@ -244,12 +245,12 @@ def wait_for_worker(
 
             try:
                 resp = requests.get(
-                    f"{API_BASE}/worker",
+                    f"{API_BASE}/workers",
                     params={"queue": queue},
                     headers=api_headers,
                     timeout=5,
                 )
-                if resp.status_code == 200 and (resp.json().get("data") or []):
+                if resp.status_code == 200 and resp.json():
                     return
             except requests.RequestException:
                 pass
