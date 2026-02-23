@@ -847,7 +847,11 @@ class Manager:
 
                 return {
                     "task_id": task_id,
-                    "status": "running" if (is_running if 'is_running' in locals() else True) else "completed",
+                    "status": (
+                        "running"
+                        if (is_running if 'is_running' in locals() else True)
+                        else "completed"
+                    ),
                     "result": result
                 }
             if rq_job.is_failed:

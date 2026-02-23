@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 from ...models import DeviceTestInfo, DriverConnectionArgs
 from ...models.driver import DriverExecutionResult

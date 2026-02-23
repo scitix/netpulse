@@ -42,9 +42,12 @@ def test_basic_webhook_calls_requests(monkeypatch):
     )
 
     caller = BasicWebHookCaller(hook)
-    caller = BasicWebHookCaller(hook)
     # Use a list of DriverExecutionResult objects
-    result = [DriverExecutionResult(command="show version", output="Cisco IOS Software", exit_status=0)]
+    result = [
+        DriverExecutionResult(
+            command="show version", output="Cisco IOS Software", exit_status=0
+        )
+    ]
     caller.call(req=req, job=MockJob(id="job-1"), result=result)
 
     assert captured["method"] == hook.method.value
@@ -73,8 +76,6 @@ def test_basic_webhook_swallows_request_errors(monkeypatch):
 
     monkeypatch.setattr(webhook_basic.requests, "request", failing_request)
 
-    caller = BasicWebHookCaller(hook)
-    # Should not raise even if the HTTP call fails
     caller = BasicWebHookCaller(hook)
     # Should not raise even if the HTTP call fails
     caller.call(req=None, job=MockJob(id="job-2"), result="done")
@@ -135,7 +136,6 @@ def test_basic_webhook_formats_multiple_commands(monkeypatch):
         command=["show version", "show interfaces"],
     )
 
-    caller = BasicWebHookCaller(hook)
     caller = BasicWebHookCaller(hook)
     # Simulate result with multiple commands as a list
     multi_cmd_result = [
