@@ -3,6 +3,7 @@ from pydantic import HttpUrl
 
 from netpulse.models import DriverConnectionArgs, DriverName
 from netpulse.models.common import WebHook
+from netpulse.models.driver import DriverExecutionResult
 from netpulse.models.request import ExecutionRequest, TemplateParseRequest, TemplateRenderRequest
 from netpulse.plugins.drivers import BaseDriver
 from netpulse.plugins.templates import BaseTemplateParser, BaseTemplateRenderer
@@ -28,29 +29,33 @@ class StubDriver(BaseDriver):
     def connect(self) -> str:
         return "session"
 
-    def send(self, session, command: list[str]) -> dict:
+    def send(self, session, command: list[str]) -> list[DriverExecutionResult]:
         self.sent_payload = command
-        return {
-            cmd: {
-                "output": f"sent-{cmd}",
-                "error": "",
-                "exit_status": 0,
-                "metadata": {"duration_seconds": 0.001},
-            }
+        from netpulse.models.driver import DriverExecutionResult
+        return [
+            DriverExecutionResult(
+                command=cmd,
+                output=f"sent-{cmd}",
+                error="",
+                exit_status=0,
+                metadata={"duration_seconds": 0.001},
+            )
             for cmd in command
-        }
+        ]
 
-    def config(self, session, config: list[str]) -> dict:
+    def config(self, session, config: list[str]) -> list[DriverExecutionResult]:
         self.sent_payload = config
-        return {
-            cfg: {
-                "output": f"cfg-{cfg}",
-                "error": "",
-                "exit_status": 0,
-                "metadata": {"duration_seconds": 0.001},
-            }
+        from netpulse.models.driver import DriverExecutionResult
+        return [
+            DriverExecutionResult(
+                command=cfg,
+                output=f"cfg-{cfg}",
+                error="",
+                exit_status=0,
+                metadata={"duration_seconds": 0.001},
+            )
             for cfg in config
-        }
+        ]
 
     def disconnect(self, session) -> None:
         self.disconnect_calls += 1
@@ -106,8 +111,9 @@ def test_rpc_execute_with_render_and_parse(monkeypatch, app_config):
 
     result = rpc.execute(req)
 
-    assert result["rendered-cmd"]["output"] == "sent-rendered-cmd"
-    assert result["rendered-cmd"]["parsed"] == {"parsed": "sent-rendered-cmd"}
+    assert result[0].command == "rendered-cmd"
+    assert result[0].output == "sent-rendered-cmd"
+    assert result[0].parsed == {"parsed": "sent-rendered-cmd"}
 
 
 def test_rpc_execute_missing_driver_raises(monkeypatch, app_config):
@@ -133,10 +139,15 @@ def test_rpc_execute_config_path(monkeypatch, app_config):
         def from_execution_request(cls, req: ExecutionRequest) -> "ConfigDriver":
             return cls(req=req)
 
-        def config(self, session, config: list[str]) -> dict:
+        def config(self, session, config: list[str]) -> list[DriverExecutionResult]:
             captured["config"] = ",".join(config)
             cfg_key = "\n".join(config)
-            return {cfg_key: {"output": f"cfg-{cfg_key}", "error": "", "exit_status": 0}}
+            from netpulse.models.driver import DriverExecutionResult
+            return [
+                DriverExecutionResult(
+                    command=cfg_key, output=f"cfg-{cfg_key}", error="", exit_status=0
+                )
+            ]
 
     req = ExecutionRequest(
         driver=DriverName.NETMIKO,
@@ -148,7 +159,7 @@ def test_rpc_execute_config_path(monkeypatch, app_config):
     result = rpc.execute(req)
 
     assert captured["config"] == "line1,line2"
-    assert result["line1\nline2"]["output"] == "cfg-line1\nline2"
+    assert result[0].output == "cfg-line1\nline2"
 
 
 def test_rpc_execute_parsing_requires_dict(monkeypatch, app_config):
@@ -188,7 +199,8 @@ def test_rpc_execute_rendering_requires_dict(monkeypatch, app_config):
     monkeypatch.setattr(StubRenderer, "render", classmethod(lambda cls, ctx: "rendered"))
 
     result = rpc.execute(req)
-    assert result["rendered"]["output"] == "sent-rendered"
+    assert result[0].command == "rendered"
+    assert result[0].output == "sent-rendered"
 
 
 def test_rpc_disconnect_called_on_exception(monkeypatch, app_config):
@@ -211,8 +223,8 @@ def test_rpc_disconnect_called_on_exception(monkeypatch, app_config):
     monkeypatch.setattr(rpc, "drivers", {DriverName.NETMIKO: FailingDriver})
 
     result = rpc.execute(req)
-    assert result["show version"].exit_status == 1
-    assert "boom" in result["show version"].error
+    assert result[0].exit_status == 1
+    assert "boom" in result[0].error
     assert disconnect_calls, "disconnect should be invoked on exception"
 
 

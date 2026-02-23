@@ -1,10 +1,8 @@
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Optional
 
 from ...models import DeviceTestInfo, DriverConnectionArgs
+from ...models.driver import DriverExecutionResult
 from ...models.request import ExecutionRequest
-
-if TYPE_CHECKING:
-    from ...models.driver import DriverExecutionResult
 
 
 class BaseDriver:
@@ -82,10 +80,10 @@ class BaseDriver:
     def connect(self):
         raise NotImplementedError
 
-    def send(self, session, command: list[str]) -> "Dict[str, DriverExecutionResult]":
+    def send(self, session, command: list[str]) -> list[DriverExecutionResult]:
         raise NotImplementedError
 
-    def config(self, session, config: list[str]) -> "Dict[str, DriverExecutionResult]":
+    def config(self, session, config: list[str]) -> list[DriverExecutionResult]:
         raise NotImplementedError
 
     def disconnect(self, session):

@@ -158,7 +158,7 @@ def test_paramiko_metadata():
     )
 
     result = driver._execute_command(FakeSession(), "echo test", ParamikoSendCommandArgs())
-    metadata = result["echo test"].metadata
+    metadata = result.metadata
     assert metadata is not None
     assert "duration_seconds" in metadata
     assert isinstance(metadata["duration_seconds"], float)
@@ -234,8 +234,8 @@ def test_paramiko_list_active_detached_tasks():
     # Execute via the public send() method
     results = driver.send(mock_session, [])
 
-    assert "list_active_detached_tasks" in results
-    tasks = results["list_active_detached_tasks"].metadata["active_tasks"]
+    res = next(x for x in results if x.command == "list_active_detached_tasks")
+    tasks = res.metadata["active_tasks"]
     assert len(tasks) == 1
     assert tasks[0]["task_id"] == "task-xyz"
     assert tasks[0]["pid"] == 9999

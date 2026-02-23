@@ -6,6 +6,7 @@ from typing import List, Optional
 import rq
 from pydantic import (
     BaseModel,
+    ConfigDict,
     Field,
     ValidationError,
     computed_field,
@@ -55,6 +56,31 @@ class JobInResponse(BaseModel):
     worker: Optional[str] = None
     result: Optional[JobResult] = None
     task_id: Optional[str] = None
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "job_123456",
+                "status": "finished",
+                "created_at": "2024-02-23T10:00:00+08:00",
+                "queue": "fifo",
+                "worker": "worker@hostname",
+                "duration": 0.5,
+                "result": {
+                    "type": 1,
+                    "retval": [
+                        {
+                            "command": "show version",
+                            "output": "Arista vEOS\nHardware version: 4.25.4M",
+                            "error": "",
+                            "exit_status": 0,
+                            "metadata": {"host": "172.17.0.1", "duration_seconds": 0.123},
+                        }
+                    ],
+                },
+            }
+        }
+    )
 
     @field_serializer("created_at", "enqueued_at", "started_at", "ended_at")
     def serialize_datetime(self, dt: Optional[datetime], _info):
@@ -164,6 +190,26 @@ class BatchSubmitJobResponse(BaseModel):
     succeeded: Optional[List[JobInResponse]] = None
     failed: Optional[List[BatchFailedItem]] = None
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "succeeded": [
+                    {
+                        "id": "job_1",
+                        "status": "queued",
+                        "queue": "fifo",
+                    }
+                ],
+                "failed": [
+                    {
+                        "host": "192.168.1.1",
+                        "reason": "Vault key not found",
+                    }
+                ],
+            }
+        }
+    )
+
 
 class ConnectionTestResponse(BaseModel):
     """Response model for device connection testing"""
@@ -183,6 +229,21 @@ class ConnectionTestResponse(BaseModel):
     @field_serializer("timestamp")
     def serialize_datetime(self, dt: Optional[datetime], _info):
         return _serialize_datetime_with_tz(dt, _info)
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "success": True,
+                "latency": 0.045,
+                "result": {
+                    "driver": "netmiko",
+                    "host": "192.168.1.1",
+                    "prompt": "router#",
+                },
+                "timestamp": "2024-02-23T10:05:00+08:00",
+            }
+        }
+    )
 
 
 class DetachedTaskInResponse(BaseModel):
@@ -224,3 +285,21 @@ class DetachedTaskInResponse(BaseModel):
             if isinstance(val, (int, float)):
                 data[field] = datetime.fromtimestamp(val, tz=timezone.utc)
         return data
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "task_id": "task_abc_789",
+                "command": ["stress --cpu 4 --timeout 60s"],
+                "host": "192.168.1.100",
+                "driver": "paramiko",
+                "status": "running",
+                "last_sync": "2024-02-23T10:10:00+08:00",
+                "connection_args": {
+                    "host": "192.168.1.100",
+                    "username": "admin",
+                    "password": "******",
+                },
+            }
+        }
+    )

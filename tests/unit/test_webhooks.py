@@ -43,8 +43,8 @@ def test_basic_webhook_calls_requests(monkeypatch):
 
     caller = BasicWebHookCaller(hook)
     caller = BasicWebHookCaller(hook)
-    # Use a DriverExecutionResult object that simulates command output
-    result = {"show version": DriverExecutionResult(output="Cisco IOS Software", exit_status=0)}
+    # Use a list of DriverExecutionResult objects
+    result = [DriverExecutionResult(command="show version", output="Cisco IOS Software", exit_status=0)]
     caller.call(req=req, job=MockJob(id="job-1"), result=result)
 
     assert captured["method"] == hook.method.value
@@ -137,13 +137,19 @@ def test_basic_webhook_formats_multiple_commands(monkeypatch):
 
     caller = BasicWebHookCaller(hook)
     caller = BasicWebHookCaller(hook)
-    # Simulate result with multiple commands
-    multi_cmd_result = {
-        "show version": DriverExecutionResult(
-            output="Cisco IOS Software, Version 15.1", exit_status=0
+    # Simulate result with multiple commands as a list
+    multi_cmd_result = [
+        DriverExecutionResult(
+            command="show version",
+            output="Cisco IOS Software, Version 15.1",
+            exit_status=0,
         ),
-        "show interfaces": DriverExecutionResult(output="GigabitEthernet0/0 is up", exit_status=0),
-    }
+        DriverExecutionResult(
+            command="show interfaces",
+            output="GigabitEthernet0/0 is up",
+            exit_status=0,
+        ),
+    ]
     caller.call(req=req, job=MockJob(id="job-4"), result=multi_cmd_result)
 
     payload: dict = captured["json"]
@@ -178,12 +184,15 @@ def test_basic_webhook_formats_nested_dict_result(monkeypatch):
     )
 
     caller = BasicWebHookCaller(hook)
-    # Simulate paramiko nested dict result using DriverExecutionResult model
-    nested_result = {
-        "show version": DriverExecutionResult(
-            output="Cisco IOS Software, Version 15.1", error="", exit_status=0
+    # Simulate paramiko results as a list
+    nested_result = [
+        DriverExecutionResult(
+            command="show version",
+            output="Cisco IOS Software, Version 15.1",
+            error="",
+            exit_status=0,
         )
-    }
+    ]
     caller.call(req=req, job=MockJob(id="job-5"), result=nested_result)
 
     payload: dict = captured["json"]

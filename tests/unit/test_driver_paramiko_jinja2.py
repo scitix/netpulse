@@ -44,8 +44,8 @@ class TestParamikoJinja2(unittest.TestCase):
 
         # Verify exec_command was called with rendered string
         mock_session.exec_command.assert_called_with("echo bar", get_pty=False)
-        self.assertIn("echo bar", result)
-        self.assertEqual(result["echo bar"].output, "bar\n")
+        self.assertEqual(result[0].command, "echo bar")
+        self.assertEqual(result[0].output, "bar\n")
 
     @patch("netpulse.plugins.drivers.paramiko.ParamikoDriver.connect")
     @patch("netpulse.plugins.drivers.paramiko.ParamikoDriver.disconnect")
@@ -75,7 +75,7 @@ class TestParamikoJinja2(unittest.TestCase):
 
         # Verify rendering
         mock_session.exec_command.assert_called_with("vlan 100", get_pty=False)
-        self.assertIn("vlan 100", result)
+        self.assertEqual(result[0].command, "vlan 100")
 
 
 if __name__ == "__main__":

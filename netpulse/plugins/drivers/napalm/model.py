@@ -69,12 +69,16 @@ class NapalmExecutionRequest(ExecutionRequest):
                 "driver": "napalm",
                 "queue_strategy": "fifo",
                 "connection_args": {
-                    "device_type": "cisco_ios",
+                    "device_type": "eos",
                     "host": "172.17.0.1",
                     "username": "admin",
                     "password": "admin",
                 },
-                "config": "hostname router1\ninterface GigabitEthernet0/1\n description WAN Link",
+                "config": [
+                    "interface Ethernet1",
+                    "description Uplink to Core",
+                    "switchport mode trunk"
+                ],
                 "dry_run": False,
             }
         }

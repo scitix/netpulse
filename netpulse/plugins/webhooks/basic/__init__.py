@@ -39,9 +39,9 @@ class BasicWebHookCaller(BaseWebHookCaller):
             is_success = False
             exc_type, exc_msg = result.error
             result_payload = f"{exc_type}: {exc_msg}"
-        elif isinstance(result, dict):
-            # Use the formatting logic for dictionary results
-            result_payload = self._format_dict_result(result)
+        elif isinstance(result, list):
+            # Use the formatting logic for list results
+            result_payload = self._format_result(result)
         else:
             result_payload = str(result)
 
@@ -104,35 +104,35 @@ class BasicWebHookCaller(BaseWebHookCaller):
         else:
             log.debug(f"Webhook {self.config.url} called successfully")
 
-    def _format_dict_result(self, result: dict) -> str:
+    def _format_result(self, result: list) -> str:
         """
-        Format dictionary result (multiple commands) into a readable string.
-        Handles both simple dict format: {"cmd": "output"}
-        and nested dict format: {"cmd": {"output": "...", "error": "...", "exit_status": 0}}
+        Format list result (multiple commands) into a readable string.
         """
         if not result:
-            return "{}"
+            return "[]"
 
         lines = []
-        for cmd, output in result.items():
-            lines.append(f"Command: {cmd}")
+        for res in result:
             # Handle DriverExecutionResult object
-            if isinstance(output, DriverExecutionResult):
-                lines.append(f"Output:\n{output.output}")
-                if output.error:
-                    lines.append(f"Error: {output.error}")
-                lines.append(f"Exit Status: {output.exit_status}")
-            elif isinstance(output, dict):
-                # Handle nested dict format (e.g., legacy or other drivers)
-                if "output" in output:
-                    lines.append(f"Output:\n{output['output']}")
-                if "error" in output and output.get("error"):
-                    lines.append(f"Error: {output['error']}")
-                if "exit_status" in output:
-                    lines.append(f"Exit Status: {output['exit_status']}")
+            if isinstance(res, DriverExecutionResult):
+                lines.append(f"Command: {res.command}")
+                lines.append(f"Output:\n{res.output}")
+                if res.error:
+                    lines.append(f"Error: {res.error}")
+                lines.append(f"Exit Status: {res.exit_status}")
+            elif isinstance(res, dict):
+                # Handle dict format (e.g., if somehow a dict is passed in the list)
+                cmd = res.get("command", "unknown")
+                lines.append(f"Command: {cmd}")
+                if "output" in res:
+                    lines.append(f"Output:\n{res['output']}")
+                if "error" in res and res.get("error"):
+                    lines.append(f"Error: {res['error']}")
+                if "exit_status" in res:
+                    lines.append(f"Exit Status: {res['exit_status']}")
             else:
-                # Simple string output
-                lines.append(f"Output:\n{output}")
+                # Simple string or other output
+                lines.append(str(res))
             lines.append("")  # Empty line between commands
 
         return "\n".join(lines).rstrip()

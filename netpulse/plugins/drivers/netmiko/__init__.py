@@ -3,7 +3,7 @@ import os
 import signal
 import sys
 import threading
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from netmiko import BaseConnection, ConnectHandler
 
@@ -210,7 +210,7 @@ class NetmikoDriver(BaseDriver):
 
     def send(
         self, session: BaseConnection, command: list[str]
-    ) -> "Dict[str, DriverExecutionResult]":
+    ) -> list[DriverExecutionResult]:
         """Execute commands and return rich results with metadata"""
         import time
 
@@ -234,7 +234,7 @@ class NetmikoDriver(BaseDriver):
                     log.info("Nested file transfer detected")
                     return self._handle_file_transfer(session, self.args.file_transfer)
 
-                result = {}
+                result = []
                 for cmd in command:
                     start_time = time.perf_counter()
                     if self.args:
@@ -260,30 +260,32 @@ class NetmikoDriver(BaseDriver):
                         response = session.send_command(cmd)
 
                     duration_metadata = self._get_base_metadata(start_time)
-                    result[cmd] = DriverExecutionResult(
+                    result.append(DriverExecutionResult(
+                        command=cmd,
                         output=response,
                         error="",
                         exit_status=0,
                         metadata=duration_metadata,
-                    )
+                    ))
                 if self.enabled:
                     session.exit_enable_mode()
 
             return result
         except Exception as e:
             log.error(f"Error in sending command: {e}")
-            return {
-                " ".join(command): DriverExecutionResult(
+            return [
+                DriverExecutionResult(
+                    command=" ".join(command),
                     output="",
                     error=str(e),
                     exit_status=1,
                     metadata=self._get_base_metadata(start_time),
                 )
-            }
+            ]
 
     def config(
         self, session: BaseConnection, config: list[str]
-    ) -> "Dict[str, DriverExecutionResult]":
+    ) -> list[DriverExecutionResult]:
         """Execute configuration set and return unified rich result"""
         import time
 
@@ -334,27 +336,28 @@ class NetmikoDriver(BaseDriver):
                 if self.enabled:
                     session.exit_enable_mode()
 
-            # Harmonize config result as a dict mapping the full set string to result
-            # This allows rpc.py parsing to work the same way as send.
+            # Harmonize config result as a list
             config_key = "\n".join(config)
-            return {
-                config_key: DriverExecutionResult(
+            return [
+                DriverExecutionResult(
+                    command=config_key,
                     output=response,
                     error="",
                     exit_status=0,
                     metadata=self._get_base_metadata(start_time),
                 )
-            }
+            ]
         except Exception as e:
             log.error(f"Error in sending config: {e}")
-            return {
-                "\n".join(config): DriverExecutionResult(
+            return [
+                DriverExecutionResult(
+                    command="\n".join(config),
                     output="",
                     error=str(e),
                     exit_status=1,
                     metadata=self._get_base_metadata(start_time),
                 )
-            }
+            ]
 
     def _commit(self, session: BaseConnection) -> Optional[str]:
         """
@@ -374,7 +377,7 @@ class NetmikoDriver(BaseDriver):
 
     def _handle_file_transfer(
         self, session: BaseConnection, file_transfer_op: Any
-    ) -> Dict[str, DriverExecutionResult]:
+    ) -> list[DriverExecutionResult]:
         """
         Handle file transfer using Netmiko's file_transfer function.
         """
@@ -420,24 +423,26 @@ class NetmikoDriver(BaseDriver):
                 "local_path": dest_file if direction == "get" else source_file,
                 "remote_path": source_file if direction == "get" else dest_file,
             })
-            return {
-                op_name: DriverExecutionResult(
+            return [
+                DriverExecutionResult(
+                    command=op_name,
                     output=f"File transfer results: {results}",
                     error="",
                     exit_status=0 if results.get("file_exists") else 1,
                     metadata=transfer_metadata,
                 )
-            }
+            ]
         except Exception as e:
             log.error(f"Error in Netmiko file transfer: {e}")
-            return {
-                "file_transfer": DriverExecutionResult(
+            return [
+                DriverExecutionResult(
+                    command="file_transfer",
                     output="",
                     error=str(e),
                     exit_status=1,
                     metadata={"duration_seconds": 0.0},
                 )
-            }
+            ]
 
     def disconnect(self, session: BaseConnection, reset=False):
         """

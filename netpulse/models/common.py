@@ -43,20 +43,28 @@ class JobResult(BaseModel):
         RETRIED = 4
 
     type: ResultType
-    retval: Optional[Dict[str, DriverExecutionResult]] = None
+    retval: Optional[list[DriverExecutionResult]] = None
     error: Optional[Any] = None
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "type": 1,
-                "retval": {
-                    "show version": {
-                        "output": "Interface GigabitEthernet1/0/1",
+                "retval": [
+                    {
+                        "command": "show version",
+                        "output": "Arista vEOS\nHardware version: 4.25.4M",
                         "error": "",
                         "exit_status": 0,
+                        "download_url": None,
+                        "metadata": {
+                            "host": "172.17.0.1",
+                            "duration_seconds": 0.123,
+                            "session_reused": True,
+                        },
+                        "parsed": {"version": "4.25.4M", "model": "vEOS"},
                     }
-                },
+                ],
                 "error": {
                     "type": "ValueError",
                     "message": "Something went wrong",
@@ -209,7 +217,7 @@ class BulkDeviceRequest(DriverConnectionArgs):
                 "host": "192.168.1.1",
                 "username": "admin",
                 "password": "admin",
-                "command": "show version",
+                "command": ["show ip int brief"],
             }
         },
     )
@@ -283,4 +291,16 @@ class FileTransferModel(BaseModel):
         default=True, description="Cleanup the file if execution succeeds"
     )
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(
+        extra="allow",
+        json_schema_extra={
+            "example": {
+                "operation": "upload",
+                "remote_path": "/tmp/config.cfg",
+                "local_path": "staged://abc-123",
+                "overwrite": True,
+                "execute_after_upload": True,
+                "execute_command": "ls -l /tmp/config.cfg",
+            }
+        },
+    )

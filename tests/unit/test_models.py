@@ -78,9 +78,11 @@ def test_job_in_response_serialization(monkeypatch):
             from netpulse.models.driver import DriverExecutionResult
 
             self.type = Result.Type.SUCCESSFUL
-            self.return_value = {
-                "show version": DriverExecutionResult(output="Cisco IOS", error="", exit_status=0)
-            }
+            self.return_value = [
+                DriverExecutionResult(
+                    command="show version", output="Cisco IOS", error="", exit_status=0
+                )
+            ]
 
     class DummyJob:
         id = "job-1"

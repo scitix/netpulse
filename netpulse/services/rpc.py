@@ -194,9 +194,12 @@ def execute(req: ExecutionRequest):
             primary_cmd = payload[0] if (payload and isinstance(payload, list)) else ""
             result = dobj.launch_detached(session, primary_cmd, task_id)
 
+            # result is list[DriverExecutionResult], find 'launch' entry
             is_running = True
-            if "launch" in result and result["launch"].metadata:
-                is_running = result["launch"].metadata.get("running", True)
+            for res in result:
+                if res.command == "launch":
+                    is_running = res.metadata.get("is_running", True)
+                    break
 
             # Register in Redis for global tracking
             meta = {
@@ -223,25 +226,15 @@ def execute(req: ExecutionRequest):
         dobj.disconnect(session)
     except Exception as e:
         log.error(f"Error in connection or execution: {e}")
-        error_key = "\n".join(payload) if isinstance(payload, list) else str(payload)
-        result_data = {
-            "pid": None,
-            "running": False,
-            "exit_code": None,
-            "output_tail": None,
-            "runtime_seconds": 0.0,
-            "killed": False,
-            "cleaned": False,
-        }
-        return {
-            error_key: DriverExecutionResult(
+        return [
+            DriverExecutionResult(
+                command="\n".join(payload) if isinstance(payload, list) else str(payload),
                 output="",
                 error=str(e),
                 exit_status=1,
                 metadata={"duration_seconds": 0.0},
-                **result_data,
             )
-        }
+        ]
     finally:
         if session:
             try:
@@ -249,26 +242,22 @@ def execute(req: ExecutionRequest):
             except Exception:
                 pass
 
-    # Parsing after result is obtained
     if req.parsing:
         try:
-            if not isinstance(result, dict):
-                raise ValueError("Result must be a dict for parsing.")
+            if not isinstance(result, list):
+                raise ValueError("Result must be a list for parsing.")
 
             if req.parsing.context:
                 req.parsing.context = None
                 log.warning("Context in request is overridden by output.")
 
             parser = parsers[req.parsing.name].from_parsing_request(req.parsing)
-            for cmd, val in result.items():
+            for val in result:
                 # If it's a rich object (output, error, etc.), parse only the output
                 if hasattr(val, "output"):
                     val.parsed = parser.parse(val.output)
                 elif isinstance(val, dict) and "output" in val:
                     val["parsed"] = parser.parse(val["output"])
-                else:
-                    # Backward compatibility for primitive drivers
-                    result[cmd] = parser.parse(val)
         except Exception as e:
             log.error(f"Error in parsing: {e}")
             raise e
@@ -378,13 +367,13 @@ def rpc_webhook_callback(*args):
             raise e
 
     # --- New: Transform Local Paths to Download URLs ---
-    if is_success and isinstance(result, dict):
+    if is_success and isinstance(result, list):
         from ..utils import g_config
 
         staging_dir = str(g_config.storage.staging)
         download_base = os.path.join(staging_dir, "downloads")
 
-        for res in result.values():
+        for res in result:
             if hasattr(res, "metadata") and isinstance(res.metadata, dict):
                 # Check for either flattened or nested local_path
                 metadata = res.metadata
@@ -422,9 +411,9 @@ def rpc_webhook_callback(*args):
         try:
             from .rediz import g_detached_task_registry
 
-            # result is a dict of {cmd: DriverExecutionResult}
+            # result is a list of DriverExecutionResult
             # For management query, it has only one key
-            for val in result.values():
+            for val in result:
                 if hasattr(val, "metadata") and "task_id" in val.metadata:
                     task_id = val.metadata["task_id"]
                     next_offset = val.metadata.get("next_offset")

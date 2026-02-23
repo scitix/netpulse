@@ -54,8 +54,12 @@ class PyeapiExecutionRequest(ExecutionRequest):
                     "password": "admin",
                     "transport": "https",
                 },
-                "config": "hostname test-device",
-                "save": False,
+                "config": [
+                    "interface Ethernet1",
+                    "description Managed by PyEAPI",
+                    "no shutdown"
+                ],
+                "save": True,
             }
         }
     )

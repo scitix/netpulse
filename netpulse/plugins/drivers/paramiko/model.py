@@ -105,10 +105,6 @@ class ParamikoConnectionArgs(DriverConnectionArgs):
     )
 
 
-# Standardized FileTransferModel is now used globally
-
-
-
 class ParamikoSendCommandArgs(DriverArgs):
     """Command execution arguments, reference paramiko.SSHClient.exec_command()"""
 
@@ -121,7 +117,6 @@ class ParamikoSendCommandArgs(DriverArgs):
     environment: Optional[Dict[str, str]] = Field(
         default=None, description="Environment variables dictionary"
     )
-    bufsize: int = Field(default=-1, description="Buffer size, -1 means use system default")
     bufsize: int = Field(default=-1, description="Buffer size, -1 means use system default")
 
     # Script content execution
@@ -188,9 +183,6 @@ class ParamikoSendConfigArgs(DriverArgs):
         return self
 
 
-# Removed deprecated Pulling/Pushing models. Use ParamikoExecutionRequest.
-
-
 class ParamikoExecutionRequest(ExecutionRequest):
     driver: DriverName = DriverName.PARAMIKO
     connection_args: ParamikoConnectionArgs
@@ -205,16 +197,16 @@ class ParamikoExecutionRequest(ExecutionRequest):
                     "host": "192.168.1.100",
                     "username": "admin",
                     "key_filename": "/path/to/private_key",
-                    "passphrase": "key_password",
                 },
                 "config": [
-                    "echo 'Hello World' > /tmp/test.txt",
-                    "chmod 644 /tmp/test.txt",
+                    "apt-get update",
+                    "apt-get install -y nginx",
+                    "systemctl enable nginx"
                 ],
                 "driver_args": {
                     "sudo": True,
-                    "sudo_password": "sudo_pass",
-                    "timeout": 30.0,
+                    "sudo_password": "secret_password",
+                    "timeout": 60.0,
                 },
             }
         }

@@ -35,8 +35,7 @@ def test_paramiko_launch_detached():
 
     res = driver.launch_detached(mock_session, "sleep 100", "test-123")
 
-    assert "launch" in res
-    launch_res = res["launch"]
+    launch_res = next(x for x in res if x.command == "launch")
     assert launch_res.metadata["task_id"] == "test-123"
     assert launch_res.metadata["pid"] == 9999
     assert launch_res.metadata["log_file"] == f"{detached_dir}/np_test-123.log"
@@ -120,8 +119,7 @@ def test_paramiko_read_logs():
 
     res = driver._read_logs(mock_session, "t3", offset=0)
 
-    assert "query" in res
-    query_res = res["query"]
+    query_res = next(x for x in res if x.command == "query")
     assert query_res.output == "hello\nworld\n"
     assert query_res.metadata["log_offset"] == 12
     assert query_res.metadata["is_running"] is True
@@ -152,7 +150,8 @@ def test_paramiko_kill_task():
     # Run the kill
     res = driver.kill_task(mock_session, "t4")
 
-    assert res is True
+    assert res[0].exit_status == 0
+    assert res[0].command == "kill"
 
     # Assert kill and clean commands were run
     # exec_command is called by _execute_command which is called by

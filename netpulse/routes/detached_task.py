@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -10,14 +10,16 @@ from .device import _resolve_request_credentials
 router = APIRouter(tags=["detached-task"])
 
 
-@router.get("/detached-tasks", response_model=Dict[str, DetachedTaskInResponse])
+@router.get("/detached-tasks", response_model=List[DetachedTaskInResponse])
 def list_detached_tasks(
     status: Optional[str] = Query(
         None, description="Filter by status (running/completed/launching)"
     ),
 ):
     """List all registered detached tasks."""
-    return g_mgr.list_detached_tasks(status=status)
+    tasks = g_mgr.list_detached_tasks(status=status)
+    # Convert dict value to list
+    return list(tasks.values())
 
 
 @router.get("/detached-tasks/{task_id}")

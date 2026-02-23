@@ -38,7 +38,9 @@ def test_paramiko_send_uses_exec_args(monkeypatch):
     )
 
     result = driver.send(session, ["cmd1", "cmd2"])  # type: ignore
-    assert set(result.keys()) == {"cmd1", "cmd2"}
+    assert len(result) == 2
+    assert result[0].command == "cmd1"
+    assert result[1].command == "cmd2"
     for cmd, kwargs in session.calls:
         assert kwargs["timeout"] == 1.5
         assert kwargs["get_pty"] is True
@@ -63,7 +65,7 @@ def test_paramiko_send_returns_empty_when_no_commands():
     )
     session = FakeSession()
 
-    assert driver.send(session, []) == {}  # type: ignore
+    assert driver.send(session, []) == []  # type: ignore
     assert session.called is False
 
 
@@ -86,14 +88,14 @@ def test_paramiko_send_runs_file_transfer(monkeypatch):
         called["session"] = session
         called["op"] = file_transfer_op
         op_key = f"{file_transfer_op.operation} {file_transfer_op.remote_path}"
-        return {op_key: DriverExecutionResult(output="", error="", exit_status=0)}
+        return [DriverExecutionResult(command=op_key, output="", error="", exit_status=0)]
 
     monkeypatch.setattr(ParamikoDriver, "_handle_file_transfer", fake_handle)
     fake_session = object()
 
     result = driver.send(fake_session, ["ignored"])  # type: ignore
-    assert hasattr(result["upload /tmp/b"], "exit_status")
-    assert result["upload /tmp/b"].exit_status == 0
+    assert result[0].exit_status == 0
+    assert result[0].command == "upload /tmp/b"
     assert called["session"] is fake_session
     assert called["op"] == op
 
@@ -135,11 +137,11 @@ def test_paramiko_config_with_sudo():
     )
 
     result = driver.config(session, ["echo 1"])  # type: ignore
-    assert "echo 1" in result
+    assert result[0].command == "echo 1"
     cmd, kwargs = session.exec_calls[0]
     assert cmd.startswith("sudo -S")
     assert kwargs["get_pty"] is True  # sudo + password should force PTY
-    assert result["echo 1"].exit_status == 0
+    assert result[0].exit_status == 0
 
 
 def test_paramiko_config_returns_empty_when_no_config():
@@ -159,7 +161,7 @@ def test_paramiko_config_returns_empty_when_no_config():
     )
     session = FakeSession()
 
-    assert driver.config(session, []) == {}  # type: ignore
+    assert driver.config(session, []) == []  # type: ignore
     assert session.called is False
 
 

@@ -139,7 +139,7 @@ class Manager:
         2. The node has no capacity to run a new worker. The job will timeout.
 
         For 1, we can just use the existing worker (ignore).
-        For 2, we have to reschedule (TODO).
+        For 2, the job will timeout and be handled by the retry mechanism.
         """
         is_single = isinstance(hosts, str)
         hosts = [hosts] if isinstance(hosts, str) else hosts
@@ -828,24 +828,28 @@ class Manager:
                 # Update registry after successful query to move the offset
                 try:
                     # result is {"query": DriverExecutionResult}
-                    for val in result.values():
+                    for val in result:
                         if hasattr(val, "metadata") and "task_id" in val.metadata:
                             task_id = val.metadata["task_id"]
                             next_offset = val.metadata.get("next_offset")
-                            running = val.metadata.get("running", True)
+                            is_running = val.metadata.get("is_running", True)
 
                             m = g_detached_task_registry.get(task_id)
                             if m:
                                 if next_offset is not None:
                                     m["last_offset"] = next_offset
                                 m["last_sync"] = time.time()
-                                m["status"] = "running" if running else "completed"
+                                m["status"] = "running" if is_running else "completed"
                                 g_detached_task_registry.register(task_id, m)
                             break
                 except Exception as e:
                     log.warning(f"Failed to update registry after sync query: {e}")
 
-                return result
+                return {
+                    "task_id": task_id,
+                    "status": "running" if (is_running if 'is_running' in locals() else True) else "completed",
+                    "result": result
+                }
             if rq_job.is_failed:
                 raise JobOperationError(f"Detached Task query failed: {rq_job.exc_info}")
             time.sleep(0.1)
@@ -883,7 +887,10 @@ class Manager:
                 from .rediz import g_detached_task_registry
 
                 g_detached_task_registry.unregister(task_id)
-                return rq_job.result
+                # result is list[DriverExecutionResult]
+                if isinstance(rq_job.result, list) and len(rq_job.result) > 0:
+                    return rq_job.result[0].exit_status == 0
+                return True
             if rq_job.is_failed:
                 return False
             time.sleep(0.1)
@@ -919,7 +926,7 @@ class Manager:
             if rq_job.is_finished:
                 result = rq_job.result
                 # result: {"list_active_detached_tasks": DriverExecutionResult}
-                val = next(iter(result.values()))
+                val = result[0]
                 active_tasks = val.metadata.get("active_tasks", [])
 
                 # Sync local registry with remote state

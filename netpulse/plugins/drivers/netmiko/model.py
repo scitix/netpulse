@@ -153,11 +153,16 @@ class NetmikoExecutionRequest(ExecutionRequest):
                 "connection_args": {
                     "device_type": "cisco_ios",
                     "host": "172.17.0.1",
-                    "port": "10005",
+                    "port": 22,
                     "username": "admin",
                     "password": "admin",
+                    "keepalive": 60,
                 },
-                "config": ["hostname cat"],
+                "config": [
+                    "interface GigabitEthernet0/1",
+                    "description Managed by NetPulse",
+                    "no shutdown"
+                ],
                 "save": True,
                 "enable_mode": True,
             }

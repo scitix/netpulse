@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from ....models.driver import DriverExecutionResult
@@ -91,7 +91,7 @@ class PyeapiDriver(BaseDriver):
 
     def send(
         self, session: "pyeapi.client.Node", command: list[str]
-    ) -> "Dict[str, DriverExecutionResult]":
+    ) -> list[DriverExecutionResult]:
         """
         Use pyeapi.Node.enable to send out commands
         """
@@ -105,38 +105,38 @@ class PyeapiDriver(BaseDriver):
 
             if command is None:
                 log.warning("No command provided")
-                return {}
+                return []
 
             start_time = time.perf_counter()
             # session.enable returns a list of result objects for each command
             raw_results = session.enable(commands=command, send_enable=self.enabled, **self.args)
             duration_metadata = self._get_base_metadata(start_time)
-            result = {}
+            result = []
             for i, cmd in enumerate(command):
                 output = raw_results[i]
-                result[cmd] = DriverExecutionResult(
+                result.append(DriverExecutionResult(
+                    command=cmd,
                     output=output,
                     error="",
                     exit_status=0,
                     metadata=duration_metadata,
-                )
+                ))
             return result
         except Exception as e:
             log.error(f"Error in pyeapi send: {e}")
-            # Determine a key for the error result. If command is None or empty, use a default.
-            error_key = " ".join(command) if command else "unknown_command"
-            return {
-                error_key: DriverExecutionResult(
+            return [
+                DriverExecutionResult(
+                    command=" ".join(command) if command else "unknown_command",
                     output="",
                     error=str(e),
                     exit_status=1,
                     metadata=self._get_base_metadata(start_time),
                 )
-            }
+            ]
 
     def config(
         self, session: "pyeapi.client.Node", config: Optional[list[str]] = None
-    ) -> "Dict[str, DriverExecutionResult]":
+    ) -> list[DriverExecutionResult]:
         """
         Unified config result for pyeapi.
         """
@@ -150,7 +150,7 @@ class PyeapiDriver(BaseDriver):
 
             if not config:
                 log.warning("No config provided")
-                return {}
+                return []
 
             start_time = time.perf_counter()
             full_config = config.copy()
@@ -159,27 +159,26 @@ class PyeapiDriver(BaseDriver):
 
             response = session.config(commands=full_config, **self.args)
             duration_metadata = self._get_base_metadata(start_time)
-            config_key = "\n".join(config)
-            return {
-                config_key: DriverExecutionResult(
+            return [
+                DriverExecutionResult(
+                    command="\n".join(config),
                     output=response,
                     error="",
                     exit_status=0,
                     metadata=duration_metadata,
                 )
-            }
+            ]
         except Exception as e:
             log.error(f"Error in sending config: {e}")
-            # Determine a key for the error result. If config is None or empty, use a default.
-            error_key = "\n".join(config) if config else "unknown_config"
-            return {
-                error_key: DriverExecutionResult(
+            return [
+                DriverExecutionResult(
+                    command="\n".join(config) if config else "unknown_config",
                     output="",
                     error=str(e),
                     exit_status=1,
                     metadata=self._get_base_metadata(start_time),
                 )
-            }
+            ]
 
     def disconnect(self, session):
         """

@@ -1,11 +1,10 @@
 import pytest
 import requests
 
-from netpulse.models import DriverName
+from netpulse.models import DriverName, FileTransferModel
 from netpulse.plugins.drivers.paramiko.model import (
     ParamikoConnectionArgs,
     ParamikoExecutionRequest,
-    ParamikoFileTransferOperation,
     ParamikoSendCommandArgs,
 )
 from netpulse.services import rpc
@@ -49,11 +48,9 @@ def test_paramiko_exec_on_linux_ssh():
 
     result = rpc.execute(req)
 
-    assert target.command in result
-    payload = result[target.command]
-    assert isinstance(payload, dict)
-    assert payload["exit_status"] == 0
-    assert "netpulse-e2e" in payload["output"]
+    res = next(x for x in result if x.command == target.command)
+    assert res.exit_status == 0
+    assert "netpulse-e2e" in res.output
 
 
 def test_paramiko_config_on_linux_ssh(tmp_path):
@@ -83,8 +80,9 @@ def test_paramiko_config_on_linux_ssh(tmp_path):
         config=cfg_cmd,
     )
     cfg_result = rpc.execute(cfg_req)
-    assert cfg_cmd in cfg_result
-    assert cfg_result[cfg_cmd]["exit_status"] == 0
+    res = cfg_result[0]
+    assert res.command == cfg_cmd
+    assert res.exit_status == 0
 
     verify_req = ParamikoExecutionRequest(
         driver=DriverName.PARAMIKO,
@@ -92,8 +90,9 @@ def test_paramiko_config_on_linux_ssh(tmp_path):
         command="cat /tmp/paramiko-config-e2e.txt",
     )
     verify_result = rpc.execute(verify_req)
-    payload = verify_result["cat /tmp/paramiko-config-e2e.txt"]
-    assert marker in payload["output"]
+    res = verify_result[0]
+    assert res.command == "cat /tmp/paramiko-config-e2e.txt"
+    assert marker in res.output
 
 
 def test_paramiko_file_transfer_upload_and_download(tmp_path):
@@ -125,7 +124,7 @@ def test_paramiko_file_transfer_upload_and_download(tmp_path):
         connection_args=conn_args,
         command="noop",
         driver_args=ParamikoSendCommandArgs(
-            file_transfer=ParamikoFileTransferOperation(
+            file_transfer=FileTransferModel(
                 operation="upload",
                 local_path=str(upload_path),
                 remote_path=remote_path,
@@ -133,9 +132,8 @@ def test_paramiko_file_transfer_upload_and_download(tmp_path):
         ),
     )
     upload_result = rpc.execute(upload_req)
-    transfer_key = next(iter(upload_result.keys()))
-    assert "file_transfer_upload" in transfer_key
-    assert upload_result[transfer_key]["exit_status"] == 0
+    res = next(x for x in upload_result if "file_transfer_upload" in x.command)
+    assert res.exit_status == 0
 
     download_path = tmp_path / "paramiko-download.txt"
     download_req = ParamikoExecutionRequest(
@@ -143,7 +141,7 @@ def test_paramiko_file_transfer_upload_and_download(tmp_path):
         connection_args=conn_args,
         command="noop",
         driver_args=ParamikoSendCommandArgs(
-            file_transfer=ParamikoFileTransferOperation(
+            file_transfer=FileTransferModel(
                 operation="download",
                 local_path=str(download_path),
                 remote_path=remote_path,
@@ -151,9 +149,8 @@ def test_paramiko_file_transfer_upload_and_download(tmp_path):
         ),
     )
     download_result = rpc.execute(download_req)
-    transfer_key = next(iter(download_result.keys()))
-    assert "file_transfer_download" in transfer_key
-    assert download_result[transfer_key]["exit_status"] == 0
+    res = next(x for x in download_result if "file_transfer_download" in x.command)
+    assert res.exit_status == 0
     assert download_path.read_text() == upload_payload
 
 
@@ -196,5 +193,5 @@ def test_api_exec_paramiko_fifo(fifo_worker, api_server, wait_for_job):
     finished = wait_for_job(job_id=job["id"])
     assert finished["status"] == "finished"
     result = finished["result"]["retval"]
-    assert cmd in result
-    assert "api-paramiko-e2e" in result[cmd]["output"]
+    res = next(x for x in result if x["command"] == cmd)
+    assert "api-paramiko-e2e" in res["output"]

@@ -31,7 +31,16 @@ class TemplateParseRequest(BaseModel):
         description="Context content to be parsed",
     )
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(
+        extra="allow",
+        json_schema_extra={
+            "example": {
+                "name": "textfsm",
+                "template": "cisco_ios_show_version.textfsm",
+                "context": "Cisco IOS Software, v15.2...",
+            }
+        },
+    )
 
 
 class TemplateRenderRequest(BaseModel):
@@ -51,7 +60,16 @@ class TemplateRenderRequest(BaseModel):
         description="Context data for rendering",
     )
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(
+        extra="allow",
+        json_schema_extra={
+            "example": {
+                "name": "jinja2",
+                "template": "hostname {{ hostname }}\ninterface {{ intf }}",
+                "context": {"hostname": "router1", "intf": "Gi0/1", "desc": "Configured by Jinja"},
+            }
+        },
+    )
 
 
 class ExecutionRequest(BaseModel):
@@ -212,7 +230,10 @@ class ExecutionRequest(BaseModel):
                     "username": "admin",
                     "password": "admin",
                 },
-                "config": "interface GigabitEthernet0/1\n description Something",
+                "config": [
+                    "interface GigabitEthernet0/1",
+                    "description Managed by NetPulse"
+                ],
             }
         },
     )
@@ -225,6 +246,31 @@ class BulkExecutionRequest(ExecutionRequest):
             "Device list for batch operation. Each device can override connection_args "
             "and optionally override command/config from base request"
         ),
+    )
+
+    model_config = ConfigDict(
+        extra="allow",
+        json_schema_extra={
+            "example": {
+                "driver": "netmiko",
+                "command": ["show version"],
+                "devices": [
+                    {
+                        "host": "172.17.0.1",
+                        "device_type": "cisco_ios",
+                        "username": "admin",
+                        "password": "pass",
+                    },
+                    {
+                        "host": "172.17.0.2",
+                        "device_type": "cisco_xe",
+                        "username": "admin",
+                        "password": "pass",
+                        "command": ["show ip interface brief"],
+                    },
+                ],
+            }
+        },
     )
 
     # Allow more time for bulk operations

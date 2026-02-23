@@ -1,6 +1,6 @@
 import logging
 from inspect import signature
-from typing import Dict, Optional
+from typing import Optional
 
 from napalm.base import NetworkDriver, get_network_driver
 
@@ -150,7 +150,7 @@ class NapalmDriver(BaseDriver):
 
     def send(
         self, session: NetworkDriver, command: list[str]
-    ) -> "Dict[str, DriverExecutionResult]":
+    ) -> list[DriverExecutionResult]:
         """
         Send commands to the device.
         """
@@ -160,23 +160,24 @@ class NapalmDriver(BaseDriver):
 
         if not command:
             log.warning("No command provided")
-            return {}
+            return []
 
         commands = command if isinstance(command, list) else [command]
-        result = {}
+        result = []
 
         try:
             session.open()
         except Exception as e:
             log.error(f"Failed to open session: {e}")
-            return {
-                " ".join(commands): DriverExecutionResult(
+            return [
+                DriverExecutionResult(
+                    command=" ".join(commands),
                     output="",
                     error=f"Failed to open session: {e}",
                     exit_status=1,
                     metadata=self._get_base_metadata(time.perf_counter()),
                 )
-            }
+            ]
 
         for cmd in commands:
             start_time = time.perf_counter()
@@ -209,16 +210,17 @@ class NapalmDriver(BaseDriver):
                 exit_status = 1
 
             duration_metadata = self._get_base_metadata(start_time)
-            result[cmd] = DriverExecutionResult(
+            result.append(DriverExecutionResult(
+                command=cmd,
                 output=str(output),
                 error=error,
                 exit_status=exit_status,
                 metadata=duration_metadata,
-            )
+            ))
 
         return result
 
-    def config(self, session: NetworkDriver, cfg: list[str]) -> "Dict[str, DriverExecutionResult]":
+    def config(self, session: NetworkDriver, cfg: list[str]) -> list[DriverExecutionResult]:
         """
         Configure the device.
         """
@@ -228,7 +230,7 @@ class NapalmDriver(BaseDriver):
 
         if not cfg:
             log.warning("No configuration provided")
-            return {}
+            return []
 
         start_time = time.perf_counter()
         # Process config format
@@ -244,14 +246,15 @@ class NapalmDriver(BaseDriver):
             diff = session.compare_config()
         except Exception as e:
             log.error(f"Configuration setup failed: {e}")
-            return {
-                cfg_text: DriverExecutionResult(
+            return [
+                DriverExecutionResult(
+                    command=cfg_text,
                     output="",
                     error=str(e),
                     exit_status=1,
                     metadata=self._get_base_metadata(start_time),
                 )
-            }
+            ]
 
         log.debug(f"Configuration diff: {diff[:50]}...")
 
@@ -271,14 +274,15 @@ class NapalmDriver(BaseDriver):
             exit_status = 1
 
 
-        return {
-            cfg_text: DriverExecutionResult(
+        return [
+            DriverExecutionResult(
+                command=cfg_text,
                 output=diff,
                 error=error,
                 exit_status=exit_status,
                 metadata=self._get_base_metadata(start_time),
             )
-        }
+        ]
 
     def disconnect(self, session):
         """
