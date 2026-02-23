@@ -192,7 +192,7 @@ def test_paramiko_interactive_expect():
     )
 
     expect_map = {"[Y/n]": "y"}
-    output, error, status = driver._execute_interactive(
+    output, _error, status = driver._execute_interactive(
         mock_session, "confirm_cmd", expect_map, timeout=1.0
     )
 

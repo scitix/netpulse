@@ -33,6 +33,7 @@ drafts/
 site/
 docs-local/
 site*
+.cursor/
 
 # Containerlab labs
 tests/clab/clab-netpulse-e2e/
