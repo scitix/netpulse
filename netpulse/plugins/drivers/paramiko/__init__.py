@@ -45,6 +45,10 @@ class ParamikoDriver(BaseDriver):
     persisted_session: ClassVar[Optional[paramiko.SSHClient]] = None
     persisted_conn_args: ClassVar[Optional[ParamikoConnectionArgs]] = None
 
+    # Track last cleanup time per (host, user) to avoid cleanup storm
+    _last_cleanup_times: ClassVar[Dict[Tuple[str, str, int], float]] = {}
+    _CLEANUP_INTERVAL: ClassVar[int] = 1800  # 30 minutes
+
     # Monitor thread for keepalive
     _monitor_stop_event: ClassVar[Optional[threading.Event]] = None
     _monitor_thread: ClassVar[Optional[threading.Thread]] = None
@@ -236,8 +240,8 @@ class ParamikoDriver(BaseDriver):
                 self._session_reused = False  # New connection
                 self._set_persisted_session(session, self.conn_args)
 
-            # Cleanup expired task files on the remote host
-            self._cleanup_expired_tasks(session)
+            # Cleanup expired task files on the remote host (with frequency limit)
+            self._maybe_cleanup_expired_tasks(session)
 
             return session
         except Exception as e:
@@ -1164,6 +1168,17 @@ class ParamikoDriver(BaseDriver):
             total_seconds += int(parts[0])
 
         return total_seconds
+
+    def _maybe_cleanup_expired_tasks(self, session: paramiko.SSHClient):
+        """Check if cleanup is needed based on interval and run if so."""
+        key = (self.conn_args.host, self.conn_args.username, self.conn_args.port)
+        now = time.time()
+        last_cleanup = self._last_cleanup_times.get(key, 0)
+
+        if now - last_cleanup > self._CLEANUP_INTERVAL:
+            log.info(f"Running periodic detached task cleanup for {key[0]}...")
+            self._cleanup_expired_tasks(session)
+            self._last_cleanup_times[key] = now
 
     def _cleanup_expired_tasks(self, session: paramiko.SSHClient, retention_seconds: int = 86400):
         """
