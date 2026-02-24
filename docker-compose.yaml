@@ -11,7 +11,7 @@ services:
     volumes:
       - ./config:/app/config:z
       - ./redis/tls:/app/redis/tls:ro,z
-      - netpulse_staging:/app/storage/staging:z
+      - netpulse_staging:/app/storage/staging
     ports:
       - "9000:9000"
     networks:
@@ -33,7 +33,7 @@ services:
     volumes:
       - ./config:/app/config:z
       - ./redis/tls:/app/redis/tls:ro,z
-      - netpulse_staging:/app/storage/staging:z
+      - netpulse_staging:/app/storage/staging
     depends_on:
       redis:
         condition: service_healthy
@@ -55,7 +55,7 @@ services:
     volumes:
       - ./config:/app/config:z
       - ./redis/tls:/app/redis/tls:ro,z
-      - netpulse_staging:/app/storage/staging:z
+      - netpulse_staging:/app/storage/staging
     depends_on:
       redis:
         condition: service_healthy
@@ -77,7 +77,7 @@ services:
     volumes:
       - ./vault/config:/vault/config:ro,z
       - ./vault/data:/vault/data:z
-      - vault_logs:/vault/logs:z
+      - vault_logs:/vault/logs
     command: vault server -config=/vault/config/vault.hcl
     networks:
       - "netpulse-network"
@@ -114,7 +114,7 @@ services:
     volumes:
       - ./redis/redis.conf:/etc/redis/redis.conf:ro,z
       - ./redis/tls:/etc/redis/tls:ro,z
-      - redis_data:/data:z
+      - redis_data:/data
     command: redis-server /etc/redis/redis.conf --requirepass "${NETPULSE_REDIS__PASSWORD}"
     networks:
       - "netpulse-network"
