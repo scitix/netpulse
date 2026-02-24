@@ -56,6 +56,8 @@ class JobInResponse(BaseModel):
     worker: Optional[str] = None
     result: Optional[JobResult] = None
     task_id: Optional[str] = None
+    device_name: Optional[str] = None
+    command: Optional[List[str]] = None
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -151,6 +153,8 @@ class JobInResponse(BaseModel):
             worker=job.worker_name,
             result=result,
             task_id=meta.task_id if meta else None,
+            device_name=meta.device_name if meta else None,
+            command=meta.command if meta else None,
         )
 
 

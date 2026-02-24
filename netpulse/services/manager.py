@@ -239,6 +239,7 @@ class Manager:
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
         meta: Optional[dict] = None,
+        metas: Optional[list[dict]] = None,
     ):
         """
         Send multiple jobs to a single queue.
@@ -259,7 +260,8 @@ class Manager:
         effective_result_ttl = result_ttl if result_ttl is not None else self.job_result_ttl
 
         jobs = []
-        for func, kwargs in zip(funcs, kwargses):
+        for idx, (func, kwargs) in enumerate(zip(funcs, kwargses)):
+            m = metas[idx] if metas and idx < len(metas) else meta
             job = Queue.prepare_data(
                 func=func,
                 timeout=job_timeout,  # time limit for job execution
@@ -267,7 +269,7 @@ class Manager:
                 result_ttl=effective_result_ttl,  # result ttl (from request or default)
                 failure_ttl=effective_result_ttl,  # errors ttl in redis
                 kwargs=kwargs,
-                meta=meta if meta else JobAdditionalData().model_dump(),
+                meta=m if m else JobAdditionalData().model_dump(),
                 on_success=on_success_cb,
                 on_failure=on_failure_cb,
             )
@@ -406,6 +408,7 @@ class Manager:
         on_success: Optional[Callable] = None,
         on_failure: Optional[Callable] = None,
         meta: Optional[dict] = None,
+        metas: Optional[list[dict]] = None,
     ) -> tuple[list[JobInResponse], list[BatchFailedItem]]:
         assert len(conn_args) == len(kwargses), "conn_args and kwargs mismatch"
 
@@ -424,6 +427,7 @@ class Manager:
                 on_success=on_success,
                 on_failure=on_failure,
                 meta=meta,
+                metas=metas,
             )
             return [JobInResponse.from_job(job) for job in jobs], []
 
@@ -511,7 +515,7 @@ class Manager:
                             on_success=on_success,
                             on_failure=on_failure,
                             pipeline=pipe,
-                            meta=meta,
+                            meta=metas[idx] if metas and idx < len(metas) else meta,
                         )
                         for idx in ready_idx
                     ]
@@ -572,6 +576,17 @@ class Manager:
         else:
             effective_timeout = None
 
+        # Helper to extract command from request
+        def get_command_list(r):
+            if hasattr(r, "command") and r.command:
+                return [r.command] if isinstance(r.command, str) else r.command
+            if hasattr(r, "config") and r.config:
+                return [r.config] if isinstance(r.config, str) else r.config
+            return None
+
+        meta.device_name = req.connection_args.host
+        meta.command = get_command_list(req)
+
         # NOTE: DO NOT change attr "req". It's hardcoded in webhook handler.
         r = self.dispatch_rpc_job(
             conn_arg=req.connection_args,
@@ -608,6 +623,21 @@ class Manager:
         else:
             effective_timeout = None
 
+        # Helper to extract command from request
+        def get_command_list(r):
+            if hasattr(r, "command") and r.command:
+                return [r.command] if isinstance(r.command, str) else r.command
+            if hasattr(r, "config") and r.config:
+                return [r.config] if isinstance(r.config, str) else r.config
+            return None
+
+        metas = [
+            JobAdditionalData(
+                device_name=req.connection_args.host, command=get_command_list(req)
+            ).model_dump()
+            for req in reqs
+        ]
+
         # Use first request's result_ttl for all jobs in batch (they should be the same)
         return self.dispatch_bulk_rpc_jobs(
             conn_args=[req.connection_args for req in reqs],
@@ -619,6 +649,7 @@ class Manager:
             kwargses=[{"req": req} for req in reqs],
             on_success=success_handler,
             on_failure=failure_handler,
+            metas=metas,
         )
 
     def _get_all_job_id(self):

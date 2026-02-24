@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, Literal, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
@@ -29,6 +29,8 @@ class JobAdditionalData(BaseModel):
 
     error: Optional[Tuple[str, str]] = None  # 0: exc_type, 1: exc_value
     task_id: Optional[str] = None
+    device_name: Optional[str] = None
+    command: Optional[List[str]] = None
 
 
 class JobResult(BaseModel):
