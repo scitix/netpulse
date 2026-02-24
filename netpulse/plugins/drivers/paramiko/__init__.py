@@ -431,7 +431,7 @@ class ParamikoDriver(BaseDriver):
         return f"/tmp/np-detached-{user}"
 
     # =========================================================================
-    # New Detach Implementation (Standardized)
+    # Detach Implementation (Standardized)
     # =========================================================================
 
     def launch_detached(
@@ -509,18 +509,45 @@ class ParamikoDriver(BaseDriver):
             final_cmd = self._apply_env_to_command(final_cmd, self.args.environment)
 
         # 2. Handle Sudo if requested
-        safe_cmd = shlex.quote(f"{final_cmd} ; exit $?")
+        # We put the final commands and cleanup inside a single script payload
+        # This ensures the shell replacement via exec maintains sequential execution
+        inner_script = (
+            f"{final_cmd}\nRET=$?\necho $RET > {pid_file}.exit\ndate +%s >> {age_file}\nexit $RET"
+        )
+        safe_cmd = shlex.quote(inner_script)
+
+        # We exec the customized bash. The PID will remain the same as the nohup setsid launcher.
         wrapped_cmd = f"exec -a {proc_name} bash -c {safe_cmd}"
 
         # 3. Construct the background launch wrapper
-        helper_cmd = f"{wrapped_cmd} ; echo $? > {pid_file}.exit ; date +%s >> {age_file}"
+        # Inject the task_id and command into meta_file
+        cmd_meta_safe = shlex.quote(cmd)
+
+        # Max log size 1GB, keep last 700MB
+        log_max = 1073741824
+        log_keep = 734003200
+
+        # Watcher loop that runs in the background and rotates the file
+        watcher_script = (
+            f"while kill -0 $MAIN_PID 2>/dev/null; do "
+            f"sleep 60; "
+            f"size=$(stat -c%s {output_file} 2>/dev/null || echo 0); "
+            f"if [ $size -gt {log_max} ]; then "
+            f"tail -c {log_keep} {output_file} > {output_file}.tmp 2>/dev/null "
+            f"&& cp -f {output_file}.tmp {output_file} 2>/dev/null; "
+            f"fi; "
+            f"done"
+        )
 
         bg_launch = (
             f"echo {int(time.time())} > {age_file}; "
-            f"nohup setsid bash -c {shlex.quote(helper_cmd)} "
-            f"</dev/null > {output_file} 2>&1 & "
-            f"echo $! > {pid_file}; "
-            f"echo {task_id} > {meta_file}"
+            f"nohup setsid bash -c {shlex.quote(wrapped_cmd)} "
+            f"</dev/null >> {output_file} 2>&1 & "
+            f"MAIN_PID=$!; "
+            f"echo $MAIN_PID > {pid_file}; "
+            f"echo {task_id} > {meta_file}; "
+            f"echo {cmd_meta_safe} >> {meta_file}; "
+            f"( {watcher_script} ) &"
         )
 
         # Apply sudo wrapping
@@ -558,17 +585,19 @@ class ParamikoDriver(BaseDriver):
             running, _ = self._is_task_running(session, task_id)
 
         metadata = self._get_base_metadata(start_time)
-        metadata.update({
-            "task_id": task_id,
-            "pid": pid,
-            "log_file": output_file,
-            "pid_file": pid_file,
-            "meta_file": meta_file,
-            "age_file": age_file,
-            "command": cmd,
-            "is_running": running,
-            "created_at": time.time(),
-        })
+        metadata.update(
+            {
+                "task_id": task_id,
+                "pid": pid,
+                "log_file": output_file,
+                "pid_file": pid_file,
+                "meta_file": meta_file,
+                "age_file": age_file,
+                "command": cmd,
+                "is_running": running,
+                "created_at": time.time(),
+            }
+        )
 
         output = f"Task {task_id} launched."
         error = ""
@@ -602,16 +631,24 @@ class ParamikoDriver(BaseDriver):
         # Check if process is still running
         running, pid = self._is_task_running(session, task_id)
 
+        # Get current file size first to detect rotations
+        size_c = f"stat -c%s {log_f} 2>/dev/null || echo 0"
+        size_res = self._execute_command(session, size_c, None)
+        file_size = int(size_res.output.strip() or 0)
+
+        # If the file shrank, a rotation happened, reset offset to read the new rotated block.
+        if offset > file_size:
+            offset = 0
+
         # Read with tail from offset (more efficient than dd bs=1 for large files)
         # tail -c +N starts at byte N (one-indexed)
         read_c = f"tail -c +{offset + 1} {log_f} 2>/dev/null" if offset > 0 else f"cat {log_f}"
         exec_res = self._execute_command(session, read_c, None)
         output = exec_res.output
 
-        # Get current file size for next offset
-        size_c = f"stat -c%s {log_f} 2>/dev/null || echo 0"
-        size_res = self._execute_command(session, size_c, None)
-        file_size = int(size_res.output.strip() or 0)
+        # After reading, fetch the ultimate size to use as the next offset marker
+        size_res_after = self._execute_command(session, size_c, None)
+        file_size_after = int(size_res_after.output.strip() or 0)
 
         return [
             DriverExecutionResult(
@@ -623,7 +660,7 @@ class ParamikoDriver(BaseDriver):
                     "task_id": task_id,
                     "is_running": running,
                     "pid": pid,
-                    "next_offset": file_size,
+                    "next_offset": file_size_after,
                     "completed": not running,
                 },
             )
@@ -635,7 +672,13 @@ class ParamikoDriver(BaseDriver):
 
         start_time = time.perf_counter()
         if running and pid:
-            kill_c = f"kill -15 {pid} 2>/dev/null; sleep 0.2; kill -9 {pid} 2>/dev/null"
+            # Task runs under setsid, so we can kill the entire process group
+            # Group ID is the same as the PID of the session leader (which is our main bash wrapper)
+            kill_c = (
+                f"kill -15 -{pid} 2>/dev/null || kill -15 {pid} 2>/dev/null; "
+                f"sleep 0.2; "
+                f"kill -9 -{pid} 2>/dev/null || kill -9 {pid} 2>/dev/null"
+            )
             self._execute_command(session, kill_c, None)
 
         # Cleanup files
@@ -699,6 +742,7 @@ class ParamikoDriver(BaseDriver):
 
         try:
             import time
+
             start_time = time.perf_counter()
             if file_transfer_op.operation == "upload":
                 # Use staged file path if available
@@ -737,16 +781,18 @@ class ParamikoDriver(BaseDriver):
 
             op_key = f"{file_transfer_op.operation} {file_transfer_op.remote_path}"
             transfer_metadata = self._get_base_metadata(start_time)
-            transfer_metadata.update({
-                "transferred_bytes": bytes_used,
-                "total_bytes": total_bytes,
-                "transfer_success": bool(result.get("success")),
-                "md5_verified": bool(
-                    result.get("success") and file_transfer_op.sync_mode == "hash"
-                ),
-                "local_path": result.get("local_path"),
-                "remote_path": result.get("remote_path"),
-            })
+            transfer_metadata.update(
+                {
+                    "transferred_bytes": bytes_used,
+                    "total_bytes": total_bytes,
+                    "transfer_success": bool(result.get("success")),
+                    "md5_verified": bool(
+                        result.get("success") and file_transfer_op.sync_mode == "hash"
+                    ),
+                    "local_path": result.get("local_path"),
+                    "remote_path": result.get("remote_path"),
+                }
+            )
             transfer_result = [
                 DriverExecutionResult(
                     command=op_key,
@@ -791,9 +837,7 @@ class ParamikoDriver(BaseDriver):
                 )
             ]
 
-    def config(
-        self, session: paramiko.SSHClient, config: list[str]
-    ) -> list[DriverExecutionResult]:
+    def config(self, session: paramiko.SSHClient, config: list[str]) -> list[DriverExecutionResult]:
         """Execute configuration lines and return unified rich result"""
         if self.args and isinstance(self.args, ParamikoSendConfigArgs) and self.args.sudo:
             if not self.args.sudo_password and self.conn_args.password:
@@ -1160,7 +1204,14 @@ class ParamikoDriver(BaseDriver):
             for meta_f in meta_files:
                 try:
                     cmd_m = f"cat {meta_f}"
-                    task_id = self._execute_command(session, cmd_m, None).output.strip()
+                    meta_res = self._execute_command(session, cmd_m, None)
+                    meta_out = meta_res.output.strip().splitlines()
+                    if not meta_out:
+                        continue
+
+                    task_id = meta_out[0].strip()
+                    task_cmd = meta_out[1].strip() if len(meta_out) > 1 else ""
+
                     pid_f = meta_f.replace(".meta", "")
                     cmd_p = f"cat {pid_f}"
                     pid_out = self._execute_command(session, cmd_p, None).output.strip()
@@ -1176,6 +1227,7 @@ class ParamikoDriver(BaseDriver):
                         tasks.append(
                             {
                                 "task_id": task_id,
+                                "command": task_cmd,
                                 "pid": pid,
                                 "status": "running",
                                 "pid_file": pid_f,
