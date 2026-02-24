@@ -86,7 +86,7 @@ def test_paramiko_send_runs_file_transfer(monkeypatch):
         called["session"] = session
         called["op"] = file_transfer_op
         op_key = f"{file_transfer_op.operation} {file_transfer_op.remote_path}"
-        return [DriverExecutionResult(command=op_key, output="", error="", exit_status=0)]
+        return [DriverExecutionResult(command=op_key, stdout="", stderr="", exit_status=0)]
 
     monkeypatch.setattr(ParamikoDriver, "_handle_file_transfer", fake_handle)
     fake_session = object()

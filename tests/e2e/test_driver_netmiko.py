@@ -55,7 +55,7 @@ def test_netmiko_exec_on_linux_ssh():
     result = rpc.execute(req)
 
     res = next(x for x in result if x.command == target.command)
-    assert "netpulse-e2e" in res.output
+    assert "netpulse-e2e" in res.stdout
 
 
 def test_netmiko_exec_on_srlinux(monkeypatch):
@@ -88,8 +88,8 @@ def test_netmiko_exec_on_srlinux(monkeypatch):
         pytest.skip(f"SR Linux auth/connection failed: {exc}")
 
     res = next(x for x in result if x.command == target.command)
-    assert isinstance(res.output, str)
-    assert res.output.strip()
+    assert isinstance(res.stdout, str)
+    assert res.stdout.strip()
 
 
 def test_netmiko_config_on_srlinux(monkeypatch):
@@ -126,7 +126,7 @@ def test_netmiko_config_on_srlinux(monkeypatch):
         pytest.skip(f"SR Linux auth/connection failed: {exc}")
 
     assert isinstance(result, list)
-    assert result and all(isinstance(res.output, str) for res in result)
+    assert result and all(isinstance(res.stdout, str) for res in result)
 
 
 def test_netmiko_reuses_persisted_session(monkeypatch):
@@ -176,7 +176,7 @@ def test_netmiko_reuses_persisted_session(monkeypatch):
             )
             result = rpc.execute(req)
             res = next(x for x in result if x.command == cmd)
-            assert "reuse" in res.output
+            assert "reuse" in res.stdout
 
         non_none_sets = [s for s in set_calls if s]
         assert len(non_none_sets) == 1, "persisted session should be set once"

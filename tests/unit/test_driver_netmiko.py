@@ -71,10 +71,10 @@ def test_netmiko_send_and_config_with_stub(monkeypatch):
     send_result = driver.send(session, ["a", "b"])  # type: ignore
     assert len(send_result) == 2
     assert send_result[0].command == "a"
-    assert send_result[0].output == "resp-a"
+    assert send_result[0].stdout == "resp-a"
     assert send_result[0].metadata is not None
     assert send_result[1].command == "b"
-    assert send_result[1].output == "resp-b"
+    assert send_result[1].stdout == "resp-b"
     # New performance default: cmd_verify is False for send mode
     assert calls["send"] and all(kwargs["cmd_verify"] is False for _, kwargs in calls["send"])
 
@@ -84,9 +84,9 @@ def test_netmiko_send_and_config_with_stub(monkeypatch):
     # New behavior: results are a list of individual command results
     assert len(config_result) == 2
     assert config_result[0].command == "int lo0"
-    assert config_result[0].output == "applied"
+    assert config_result[0].stdout == "applied"
     assert config_result[1].command == "desc test"
-    assert config_result[1].output == "applied\ncommitted\nsaved"
+    assert config_result[1].stdout == "applied\ncommitted\nsaved"
     assert all(r.exit_status == 0 for r in config_result)
 
     assert len(calls["config"]) == 2

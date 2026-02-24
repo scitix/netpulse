@@ -260,8 +260,8 @@ class NetmikoDriver(BaseDriver):
                     result.append(
                         DriverExecutionResult(
                             command=cmd,
-                            output=response,
-                            error="",
+                            stdout=response,
+                            stderr="",
                             exit_status=0,
                             metadata=duration_metadata,
                         )
@@ -275,8 +275,8 @@ class NetmikoDriver(BaseDriver):
             return [
                 DriverExecutionResult(
                     command=" ".join(command),
-                    output="",
-                    error=str(e),
+                    stdout="",
+                    stderr=str(e),
                     exit_status=1,
                     metadata=self._get_base_metadata(start_time),
                 )
@@ -375,8 +375,8 @@ class NetmikoDriver(BaseDriver):
                         results.append(
                             DriverExecutionResult(
                                 command=cmd,
-                                output=output_str,
-                                error=error_msg,
+                                stdout=output_str,
+                                stderr=error_msg,
                                 exit_status=exit_status,
                                 metadata=self._get_base_metadata(line_start),
                             )
@@ -389,8 +389,8 @@ class NetmikoDriver(BaseDriver):
                                 results.append(
                                     DriverExecutionResult(
                                         command=skipped_cmd,
-                                        output="",
-                                        error=(
+                                        stdout="",
+                                        stderr=(
                                             f"Skipped due to previous error in execution of '{cmd}'"
                                         ),
                                         exit_status=1,
@@ -404,8 +404,8 @@ class NetmikoDriver(BaseDriver):
                         results.append(
                             DriverExecutionResult(
                                 command=cmd,
-                                output="",
-                                error=str(e),
+                                stdout="",
+                                stderr=str(e),
                                 exit_status=1,
                                 metadata=self._get_base_metadata(line_start),
                             )
@@ -415,8 +415,8 @@ class NetmikoDriver(BaseDriver):
                             results.append(
                                 DriverExecutionResult(
                                     command=skipped_cmd,
-                                    output="",
-                                    error=(f"Skipped due to exception in execution of '{cmd}'"),
+                                    stdout="",
+                                    stderr=(f"Skipped due to exception in execution of '{cmd}'"),
                                     exit_status=1,
                                     metadata=self._get_base_metadata(time.perf_counter()),
                                 )
@@ -429,13 +429,13 @@ class NetmikoDriver(BaseDriver):
                 # 3. Post-execution operations (Commit/Save)
                 if commit := self._commit(session):
                     if results:
-                        results[-1].output += f"\n{commit}"
+                        results[-1].stdout += f"\n{commit}"
 
                 if self.save:
                     session.set_base_prompt()
                     save_res = session.save_config()
                     if results and save_res:
-                        results[-1].output += f"\n{save_res}"
+                        results[-1].stdout += f"\n{save_res}"
 
                 # 4. Exit config mode once
                 session.exit_config_mode()
@@ -448,8 +448,8 @@ class NetmikoDriver(BaseDriver):
             return [
                 DriverExecutionResult(
                     command="\n".join(config),
-                    output="",
-                    error=str(e),
+                    stdout="",
+                    stderr=str(e),
                     exit_status=1,
                     metadata=self._get_base_metadata(start_time),
                 )
@@ -525,8 +525,8 @@ class NetmikoDriver(BaseDriver):
             return [
                 DriverExecutionResult(
                     command=op_name,
-                    output=f"File transfer results: {results}",
-                    error="",
+                    stdout=f"File transfer results: {results}",
+                    stderr="",
                     exit_status=0 if results.get("file_exists") else 1,
                     metadata=transfer_metadata,
                 )
@@ -536,8 +536,8 @@ class NetmikoDriver(BaseDriver):
             return [
                 DriverExecutionResult(
                     command="file_transfer",
-                    output="",
-                    error=str(e),
+                    stdout="",
+                    stderr=str(e),
                     exit_status=1,
                     metadata={"duration_seconds": 0.0},
                 )

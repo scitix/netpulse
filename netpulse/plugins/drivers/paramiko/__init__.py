@@ -376,8 +376,8 @@ class ParamikoDriver(BaseDriver):
             return [
                 DriverExecutionResult(
                     command="list_active_detached_tasks",
-                    output=f"Found {len(tasks)} active detached tasks",
-                    error="",
+                    stdout=f"Found {len(tasks)} active detached tasks",
+                    stderr="",
                     exit_status=0,
                     metadata={"active_tasks": tasks},
                 )
@@ -422,8 +422,8 @@ class ParamikoDriver(BaseDriver):
             return [
                 DriverExecutionResult(
                     command=" ".join(command) if command else "error",
-                    output="",
-                    error=str(e),
+                    stdout="",
+                    stderr=str(e),
                     exit_status=1,
                     metadata=self._get_base_metadata(start_time),
                 )
@@ -497,8 +497,8 @@ class ParamikoDriver(BaseDriver):
         if not final_cmd:
             return {
                 "launch": DriverExecutionResult(
-                    output="",
-                    error="No command provided for detached execution.",
+                    stdout="",
+                    stderr="No command provided for detached execution.",
                     exit_status=1,
                     metadata={},
                 )
@@ -618,8 +618,8 @@ class ParamikoDriver(BaseDriver):
         return [
             DriverExecutionResult(
                 command="launch",
-                output=output,
-                error=error,
+                stdout=output,
+                stderr=error,
                 exit_status=final_exit,
                 metadata=metadata,
             )
@@ -638,7 +638,7 @@ class ParamikoDriver(BaseDriver):
         # Get current file size first to detect rotations
         size_c = f"stat -c%s {log_f} 2>/dev/null || echo 0"
         size_res = self._execute_command(session, size_c, None)
-        file_size = int(size_res.output.strip() or 0)
+        file_size = int(size_res.stdout.strip() or 0)
 
         # If the file shrank, a rotation happened, reset offset to read the new rotated block.
         if offset > file_size:
@@ -648,17 +648,17 @@ class ParamikoDriver(BaseDriver):
         # tail -c +N starts at byte N (one-indexed)
         read_c = f"tail -c +{offset + 1} {log_f} 2>/dev/null" if offset > 0 else f"cat {log_f}"
         exec_res = self._execute_command(session, read_c, None)
-        output = exec_res.output
+        output = exec_res.stdout
 
         # After reading, fetch the ultimate size to use as the next offset marker
         size_res_after = self._execute_command(session, size_c, None)
-        file_size_after = int(size_res_after.output.strip() or 0)
+        file_size_after = int(size_res_after.stdout.strip() or 0)
 
         return [
             DriverExecutionResult(
                 command="query",
-                output=output,
-                error="",
+                stdout=output,
+                stderr="",
                 exit_status=0,
                 metadata={
                     "task_id": task_id,
@@ -698,8 +698,8 @@ class ParamikoDriver(BaseDriver):
         return [
             DriverExecutionResult(
                 command="kill",
-                output=f"Task {task_id} killed and cleaned up.",
-                error="",
+                stdout=f"Task {task_id} killed and cleaned up.",
+                stderr="",
                 exit_status=0,
                 metadata=self._get_base_metadata(start_time),
             )
@@ -719,7 +719,7 @@ class ParamikoDriver(BaseDriver):
         proc_name = f"{DETACHED_TASK_PROCESS_PREFIX}{task_id}"
         check_c = f"ps -p {pid} -o args= 2>/dev/null"
         check_res = self._execute_command(session, check_c, None)
-        comm = check_res.output.strip()
+        comm = check_res.stdout.strip()
 
         # PID matches and the command line contains our injected process name
         return (proc_name in comm, pid)
@@ -800,8 +800,8 @@ class ParamikoDriver(BaseDriver):
             transfer_result = [
                 DriverExecutionResult(
                     command=op_key,
-                    output=f"File transfer completed: {bytes_used}/{total_bytes} bytes",
-                    error="",
+                    stdout=f"File transfer completed: {bytes_used}/{total_bytes} bytes",
+                    stderr="",
                     exit_status=0 if result.get("success") else 1,
                     metadata=transfer_metadata,
                 )
@@ -834,8 +834,8 @@ class ParamikoDriver(BaseDriver):
             return [
                 DriverExecutionResult(
                     command=f"file_transfer_{file_transfer_op.operation}",
-                    output="",
-                    error=str(e),
+                    stdout="",
+                    stderr=str(e),
                     exit_status=1,
                     metadata={},
                 )
@@ -858,8 +858,8 @@ class ParamikoDriver(BaseDriver):
 
         config_start_time = time.perf_counter()
         try:
-            full_output = []
-            full_error = []
+            full_stdout = []
+            full_stderr = []
             total_duration = 0.0
             overall_exit_status = 0
 
@@ -916,9 +916,9 @@ class ParamikoDriver(BaseDriver):
                 ):
                     out_chunk = self._clean_sudo_output(out_chunk, self.args.sudo_password)
 
-                full_output.append(out_chunk)
+                full_stdout.append(out_chunk)
                 if err_chunk:
-                    full_error.append(err_chunk)
+                    full_stderr.append(err_chunk)
 
                 if exit_status != 0:
                     overall_exit_status = exit_status
@@ -931,8 +931,8 @@ class ParamikoDriver(BaseDriver):
             return [
                 DriverExecutionResult(
                     command="\n".join(config),
-                    output="\n".join(full_output),
-                    error="\n".join(full_error),
+                    stdout="\n".join(full_stdout),
+                    stderr="\n".join(full_stderr),
                     exit_status=overall_exit_status,
                     metadata=metadata,
                 )
@@ -942,8 +942,8 @@ class ParamikoDriver(BaseDriver):
             return [
                 DriverExecutionResult(
                     command="\n".join(config) if config else "error",
-                    output="",
-                    error=str(e),
+                    stdout="",
+                    stderr=str(e),
                     exit_status=1,
                     metadata=self._get_base_metadata(config_start_time),
                 )
@@ -1010,21 +1010,21 @@ class ParamikoDriver(BaseDriver):
 
         # Use interactive handler if expect_map is provided
         if expect_map:
-            output, error, exit_status = self._execute_interactive(
+            stdout, stderr, exit_status = self._execute_interactive(
                 session, exec_cmd, expect_map, **exec_kwargs
             )
         else:
-            _stdin, stdout, stderr = session.exec_command(exec_cmd, **exec_kwargs)
-            output = stdout.read().decode("utf-8", errors="replace")
-            error = stderr.read().decode("utf-8", errors="replace")
-            exit_status = stdout.channel.recv_exit_status()
+            _stdin, stdout_channel, stderr_channel = session.exec_command(exec_cmd, **exec_kwargs)
+            stdout = stdout_channel.read().decode("utf-8", errors="replace")
+            stderr = stderr_channel.read().decode("utf-8", errors="replace")
+            exit_status = stdout_channel.channel.recv_exit_status()
 
         duration_metadata = self._get_base_metadata(start_time)
 
         return DriverExecutionResult(
             command=cmd,
-            output=output,
-            error=error,
+            stdout=stdout,
+            stderr=stderr,
             exit_status=exit_status,
             metadata=duration_metadata,
         )
@@ -1040,7 +1040,7 @@ class ParamikoDriver(BaseDriver):
         # Start command
         stdin, stdout, stderr = session.exec_command(cmd, **kwargs)
 
-        full_output = ""
+        full_stdout = ""
         # Small timeout for polling each chunk
         poll_interval = 0.2
         max_no_output = int((timeout or 60) / poll_interval)
@@ -1050,7 +1050,7 @@ class ParamikoDriver(BaseDriver):
             if stdout.channel.recv_ready():
                 chunk = stdout.channel.recv(4096).decode("utf-8", errors="replace")
                 if chunk:
-                    full_output += chunk
+                    full_stdout += chunk
                     no_output_count = 0
 
                     # Check if any prompt matches
@@ -1067,7 +1067,7 @@ class ParamikoDriver(BaseDriver):
 
         # Read final output
         if stdout.channel.recv_ready():
-            full_output += stdout.channel.recv(4096).decode("utf-8", errors="replace")
+            full_stdout += stdout.channel.recv(4096).decode("utf-8", errors="replace")
 
         # Avoid blocking on recv_exit_status if the command is still hung
         if not stdout.channel.exit_status_ready():
@@ -1092,11 +1092,11 @@ class ParamikoDriver(BaseDriver):
         else:
             exit_status = stdout.channel.recv_exit_status()
 
-        error = ""
+        full_stderr = ""
         if stderr.channel.recv_stderr_ready():
-            error = stderr.channel.recv_stderr(4096).decode("utf-8", errors="replace")
+            full_stderr = stderr.channel.recv_stderr(4096).decode("utf-8", errors="replace")
 
-        return full_output, error, exit_status
+        return full_stdout, full_stderr, exit_status
 
     def _execute_script_content(
         self, session: paramiko.SSHClient, args: ParamikoSendCommandArgs
@@ -1132,15 +1132,15 @@ class ParamikoDriver(BaseDriver):
         stdin.write(script_content)
         stdin.close()
 
-        output = stdout.read().decode("utf-8", errors="replace")
-        error = stderr.read().decode("utf-8", errors="replace")
+        stdout_output = stdout.read().decode("utf-8", errors="replace")
+        stderr_output = stderr.read().decode("utf-8", errors="replace")
         exit_status = stdout.channel.recv_exit_status()
         duration = time.perf_counter() - start_time
         return [
             DriverExecutionResult(
                 command=f"script_execution_{interpreter}",
-                output=output,
-                error=error,
+                stdout=stdout_output,
+                stderr=stderr_output,
                 exit_status=exit_status,
                 metadata={
                     "duration_seconds": round(duration, 3),
@@ -1213,14 +1213,14 @@ class ParamikoDriver(BaseDriver):
         tasks = []
         detached_dir = self._get_detached_dir()
         try:
-            ls_cmd = f"ls {detached_dir}/{DETACHED_TASK_FILE_PREFIX}_*.pid.meta 2>/dev/null"
-            meta_files = self._execute_command(session, ls_cmd, None).output.strip().split()
+            ls_cmd = f"ls -1 {detached_dir}/{DETACHED_TASK_FILE_PREFIX}_*.pid.meta 2>/dev/null"
+            meta_files = self._execute_command(session, ls_cmd, None).stdout.strip().split()
 
             for meta_f in meta_files:
                 try:
                     cmd_m = f"cat {meta_f}"
                     meta_res = self._execute_command(session, cmd_m, None)
-                    meta_out = meta_res.output.strip().splitlines()
+                    meta_out = meta_res.stdout.strip().splitlines()
                     if not meta_out:
                         continue
 
@@ -1229,14 +1229,14 @@ class ParamikoDriver(BaseDriver):
 
                     pid_f = meta_f.replace(".meta", "")
                     cmd_p = f"cat {pid_f}"
-                    pid_out = self._execute_command(session, cmd_p, None).output.strip()
+                    pid_out = self._execute_command(session, cmd_p, None).stdout.strip()
 
                     if not pid_out.isdigit():
                         continue
 
                     pid = int(pid_out)
                     ps_cmd = f"ps -p {pid} -o args= --no-headers 2>/dev/null"
-                    comm = self._execute_command(session, ps_cmd, None).output.strip()
+                    comm = self._execute_command(session, ps_cmd, None).stdout.strip()
 
                     if f"{DETACHED_TASK_PROCESS_PREFIX}{task_id}" in comm:
                         tasks.append(

@@ -115,8 +115,8 @@ class PyeapiDriver(BaseDriver):
                 result.append(
                     DriverExecutionResult(
                         command=cmd,
-                        output=output,
-                        error="",
+                        stdout=output,
+                        stderr="",
                         exit_status=0,
                         metadata=duration_metadata,
                     )
@@ -127,8 +127,8 @@ class PyeapiDriver(BaseDriver):
             return [
                 DriverExecutionResult(
                     command=" ".join(command) if command else "unknown_command",
-                    output="",
-                    error=str(e),
+                    stdout="",
+                    stderr=str(e),
                     exit_status=1,
                     metadata=self._get_base_metadata(start_time),
                 )
@@ -162,8 +162,8 @@ class PyeapiDriver(BaseDriver):
             return [
                 DriverExecutionResult(
                     command="\n".join(config),
-                    output=response,
-                    error="",
+                    stdout=response,
+                    stderr="",
                     exit_status=0,
                     metadata=duration_metadata,
                 )
@@ -173,8 +173,8 @@ class PyeapiDriver(BaseDriver):
             return [
                 DriverExecutionResult(
                     command="\n".join(config) if config else "unknown_config",
-                    output="",
-                    error=str(e),
+                    stdout="",
+                    stderr=str(e),
                     exit_status=1,
                     metadata=self._get_base_metadata(start_time),
                 )

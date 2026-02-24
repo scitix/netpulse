@@ -116,18 +116,20 @@ class BasicWebHookCaller(BaseWebHookCaller):
             # Handle DriverExecutionResult object
             if isinstance(res, DriverExecutionResult):
                 lines.append(f"Command: {res.command}")
-                lines.append(f"Output:\n{res.output}")
-                if res.error:
-                    lines.append(f"Error: {res.error}")
+                lines.append(f"Output:\n{res.stdout}")
+                if res.stderr:
+                    lines.append(f"Error: {res.stderr}")
                 lines.append(f"Exit Status: {res.exit_status}")
             elif isinstance(res, dict):
                 # Handle dict format (e.g., if somehow a dict is passed in the list)
                 cmd = res.get("command", "unknown")
                 lines.append(f"Command: {cmd}")
-                if "output" in res:
-                    lines.append(f"Output:\n{res['output']}")
-                if "error" in res and res.get("error"):
-                    lines.append(f"Error: {res['error']}")
+                output = res.get("stdout")
+                if output is not None:
+                    lines.append(f"Output:\n{output}")
+                error = res.get("stderr")
+                if error:
+                    lines.append(f"Error: {error}")
                 if "exit_status" in res:
                     lines.append(f"Exit Status: {res['exit_status']}")
             else:

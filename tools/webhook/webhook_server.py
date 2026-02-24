@@ -75,7 +75,7 @@ def determine_success_status(body: Dict[str, Any]) -> Optional[bool]:
             return False
         return True
     elif isinstance(result, dict):
-        return not bool(result.get("error"))
+        return not bool(result.get("stderr"))
     return None
 
 
@@ -219,14 +219,17 @@ def log_request_details(request: Request, body: Dict[str, Any]) -> None:
                 log.info("    Raw Result:")
                 log.info(f"       {parsed.get('raw', result)}")
         elif isinstance(result, dict):
-            if result.get("error"):
+            error = result.get("stderr")
+            if error:
                 log.info("    Job Execution Failed")
-                error = result["error"]
-                log.info(f"    Error Type: {error.get('type', 'Unknown')}")
-                log.info("    Error Details:")
-                for line in error.get("message", "No message").split("\n"):
-                    if line.strip():
-                        log.info(f"       {line}")
+                if isinstance(error, dict):
+                    log.info(f"    Error Type: {error.get('type', 'Unknown')}")
+                    log.info("    Error Details:")
+                    for line in error.get("message", "No message").split("\n"):
+                        if line.strip():
+                            log.info(f"       {line}")
+                else:
+                    log.info(f"    Error: {error}")
             else:
                 log.info("    Job Execution Successful")
                 log.info("    Execution Result:")

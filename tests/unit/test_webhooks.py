@@ -44,7 +44,7 @@ def test_basic_webhook_calls_requests(monkeypatch):
     caller = BasicWebHookCaller(hook)
     # Use a list of DriverExecutionResult objects
     result = [
-        DriverExecutionResult(command="show version", output="Cisco IOS Software", exit_status=0)
+        DriverExecutionResult(command="show version", stdout="Cisco IOS Software", exit_status=0)
     ]
     caller.call(req=req, job=MockJob(id="job-1"), result=result)
 
@@ -139,12 +139,12 @@ def test_basic_webhook_formats_multiple_commands(monkeypatch):
     multi_cmd_result = [
         DriverExecutionResult(
             command="show version",
-            output="Cisco IOS Software, Version 15.1",
+            stdout="Cisco IOS Software, Version 15.1",
             exit_status=0,
         ),
         DriverExecutionResult(
             command="show interfaces",
-            output="GigabitEthernet0/0 is up",
+            stdout="GigabitEthernet0/0 is up",
             exit_status=0,
         ),
     ]
@@ -186,8 +186,8 @@ def test_basic_webhook_formats_nested_dict_result(monkeypatch):
     nested_result = [
         DriverExecutionResult(
             command="show version",
-            output="Cisco IOS Software, Version 15.1",
-            error="",
+            stdout="Cisco IOS Software, Version 15.1",
+            stderr="",
             exit_status=0,
         )
     ]

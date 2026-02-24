@@ -73,8 +73,8 @@ class JobInResponse(BaseModel):
                     "retval": [
                         {
                             "command": "show version",
-                            "output": "Arista vEOS\nHardware version: 4.25.4M",
-                            "error": "",
+                            "stdout": "Arista vEOS\nHardware version: 4.25.4M",
+                            "stderr": "",
                             "exit_status": 0,
                             "metadata": {"host": "172.17.0.1", "duration_seconds": 0.123},
                         }

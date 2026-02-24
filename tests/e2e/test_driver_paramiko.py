@@ -50,7 +50,7 @@ def test_paramiko_exec_on_linux_ssh():
 
     res = next(x for x in result if x.command == target.command)
     assert res.exit_status == 0
-    assert "netpulse-e2e" in res.output
+    assert "netpulse-e2e" in res.stdout
 
 
 def test_paramiko_config_on_linux_ssh(tmp_path):
@@ -92,7 +92,7 @@ def test_paramiko_config_on_linux_ssh(tmp_path):
     verify_result = rpc.execute(verify_req)
     res = verify_result[0]
     assert res.command == "cat /tmp/paramiko-config-e2e.txt"
-    assert marker in res.output
+    assert marker in res.stdout
 
 
 def test_paramiko_file_transfer_upload_and_download(tmp_path):

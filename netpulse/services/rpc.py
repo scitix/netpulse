@@ -227,8 +227,8 @@ def execute(req: ExecutionRequest):
         return [
             DriverExecutionResult(
                 command="\n".join(payload) if isinstance(payload, list) else str(payload),
-                output="",
-                error=str(e),
+                stdout="",
+                stderr=str(e),
                 exit_status=1,
                 metadata={"duration_seconds": 0.0},
             )
@@ -247,15 +247,15 @@ def execute(req: ExecutionRequest):
 
             if req.parsing.context:
                 req.parsing.context = None
-                log.warning("Context in request is overridden by output.")
+                log.warning("Context in request is overridden by stdout.")
 
             parser = parsers[req.parsing.name].from_parsing_request(req.parsing)
             for val in result:
-                # If it's a rich object (output, error, etc.), parse only the output
-                if hasattr(val, "output"):
-                    val.parsed = parser.parse(val.output)
-                elif isinstance(val, dict) and "output" in val:
-                    val["parsed"] = parser.parse(val["output"])
+                # If it's a rich object (stdout, stderr, etc.), parse only the stdout
+                if hasattr(val, "stdout"):
+                    val.parsed = parser.parse(val.stdout)
+                elif isinstance(val, dict) and "stdout" in val:
+                    val["parsed"] = parser.parse(val["stdout"])
         except Exception as e:
             log.error(f"Error in parsing: {e}")
             raise e

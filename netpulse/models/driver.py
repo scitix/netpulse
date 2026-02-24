@@ -9,19 +9,20 @@ class DriverExecutionResult(BaseModel):
     """
 
     command: str = ""
-    output: Any
-    error: str = ""
+    stdout: Any = ""
+    stderr: str = ""
     exit_status: int = 0
     download_url: Optional[str] = None  # Formal field for file resources
     metadata: Dict[str, Any] = Field(default_factory=dict)
     parsed: Optional[Any] = None
 
     model_config = ConfigDict(
+        populate_by_name=True,
         json_schema_extra={
             "example": {
                 "command": "show version",
-                "output": "Arista vEOS\nHardware version: 4.25.4M",
-                "error": "",
+                "stdout": "Arista vEOS\nHardware version: 4.25.4M",
+                "stderr": "",
                 "exit_status": 0,
                 "download_url": None,
                 "metadata": {

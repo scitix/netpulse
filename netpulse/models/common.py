@@ -55,8 +55,8 @@ class JobResult(BaseModel):
                 "retval": [
                     {
                         "command": "show version",
-                        "output": "Arista vEOS\nHardware version: 4.25.4M",
-                        "error": "",
+                        "stdout": "Arista vEOS\nHardware version: 4.25.4M",
+                        "stderr": "",
                         "exit_status": 0,
                         "download_url": None,
                         "metadata": {

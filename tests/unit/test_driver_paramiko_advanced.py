@@ -216,7 +216,7 @@ def test_paramiko_list_active_detached_tasks():
 
     def side_effect(cmd, **kwargs):
         ro, re = MagicMock(), MagicMock()
-        if f"ls {detached_dir}/np_*.pid.meta" in cmd:
+        if f"ls -1 {detached_dir}/np_*.pid.meta" in cmd:
             ro.read.return_value = f"{detached_dir}/np_123.pid.meta\n".encode()
         elif f"cat {detached_dir}/np_123.pid.meta" in cmd:
             ro.read.return_value = b"task-xyz\n"

@@ -120,7 +120,7 @@ def test_paramiko_read_logs():
     res = driver._read_logs(mock_session, "t3", offset=0)
 
     query_res = next(x for x in res if x.command == "query")
-    assert query_res.output == "hello\nworld\n"
+    assert query_res.stdout == "hello\nworld\n"
     assert query_res.metadata["next_offset"] == 12
     assert query_res.metadata["is_running"] is True
     assert query_res.metadata["completed"] is False

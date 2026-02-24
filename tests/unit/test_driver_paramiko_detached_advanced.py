@@ -99,7 +99,7 @@ def test_detached_launch_with_binary_upload(mock_transfer, mock_session):
 
     # Mock successful upload
     mock_transfer.return_value = {
-        "file_transfer_upload": DriverExecutionResult(output="uploaded", exit_status=0)
+        "file_transfer_upload": DriverExecutionResult(stdout="uploaded", exit_status=0)
     }
 
     # Act

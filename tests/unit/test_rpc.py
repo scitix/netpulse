@@ -36,8 +36,8 @@ class StubDriver(BaseDriver):
         return [
             DriverExecutionResult(
                 command=cmd,
-                output=f"sent-{cmd}",
-                error="",
+                stdout=f"sent-{cmd}",
+                stderr="",
                 exit_status=0,
                 metadata={"duration_seconds": 0.001},
             )
@@ -51,8 +51,8 @@ class StubDriver(BaseDriver):
         return [
             DriverExecutionResult(
                 command=cfg,
-                output=f"cfg-{cfg}",
-                error="",
+                stdout=f"cfg-{cfg}",
+                stderr="",
                 exit_status=0,
                 metadata={"duration_seconds": 0.001},
             )
@@ -114,7 +114,7 @@ def test_rpc_execute_with_render_and_parse(monkeypatch, app_config):
     result = rpc.execute(req)
 
     assert result[0].command == "rendered-cmd"
-    assert result[0].output == "sent-rendered-cmd"
+    assert result[0].stdout == "sent-rendered-cmd"
     assert result[0].parsed == {"parsed": "sent-rendered-cmd"}
 
 
@@ -148,7 +148,7 @@ def test_rpc_execute_config_path(monkeypatch, app_config):
 
             return [
                 DriverExecutionResult(
-                    command=cfg_key, output=f"cfg-{cfg_key}", error="", exit_status=0
+                    command=cfg_key, stdout=f"cfg-{cfg_key}", stderr="", exit_status=0
                 )
             ]
 
@@ -162,7 +162,7 @@ def test_rpc_execute_config_path(monkeypatch, app_config):
     result = rpc.execute(req)
 
     assert captured["config"] == "line1,line2"
-    assert result[0].output == "cfg-line1\nline2"
+    assert result[0].stdout == "cfg-line1\nline2"
 
 
 def test_rpc_execute_parsing_requires_dict(monkeypatch, app_config):
@@ -203,7 +203,7 @@ def test_rpc_execute_rendering_requires_dict(monkeypatch, app_config):
 
     result = rpc.execute(req)
     assert result[0].command == "rendered"
-    assert result[0].output == "sent-rendered"
+    assert result[0].stdout == "sent-rendered"
 
 
 def test_rpc_disconnect_called_on_exception(monkeypatch, app_config):
@@ -227,7 +227,7 @@ def test_rpc_disconnect_called_on_exception(monkeypatch, app_config):
 
     result = rpc.execute(req)
     assert result[0].exit_status == 1
-    assert "boom" in result[0].error
+    assert "boom" in result[0].stderr
     assert disconnect_calls, "disconnect should be invoked on exception"
 
 
