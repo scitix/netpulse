@@ -114,6 +114,7 @@ class JobInResponse(BaseModel):
         log = logging.getLogger(__name__)
 
         error = None
+        meta = None
         try:
             meta = JobAdditionalData.model_validate(job.meta)
         except (ValidationError, TypeError) as e:
