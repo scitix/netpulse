@@ -275,9 +275,7 @@ class FileTransferModel(BaseModel):
     )
     hash_algorithm: str = Field(default="md5", description="Hash algorithm for verification")
     verify_file: bool = Field(default=True, description="Verify file integrity after transfer")
-    chunk_size: int = Field(
-        default=32768, description="Transfer chunk size (bytes), default 32KB"
-    )
+    chunk_size: int = Field(default=32768, description="Transfer chunk size (bytes), default 32KB")
 
     # Post-transfer actions
     chmod: Optional[str] = Field(

@@ -21,5 +21,14 @@ You are an expert developer for NetPulse, an asynchronous network automation fra
 - Avoid `time.sleep()`, use `await asyncio.sleep()`.
 - Ensure proper error handling using project-specific exception handlers.
 
-## ruff check
-- Always run `ruff check` before committing.
+## Tooling & Code Quality
+- **Ruff Compliance**: All Python code must pass `ruff check` and `ruff format`.
+- **Mandatory Action**: After any code modification, you MUST run `ruff check --fix .` and `ruff format .` to ensure compliance.
+- **Line Length**: Adhere to the `line-length = 100` setting defined in `pyproject.toml`.
+- **Import Sorting**: Ruff will handle import sorting (via `I` category in `select`). Let it do its job.
+
+## Workflow Requirements
+1. **Plan**: Describe changes before execution.
+2. **Execute**: Implement changes efficiently.
+3. **Verify**: Always run tests and linting tools (`pytest`, `ruff`) before reporting completion.
+4. **Clean**: Ensure no temporary files or debug prints remain.

@@ -44,9 +44,7 @@ def test_basic_webhook_calls_requests(monkeypatch):
     caller = BasicWebHookCaller(hook)
     # Use a list of DriverExecutionResult objects
     result = [
-        DriverExecutionResult(
-            command="show version", output="Cisco IOS Software", exit_status=0
-        )
+        DriverExecutionResult(command="show version", output="Cisco IOS Software", exit_status=0)
     ]
     caller.call(req=req, job=MockJob(id="job-1"), result=result)
 

@@ -207,9 +207,7 @@ class NetmikoDriver(BaseDriver):
             log.error(f"Error in connecting: {e}")
             raise e
 
-    def send(
-        self, session: BaseConnection, command: list[str]
-    ) -> list[DriverExecutionResult]:
+    def send(self, session: BaseConnection, command: list[str]) -> list[DriverExecutionResult]:
         """Execute commands and return rich results with metadata"""
         import time
 
@@ -226,17 +224,14 @@ class NetmikoDriver(BaseDriver):
                     return self._handle_file_transfer(session, self.file_transfer)
 
                 # Legacy check for nested file transfer
-                if (
-                    self.args
-                    and getattr(self.args, "file_transfer", None) is not None
-                ):
+                if self.args and getattr(self.args, "file_transfer", None) is not None:
                     log.info("Nested file transfer detected")
                     return self._handle_file_transfer(session, self.args.file_transfer)
 
                 result = []
                 for cmd in command:
                     start_time = time.perf_counter()
-                    cmd_args = {"cmd_verify": False} # Default to False for exec mode
+                    cmd_args = {"cmd_verify": False}  # Default to False for exec mode
                     if self.args:
                         if isinstance(self.args, NetmikoSendCommandArgs):
                             user_args = self.args.model_dump()
@@ -247,8 +242,11 @@ class NetmikoDriver(BaseDriver):
                         else:
                             # Filter parameters for send_command
                             for attr in [
-                                "read_timeout", "delay_factor", "max_loops",
-                                "strip_prompt", "strip_command",
+                                "read_timeout",
+                                "delay_factor",
+                                "max_loops",
+                                "strip_prompt",
+                                "strip_command",
                             ]:
                                 if hasattr(self.args, attr):
                                     val = getattr(self.args, attr)
@@ -259,13 +257,15 @@ class NetmikoDriver(BaseDriver):
                         response = session.send_command(cmd, **cmd_args)
 
                     duration_metadata = self._get_base_metadata(start_time)
-                    result.append(DriverExecutionResult(
-                        command=cmd,
-                        output=response,
-                        error="",
-                        exit_status=0,
-                        metadata=duration_metadata,
-                    ))
+                    result.append(
+                        DriverExecutionResult(
+                            command=cmd,
+                            output=response,
+                            error="",
+                            exit_status=0,
+                            metadata=duration_metadata,
+                        )
+                    )
                 if self.enabled:
                     session.exit_enable_mode()
 
@@ -282,9 +282,7 @@ class NetmikoDriver(BaseDriver):
                 )
             ]
 
-    def config(
-        self, session: BaseConnection, config: list[str]
-    ) -> list[DriverExecutionResult]:
+    def config(self, session: BaseConnection, config: list[str]) -> list[DriverExecutionResult]:
         """Execute configuration set and return a list of granular results"""
         import time
 
@@ -309,9 +307,14 @@ class NetmikoDriver(BaseDriver):
                 config_args = {}
                 if self.args:
                     attrs = [
-                        "read_timeout", "delay_factor", "max_loops",
-                        "strip_prompt", "strip_command", "cmd_verify",
-                        "error_pattern", "config_mode_command"
+                        "read_timeout",
+                        "delay_factor",
+                        "max_loops",
+                        "strip_prompt",
+                        "strip_command",
+                        "cmd_verify",
+                        "error_pattern",
+                        "config_mode_command",
                     ]
                     for attr in attrs:
                         if hasattr(self.args, attr):
@@ -346,10 +349,7 @@ class NetmikoDriver(BaseDriver):
                     try:
                         # Use the original config_args without manual delay_factor overrides
                         response = session.send_config_set(
-                            [cmd],
-                            enter_config_mode=False,
-                            exit_config_mode=False,
-                            **config_args
+                            [cmd], enter_config_mode=False, exit_config_mode=False, **config_args
                         )
 
                         exit_status = 0
@@ -372,49 +372,55 @@ class NetmikoDriver(BaseDriver):
                                 error_msg = f"Device reported configuration error: {last_line}"
                                 break
 
-                        results.append(DriverExecutionResult(
-                            command=cmd,
-                            output=output_str,
-                            error=error_msg,
-                            exit_status=exit_status,
-                            metadata=self._get_base_metadata(line_start),
-                        ))
+                        results.append(
+                            DriverExecutionResult(
+                                command=cmd,
+                                output=output_str,
+                                error=error_msg,
+                                exit_status=exit_status,
+                                metadata=self._get_base_metadata(line_start),
+                            )
+                        )
 
                         # Atomic: stop if a line failed validation
                         if exit_status != 0:
                             # Correctly fill in ALL remaining commands as "Skipped"
-                            for skipped_cmd in config[i+1:]:
-                                results.append(DriverExecutionResult(
-                                    command=skipped_cmd,
-                                    output="",
-                                    error=(
-                                        f"Skipped due to previous error in execution of '{cmd}'"
-                                    ),
-                                    exit_status=1,
-                                    metadata=self._get_base_metadata(time.perf_counter()),
-                                ))
+                            for skipped_cmd in config[i + 1 :]:
+                                results.append(
+                                    DriverExecutionResult(
+                                        command=skipped_cmd,
+                                        output="",
+                                        error=(
+                                            f"Skipped due to previous error in execution of '{cmd}'"
+                                        ),
+                                        exit_status=1,
+                                        metadata=self._get_base_metadata(time.perf_counter()),
+                                    )
+                                )
                             break
 
                     except Exception as e:
                         log.warning(f"Exception executing config line '{cmd}': {e}")
-                        results.append(DriverExecutionResult(
-                            command=cmd,
-                            output="",
-                            error=str(e),
-                            exit_status=1,
-                            metadata=self._get_base_metadata(line_start),
-                        ))
-                        # Also fill in skipped for exceptions
-                        for skipped_cmd in config[i+1:]:
-                            results.append(DriverExecutionResult(
-                                command=skipped_cmd,
+                        results.append(
+                            DriverExecutionResult(
+                                command=cmd,
                                 output="",
-                                error=(
-                                    f"Skipped due to exception in execution of '{cmd}'"
-                                ),
+                                error=str(e),
                                 exit_status=1,
-                                metadata=self._get_base_metadata(time.perf_counter()),
-                            ))
+                                metadata=self._get_base_metadata(line_start),
+                            )
+                        )
+                        # Also fill in skipped for exceptions
+                        for skipped_cmd in config[i + 1 :]:
+                            results.append(
+                                DriverExecutionResult(
+                                    command=skipped_cmd,
+                                    output="",
+                                    error=(f"Skipped due to exception in execution of '{cmd}'"),
+                                    exit_status=1,
+                                    metadata=self._get_base_metadata(time.perf_counter()),
+                                )
+                            )
                         break
                     finally:
                         # Maintain prompt synchronization to handle sub-view changes
@@ -477,6 +483,7 @@ class NetmikoDriver(BaseDriver):
 
         try:
             import time
+
             start_time = time.perf_counter()
             if file_transfer_op.operation == "upload":
                 effective_local_path = self._get_effective_source_path(file_transfer_op.local_path)
@@ -506,13 +513,15 @@ class NetmikoDriver(BaseDriver):
 
             op_name = f"{file_transfer_op.operation} {file_transfer_op.remote_path}"
             transfer_metadata = self._get_base_metadata(start_time)
-            transfer_metadata.update({
-                "transferred_bytes": results.get("file_size", 0),
-                "transfer_success": bool(results.get("file_exists")),
-                "md5_verified": bool(results.get("file_verified")),
-                "local_path": dest_file if direction == "get" else source_file,
-                "remote_path": source_file if direction == "get" else dest_file,
-            })
+            transfer_metadata.update(
+                {
+                    "transferred_bytes": results.get("file_size", 0),
+                    "transfer_success": bool(results.get("file_exists")),
+                    "md5_verified": bool(results.get("file_verified")),
+                    "local_path": dest_file if direction == "get" else source_file,
+                    "remote_path": source_file if direction == "get" else dest_file,
+                }
+            )
             return [
                 DriverExecutionResult(
                     command=op_name,

@@ -148,9 +148,7 @@ class NapalmDriver(BaseDriver):
             log.error(f"Connection failed: {e}")
             raise e
 
-    def send(
-        self, session: NetworkDriver, command: list[str]
-    ) -> list[DriverExecutionResult]:
+    def send(self, session: NetworkDriver, command: list[str]) -> list[DriverExecutionResult]:
         """
         Send commands to the device.
         """
@@ -210,13 +208,15 @@ class NapalmDriver(BaseDriver):
                 exit_status = 1
 
             duration_metadata = self._get_base_metadata(start_time)
-            result.append(DriverExecutionResult(
-                command=cmd,
-                output=str(output),
-                error=error,
-                exit_status=exit_status,
-                metadata=duration_metadata,
-            ))
+            result.append(
+                DriverExecutionResult(
+                    command=cmd,
+                    output=str(output),
+                    error=error,
+                    exit_status=exit_status,
+                    metadata=duration_metadata,
+                )
+            )
 
         return result
 
@@ -272,7 +272,6 @@ class NapalmDriver(BaseDriver):
             log.error(f"Configuration commit failed: {e}")
             error = str(e)
             exit_status = 1
-
 
         return [
             DriverExecutionResult(

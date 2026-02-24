@@ -71,9 +71,7 @@ def test_paramiko_send_returns_empty_when_no_commands():
 
 def test_paramiko_send_runs_file_transfer(monkeypatch):
     """Use file_transfer branch instead of executing commands."""
-    op = FileTransferModel(
-        operation="upload", remote_path="/tmp/b", local_path="/tmp/a"
-    )
+    op = FileTransferModel(operation="upload", remote_path="/tmp/b", local_path="/tmp/a")
     driver = ParamikoDriver(
         args=ParamikoSendCommandArgs(),
         conn_args=ParamikoConnectionArgs(host="h", username="u", password="p"),

@@ -880,10 +880,10 @@ class Manager:
                     "task_id": task_id,
                     "status": (
                         "running"
-                        if (is_running if 'is_running' in locals() else True)
+                        if (is_running if "is_running" in locals() else True)
                         else "completed"
                     ),
-                    "result": result
+                    "result": result,
                 }
             if rq_job.is_failed:
                 raise JobOperationError(f"Detached Task query failed: {rq_job.exc_info}")

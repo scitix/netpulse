@@ -230,10 +230,7 @@ class ExecutionRequest(BaseModel):
                     "username": "admin",
                     "password": "admin",
                 },
-                "config": [
-                    "interface GigabitEthernet0/1",
-                    "description Managed by NetPulse"
-                ],
+                "config": ["interface GigabitEthernet0/1", "description Managed by NetPulse"],
             }
         },
     )

@@ -54,11 +54,7 @@ class PyeapiExecutionRequest(ExecutionRequest):
                     "password": "admin",
                     "transport": "https",
                 },
-                "config": [
-                    "interface Ethernet1",
-                    "description Managed by PyEAPI",
-                    "no shutdown"
-                ],
+                "config": ["interface Ethernet1", "description Managed by PyEAPI", "no shutdown"],
                 "save": True,
             }
         }

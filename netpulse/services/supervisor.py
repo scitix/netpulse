@@ -59,6 +59,7 @@ class DetachedTaskSupervisor:
         log.info(f"Starting staging cleanup in {download_dir}...")
         count = 0
         import shutil
+
         try:
             for filename in os.listdir(download_dir):
                 item_path = os.path.join(download_dir, filename)

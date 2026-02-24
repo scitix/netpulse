@@ -186,8 +186,6 @@ def execute(req: ExecutionRequest):
 
             log.info(f"Launching detached task {task_id} on {req.connection_args.host}")
 
-
-
             # Driver launches the process independently
             # If command list is empty, pass empty string;
             # driver may check args (script_content, etc.)
@@ -392,6 +390,7 @@ def rpc_webhook_callback(*args):
                         # for the URL, though external_url is preferred.
                         if host == "0.0.0.0":
                             import socket
+
                             try:
                                 host = socket.gethostname()
                             except Exception:

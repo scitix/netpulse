@@ -77,7 +77,7 @@ class NapalmExecutionRequest(ExecutionRequest):
                 "config": [
                     "interface Ethernet1",
                     "description Uplink to Core",
-                    "switchport mode trunk"
+                    "switchport mode trunk",
                 ],
                 "dry_run": False,
             }

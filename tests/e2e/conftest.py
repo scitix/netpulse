@@ -196,9 +196,7 @@ def wait_for_job(api_headers: dict[str, str]) -> Callable[[str, float], dict]:
     def _wait(job_id: str, timeout: float = 60.0) -> dict:
         deadline = time.time() + timeout
         while time.time() < deadline:
-            resp = requests.get(
-                f"{API_BASE}/jobs/{job_id}", headers=api_headers, timeout=5
-            )
+            resp = requests.get(f"{API_BASE}/jobs/{job_id}", headers=api_headers, timeout=5)
 
             try:
                 resp.raise_for_status()

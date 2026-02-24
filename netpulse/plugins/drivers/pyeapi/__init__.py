@@ -78,9 +78,7 @@ class PyeapiDriver(BaseDriver):
                     return session
 
             log.info(f"Connecting to {self.conn_args.host} with pyeapi...")
-            session = pyeapi.connect(
-                return_node=True, **self.conn_args.model_dump(), **self.args
-            )
+            session = pyeapi.connect(return_node=True, **self.conn_args.model_dump(), **self.args)
             self._session_reused = False
             if self.conn_args.keepalive:
                 self._set_persisted_session(session, self.conn_args)
@@ -114,13 +112,15 @@ class PyeapiDriver(BaseDriver):
             result = []
             for i, cmd in enumerate(command):
                 output = raw_results[i]
-                result.append(DriverExecutionResult(
-                    command=cmd,
-                    output=output,
-                    error="",
-                    exit_status=0,
-                    metadata=duration_metadata,
-                ))
+                result.append(
+                    DriverExecutionResult(
+                        command=cmd,
+                        output=output,
+                        error="",
+                        exit_status=0,
+                        metadata=duration_metadata,
+                    )
+                )
             return result
         except Exception as e:
             log.error(f"Error in pyeapi send: {e}")

@@ -32,6 +32,7 @@ class StubDriver(BaseDriver):
     def send(self, session, command: list[str]) -> list[DriverExecutionResult]:
         self.sent_payload = command
         from netpulse.models.driver import DriverExecutionResult
+
         return [
             DriverExecutionResult(
                 command=cmd,
@@ -46,6 +47,7 @@ class StubDriver(BaseDriver):
     def config(self, session, config: list[str]) -> list[DriverExecutionResult]:
         self.sent_payload = config
         from netpulse.models.driver import DriverExecutionResult
+
         return [
             DriverExecutionResult(
                 command=cfg,
@@ -143,6 +145,7 @@ def test_rpc_execute_config_path(monkeypatch, app_config):
             captured["config"] = ",".join(config)
             cfg_key = "\n".join(config)
             from netpulse.models.driver import DriverExecutionResult
+
             return [
                 DriverExecutionResult(
                     command=cfg_key, output=f"cfg-{cfg_key}", error="", exit_status=0

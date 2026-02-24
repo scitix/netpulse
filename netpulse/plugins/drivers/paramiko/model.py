@@ -198,11 +198,7 @@ class ParamikoExecutionRequest(ExecutionRequest):
                     "username": "admin",
                     "key_filename": "/path/to/private_key",
                 },
-                "config": [
-                    "apt-get update",
-                    "apt-get install -y nginx",
-                    "systemctl enable nginx"
-                ],
+                "config": ["apt-get update", "apt-get install -y nginx", "systemctl enable nginx"],
                 "driver_args": {
                     "sudo": True,
                     "sudo_password": "secret_password",

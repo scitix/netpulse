@@ -109,12 +109,10 @@ class NetmikoSendConfigSetArgs(DriverArgs):
 # Standardized FileTransferModel is now used globally
 
 
-
 class NetmikoExecutionRequest(ExecutionRequest):
     driver: DriverName = DriverName.NETMIKO
     connection_args: NetmikoConnectionArgs
     driver_args: Optional[NetmikoSendConfigSetArgs | NetmikoSendCommandArgs] = None
-
 
     save: bool = Field(default=False, description="Save configuration after execution")
     enable_mode: bool = Field(default=False, description="Enter privileged mode for execution")
@@ -161,7 +159,7 @@ class NetmikoExecutionRequest(ExecutionRequest):
                 "config": [
                     "interface GigabitEthernet0/1",
                     "description Managed by NetPulse",
-                    "no shutdown"
+                    "no shutdown",
                 ],
                 "save": True,
                 "enable_mode": True,
