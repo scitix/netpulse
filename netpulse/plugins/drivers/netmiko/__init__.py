@@ -387,7 +387,9 @@ class NetmikoDriver(BaseDriver):
                                 results.append(DriverExecutionResult(
                                     command=skipped_cmd,
                                     output="",
-                                    error=f"Skipped due to previous error in execution of '{cmd}'",
+                                    error=(
+                                        f"Skipped due to previous error in execution of '{cmd}'"
+                                    ),
                                     exit_status=1,
                                     metadata=self._get_base_metadata(time.perf_counter()),
                                 ))
@@ -407,7 +409,9 @@ class NetmikoDriver(BaseDriver):
                             results.append(DriverExecutionResult(
                                 command=skipped_cmd,
                                 output="",
-                                error=f"Skipped due to exception in execution of '{cmd}'",
+                                error=(
+                                    f"Skipped due to exception in execution of '{cmd}'"
+                                ),
                                 exit_status=1,
                                 metadata=self._get_base_metadata(time.perf_counter()),
                             ))
