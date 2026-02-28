@@ -23,13 +23,24 @@ def test_netmiko_send_and_config_with_stub(monkeypatch):
     calls = {"send": [], "config": [], "commit": 0, "save": 0, "enable": 0, "disable": 0}
 
     class FakeSession:
+        base_prompt = "Router"
+        RETURN = "\n"
+
         def send_command(self, cmd, **kwargs):
             calls["send"].append((cmd, kwargs))
             return f"resp-{cmd}"
 
-        def send_config_set(self, cfg, **kwargs):
-            calls["config"].append((tuple(cfg), kwargs))
-            return "applied"
+        def write_channel(self, data):
+            calls["config_writes"] = calls.get("config_writes", [])
+            calls["config_writes"].append(data.strip())
+
+        def normalize_cmd(self, cmd):
+            return cmd.rstrip() + self.RETURN
+
+        def read_until_pattern(self, pattern, read_timeout=10, **kwargs):
+            calls["config_reads"] = calls.get("config_reads", 0) + 1
+            cmd = calls["config_writes"][-1] if calls.get("config_writes") else ""
+            return f"{cmd}\napplied\n[Router-config]\n"
 
         def commit(self):
             calls["commit"] += 1
@@ -89,9 +100,9 @@ def test_netmiko_send_and_config_with_stub(monkeypatch):
     assert config_result[1].stdout == "applied\ncommitted\nsaved"
     assert all(r.exit_status == 0 for r in config_result)
 
-    assert len(calls["config"]) == 2
-    assert calls["config"][0][0] == ("int lo0",)
-    assert calls["config"][1][0] == ("desc test",)
+    assert "int lo0" in calls.get("config_writes", [])
+    assert "desc test" in calls.get("config_writes", [])
+    assert calls.get("config_reads", 0) == 2
 
     assert calls["commit"] == 1
     assert calls["save"] >= 1

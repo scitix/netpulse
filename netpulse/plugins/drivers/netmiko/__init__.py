@@ -344,17 +344,56 @@ class NetmikoDriver(BaseDriver):
                     r"Error:",
                 ]
 
+                # Ensure read_timeout is extracted from args or defaults to 10
+                read_timeout = 10.0
+                if "read_timeout" in config_args and config_args["read_timeout"] is not None:
+                    read_timeout = float(config_args["read_timeout"])
+
+                base_prompt = session.base_prompt
+                # strip() is crucial here: some vendors include trailing whitespace in base_prompt
+                base_prompt_stripped = base_prompt.strip()
+                terminator = config_args.get("terminator", r"#")
+
+                # Match multi-vendor prompts using device hostname + terminator.
+                # Includes support for ], #, >, $, % and allows trailing whitespace.
+                read_pattern = rf"{re.escape(base_prompt_stripped)}.*?(?:[\]#>$%]|{terminator})\s*$"
+
+                # Strict matching to strip prompt lines from stdout.
+                # Enforces start/end anchors to prevent stripping valid output lines
+                # containing the hostname.
+                prompt_re = re.compile(
+                    rf"^.*?{re.escape(base_prompt_stripped)}.*?(?:[\]#>$%]|{terminator})\s*$"
+                )
+
                 for i, cmd in enumerate(config):
                     line_start = time.perf_counter()
                     try:
-                        # Use the original config_args without manual delay_factor overrides
-                        response = session.send_config_set(
-                            [cmd], enter_config_mode=False, exit_config_mode=False, **config_args
+                        # Write command directly to SSH channel (bypasses Netmiko's
+                        # 2-second sleep delays)
+                        session.write_channel(session.normalize_cmd(cmd))
+
+                        # Read until the full device prompt appears (returns almost instantly
+                        # once command completes)
+                        raw_output = session.read_until_pattern(
+                            pattern=read_pattern, read_timeout=read_timeout
                         )
 
                         exit_status = 0
                         error_msg = ""
-                        output_str = response if response is not None else ""
+
+                        # Clean output: strip command echo and prompt lines
+                        cmd_stripped = cmd.strip()
+                        cleaned_lines = []
+                        for line in raw_output.splitlines():
+                            stripped = line.strip()
+                            if not stripped:
+                                continue
+                            if stripped == cmd_stripped:
+                                continue
+                            if prompt_re.match(stripped):
+                                continue
+                            cleaned_lines.append(stripped)
+                        output_str = "\n".join(cleaned_lines)
 
                         # Validate output for device-side errors
                         check_patterns = ERROR_PATTERNS

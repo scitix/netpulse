@@ -78,7 +78,9 @@ class Manager:
             if w.death_date or w.last_heartbeat is None:
                 return False
 
-            interval = (datetime.now(timezone.utc) - w.last_heartbeat.astimezone(timezone.utc)).total_seconds()
+            interval = (
+                datetime.now(timezone.utc) - w.last_heartbeat.astimezone(timezone.utc)
+            ).total_seconds()
 
             state = w.get_state()
             if state == "busy":
@@ -299,9 +301,11 @@ class Manager:
         nodes_dict = {}
         for hostname_bin, node_json in self.rdb.hscan_iter(self.node_info_map):
             if node_json:
-                hostname = hostname_bin.decode() if isinstance(hostname_bin, bytes) else hostname_bin
+                hostname = (
+                    hostname_bin.decode() if isinstance(hostname_bin, bytes) else hostname_bin
+                )
                 nodes_dict[hostname] = NodeInfo.model_validate_json(node_json)
-        
+
         return list(nodes_dict.values())
 
     def dispatch_rpc_job(
@@ -566,7 +570,8 @@ class Manager:
         if req.webhook:
             success_handler = failure_handler = rpc_webhook_callback
 
-        # Use explicitly provided Execution Timeout, fallback to system config or file transfer default
+        # Use explicitly provided Execution Timeout, fallback to system config
+        # or file transfer default
         if getattr(req, "execution_timeout", None) is not None:
             effective_timeout = req.execution_timeout
         elif req.file_transfer is not None:
@@ -610,6 +615,7 @@ class Manager:
         failure_handler, success_handler = rpc_webhook_callback, rpc_webhook_callback
 
         # Determine effective timeout from the first request if file transfer
+        req0 = reqs[0]
         if getattr(req0, "execution_timeout", None) is not None:
             effective_timeout = req0.execution_timeout
         elif req0.file_transfer is not None:
