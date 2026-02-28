@@ -78,8 +78,7 @@ class Manager:
             if w.death_date or w.last_heartbeat is None:
                 return False
 
-            interval = w.last_heartbeat.astimezone(timezone.utc) - datetime.now(timezone.utc)
-            interval = interval.total_seconds()
+            interval = (datetime.now(timezone.utc) - w.last_heartbeat.astimezone(timezone.utc)).total_seconds()
 
             state = w.get_state()
             if state == "busy":
