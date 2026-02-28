@@ -112,7 +112,16 @@ class ExecutionRequest(BaseModel):
         default=None,
         description="Queue strategy (fifo/pinned). Auto-selected by driver if not specified",
     )
-    ttl: Optional[int] = Field(default=300, description="Job timeout in seconds", ge=1, le=86400)
+    ttl: Optional[int] = Field(
+        default=300, 
+        description="Queue TTL: How long the job can remain queued before being discarded", 
+        ge=1, le=86400
+    )
+    execution_timeout: Optional[int] = Field(
+        default=None, 
+        description="Execution Timeout: Maximum execution time of the job in seconds", 
+        ge=1, le=86400
+    )
     result_ttl: Optional[int] = Field(
         default=None,
         description=(

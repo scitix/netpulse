@@ -566,16 +566,13 @@ class Manager:
         if req.webhook:
             success_handler = failure_handler = rpc_webhook_callback
 
-        # Check if ttl was explicitly set
-        ttl_explicit = "ttl" in req.model_fields_set
-
-        # Use explicitly provided TTL, otherwise use 3600s for file transfer to avoid hard timeout
-        if ttl_explicit:
-            effective_timeout = req.ttl
+        # Use explicitly provided Execution Timeout, fallback to system config or file transfer default
+        if getattr(req, "execution_timeout", None) is not None:
+            effective_timeout = req.execution_timeout
         elif req.file_transfer is not None:
             effective_timeout = 3600
         else:
-            effective_timeout = None
+            effective_timeout = self.job_timeout
 
         # Helper to extract command from request
         def get_command_list(r):
@@ -612,17 +609,13 @@ class Manager:
         # Always use rpc_webhook_callback as it now handles generic cleanup
         failure_handler, success_handler = rpc_webhook_callback, rpc_webhook_callback
 
-        # Check if ttl was explicitly set
-        req0 = reqs[0]
-        ttl_explicit = "ttl" in req0.model_fields_set
-
         # Determine effective timeout from the first request if file transfer
-        if ttl_explicit:
-            effective_timeout = req0.ttl
+        if getattr(req0, "execution_timeout", None) is not None:
+            effective_timeout = req0.execution_timeout
         elif req0.file_transfer is not None:
             effective_timeout = 3600
         else:
-            effective_timeout = None
+            effective_timeout = self.job_timeout
 
         # Helper to extract command from request
         def get_command_list(r):
