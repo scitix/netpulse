@@ -192,12 +192,12 @@ class DetachedTaskRegistry:
         log.info(f"Detached Task {task_id} removed from Registry.")
 
     def list_all(self) -> dict:
-        """List all registered tasks."""
+        """List all registered tasks using non-blocking scan."""
         import json
 
-        raw = self.rdb.hgetall(self.KEY)
         result = {}
-        for k, v in raw.items():
+        # Use hscan_iter to avoid blocking Redis with large registries
+        for k, v in self.rdb.hscan_iter(self.KEY):
             key = k.decode("utf-8") if isinstance(k, bytes) else k
             val = v.decode("utf-8") if isinstance(v, bytes) else v
             result[key] = json.loads(val)

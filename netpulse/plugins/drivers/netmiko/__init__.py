@@ -422,9 +422,6 @@ class NetmikoDriver(BaseDriver):
                                 )
                             )
                         break
-                    finally:
-                        # Maintain prompt synchronization to handle sub-view changes
-                        session.set_base_prompt()
 
                 # 3. Post-execution operations (Commit/Save)
                 if commit := self._commit(session):

@@ -292,15 +292,17 @@ class Manager:
 
     def get_all_nodes(self) -> list[NodeInfo]:
         """
-        Get all nodes from the redis
+        Get all nodes from the redis using non-blocking scan.
+        Guarantees unique list of NodeInfo.
         """
-        # check the map in redis
-        nodes: dict[str, str] = self.rdb.hgetall(self.node_info_map)  # type: ignore
-        if not nodes:
-            return []
-
-        # key: hostname of the node, value: node info
-        return [NodeInfo.model_validate_json(node) for node in nodes.values()]
+        # Collect into dict first to match original deduplication behavior
+        nodes_dict = {}
+        for hostname_bin, node_json in self.rdb.hscan_iter(self.node_info_map):
+            if node_json:
+                hostname = hostname_bin.decode() if isinstance(hostname_bin, bytes) else hostname_bin
+                nodes_dict[hostname] = NodeInfo.model_validate_json(node_json)
+        
+        return list(nodes_dict.values())
 
     def dispatch_rpc_job(
         self,
@@ -652,8 +654,10 @@ class Manager:
         )
 
     def _get_all_job_id(self):
-        keys: list[bytes] = self.rdb.keys(f"{Job.redis_job_namespace_prefix}*")  # type: ignore
-        return [k.decode().split(":")[-1] for k in keys]
+        # Use scan_iter instead of keys() to avoid blocking Redis main thread
+        # Add set() to ensure unique IDs if Redis returns duplicates during scanning
+        keys = self.rdb.scan_iter(match=f"{Job.redis_job_namespace_prefix}*")
+        return list(set(k.decode().split(":")[-1] for k in keys))
 
     def _get_job_id_by_status(self, state: str, q_name: str):
         """
