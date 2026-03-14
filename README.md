@@ -41,7 +41,7 @@ graph LR
 
 ## 🛠 Core Capabilities
 
-*   **SSH-to-API Abstraction**: Seamlessly converts multi-vendor CLI interactions (Cisco, Huawei, Arista, etc.) and Linux shell commands into structured JSON responses.
+*   **SSH-to-API Abstraction**: Seamlessly converts multi-vendor CLI interactions (Cisco, Arista,HP_comware etc.) and Linux shell commands into structured JSON responses.
 *   **Self-Healing Connectivity**: Proactively maintains session integrity via background **deep probes** to detect and automatically restore stalled SSH connections.
 *   **High-Concurrency Session Pooling**: Implements "Pinned Workers" to reuse persistent sessions, eliminating the overhead of frequent SSH handshakes.
 *   **Linux Mastery**: Advanced server management supporting sudo elevation, SFTP file synchronization, and persistent detached background tasks.

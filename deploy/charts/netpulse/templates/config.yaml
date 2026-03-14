@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "netpulse.fullname" . }}-config
+data:
+  NETPULSE_LOG__LEVEL: {{ .Values.config.logLevel | quote }}
+  NETPULSE_WORKER__PINNED_PER_NODE: {{ .Values.config.pinnedPerNode | quote }}
+  NETPULSE_REDIS__HOST: {{ .Values.config.redis.host | quote }}
+  NETPULSE_REDIS__PORT: {{ .Values.config.redis.port | quote }}
+  NETPULSE_REDIS__TLS__ENABLED: {{ .Values.config.redis.tls | quote }}
+  NETPULSE_CREDENTIAL__ENABLED: "true"
+  NETPULSE_CREDENTIAL__NAME: {{ .Values.config.vault.name | quote }}
+  NETPULSE_CREDENTIAL__ADDR: {{ .Values.config.vault.addr | quote }}
+  NETPULSE_CREDENTIAL__ALLOWED_PATHS: {{ .Values.config.vault.allowedPaths | quote }}
+  NETPULSE_CREDENTIAL__VERIFY: {{ .Values.config.vault.verify | quote }}
+  NETPULSE_CREDENTIAL__CACHE_TTL: {{ .Values.config.vault.cacheTtl | quote }}
+  NETPULSE_STORAGE__RETENTION_HOURS: {{ .Values.config.storage.retentionHours | quote }}
+  PYTHONUNBUFFERED: "1"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "netpulse.fullname" . }}-secrets
+type: Opaque
+stringData:
+  password: {{ .Values.secrets.redisPassword | quote }}
+  api-key: {{ .Values.secrets.apiKey | quote }}
+  vault-token: {{ .Values.secrets.vaultToken | quote }}

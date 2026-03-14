@@ -17,6 +17,37 @@ def _base_request(**kwargs) -> dict:
     }
 
 
+def test_push_interval_validation(app_config):
+    """push_interval must be >= 1 and requires detach=True."""
+    # Valid: 1s push interval (near-realtime)
+    req = ExecutionRequest(
+        **_base_request(
+            command="sleep 60",
+            detach=True,
+            push_interval=1,
+        )
+    )
+    assert req.push_interval == 1
+
+    # Valid: 5s push interval
+    req = ExecutionRequest(
+        **_base_request(
+            command="sleep 60",
+            detach=True,
+            push_interval=5,
+        )
+    )
+    assert req.push_interval == 5
+
+    # Invalid: push_interval without detach=True
+    with pytest.raises(ValidationError):
+        ExecutionRequest(**_base_request(command="sleep 60", push_interval=1))
+
+    # Invalid: push_interval=0 (below minimum)
+    with pytest.raises(ValidationError):
+        ExecutionRequest(**_base_request(command="sleep 60", detach=True, push_interval=0))
+
+
 def test_execution_request_requires_one_payload(app_config):
     """ExecutionRequest must include exactly one of command/config."""
     with pytest.raises(ValidationError):

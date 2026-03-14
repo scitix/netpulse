@@ -1,0 +1,160 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault
+spec:
+  ports:
+  - port: 8200
+    targetPort: 8200
+    name: http
+  selector:
+    app: vault
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault-internal
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+  - port: 8200
+    targetPort: 8200
+    name: http
+  - port: 8201
+    targetPort: 8201
+    name: cluster
+  selector:
+    app: vault
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-config
+data:
+  vault.hcl: |
+    ui            = true
+    disable_mlock = true
+
+    storage "raft" {
+      path    = "/vault/data"
+      node_id = "VAULT_NODE_ID_PLACEHOLDER"
+
+      retry_join {
+        leader_api_addr = "http://vault-0.vault-internal.{{ .Release.Namespace }}.svc.cluster.local:8200"
+      }
+      retry_join {
+        leader_api_addr = "http://vault-1.vault-internal.{{ .Release.Namespace }}.svc.cluster.local:8200"
+      }
+      retry_join {
+        leader_api_addr = "http://vault-2.vault-internal.{{ .Release.Namespace }}.svc.cluster.local:8200"
+      }
+    }
+
+    listener "tcp" {
+      address         = "0.0.0.0:8200"
+      cluster_address = "0.0.0.0:8201"
+      tls_disable     = "true"
+    }
+
+    api_addr     = "http://VAULT_NODE_ID_PLACEHOLDER.vault-internal.{{ .Release.Namespace }}.svc.cluster.local:8200"
+    cluster_addr = "http://VAULT_NODE_ID_PLACEHOLDER.vault-internal.{{ .Release.Namespace }}.svc.cluster.local:8201"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vault
+spec:
+  serviceName: vault-internal
+  replicas: {{ .Values.replicaCount.vault }}
+  selector:
+    matchLabels:
+      app: vault
+  template:
+    metadata:
+      labels:
+        app: vault
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: vault
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - name: vault
+        image: "{{ .Values.images.vault.repository }}:{{ .Values.images.vault.tag }}"
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "Starting vault node: $MY_POD_NAME"
+          sed "s/VAULT_NODE_ID_PLACEHOLDER/$MY_POD_NAME/g" \
+            /opt/vault/config/vault.hcl > /tmp/vault-resolved.hcl
+          exec vault server -config=/tmp/vault-resolved.hcl
+        env:
+        - name: MY_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: VAULT_ADDR
+          value: "http://127.0.0.1:8200"
+        - name: SKIP_CHOWN
+          value: "true"
+        - name: SKIP_SETCAP
+          value: "true"
+        ports:
+        - containerPort: 8200
+          name: http
+        - containerPort: 8201
+          name: cluster
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "50m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "vault status || [ $? -eq 2 ]"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "vault status || [ $? -eq 2 ]"
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+        securityContext:
+          runAsUser: 100
+          runAsGroup: 1000
+          capabilities:
+            add:
+            - IPC_LOCK
+        volumeMounts:
+        - name: vault-config
+          mountPath: /opt/vault/config
+        - name: netpulse-vault-raft-data
+          mountPath: /vault/data
+      volumes:
+      - name: vault-config
+        configMap:
+          name: vault-config
+  volumeClaimTemplates:
+  - metadata:
+      name: netpulse-vault-raft-data
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi

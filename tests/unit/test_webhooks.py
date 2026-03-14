@@ -1,5 +1,6 @@
 from typing import Any
 
+import pytest
 from pydantic import HttpUrl
 
 from netpulse.models import DriverConnectionArgs, DriverName
@@ -63,8 +64,8 @@ def test_basic_webhook_calls_requests(monkeypatch):
     assert captured["raised"] is True
 
 
-def test_basic_webhook_swallows_request_errors(monkeypatch):
-    """HTTP errors from webhook should be logged, not raised."""
+def test_basic_webhook_raises_on_request_errors(monkeypatch):
+    """HTTP errors from BasicWebHookCaller.call() should propagate so callers can schedule retries."""
     hook = WebHook(name="basic", url=HttpUrl("http://example.com/hook"))
     calls: list[int] = []
 
@@ -75,8 +76,8 @@ def test_basic_webhook_swallows_request_errors(monkeypatch):
     monkeypatch.setattr(webhook_basic.requests, "request", failing_request)
 
     caller = BasicWebHookCaller(hook)
-    # Should not raise even if the HTTP call fails
-    caller.call(req=None, job=MockJob(id="job-2"), result="done")
+    with pytest.raises(RuntimeError, match="boom"):
+        caller.call(req=None, job=MockJob(id="job-2"), result="done")
 
     assert calls == [1]
 

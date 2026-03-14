@@ -1,0 +1,168 @@
+# 05-vault-init.yaml
+# Vault HA 初始化 Job
+#
+# 使用 bitnami/kubectl 镜像（内置 kubectl + sh），通过 kubectl exec 调用 Vault 命令
+# 这样既解决了 vault 镜像无 kubectl/curl 的问题，也保持了完整的幂等性
+#
+# 功能：
+#   1. 初始化 Vault 集群（首次运行）并将 unseal key 存入 K8s Secret
+#   2. 重复运行时从 K8s Secret 读取 unseal key，对已封节点解封（支持节点重启恢复）
+#   3. 启用 KV v2 引擎，创建 NetPulse 所需 token
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-init
+  namespace: netpulse
+spec:
+  template:
+    spec:
+      serviceAccountName: vault-init
+      containers:
+      - name: vault-init
+        image: bitnami/kubectl:latest
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+
+          NODES="0 1 2"
+          NAMESPACE="netpulse"
+          SECRET_NAME="vault-unseal-key"
+
+          echo "==> Waiting for vault-0 status..."
+          while true; do
+            STATUS=$(kubectl exec vault-0 -n $NAMESPACE -- vault status 2>/dev/null || true)
+            echo "$STATUS" | grep -q "Initialized" && break
+            echo "    vault-0 not ready, retrying..."
+            sleep 3
+          done
+          echo "==> vault-0 is reachable."
+
+          # ----------------------------------------------------------------
+          # Step 1: Initialize (first time only) or load existing unseal key
+          # ----------------------------------------------------------------
+          INIT_STATUS=$(kubectl exec vault-0 -n $NAMESPACE -- vault status 2>/dev/null || true)
+          if echo "$INIT_STATUS" | grep -q "Initialized.*true"; then
+            echo "==> Vault already initialized. Loading unseal key from Secret..."
+            UNSEAL_KEY=$(kubectl get secret $SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.unseal-key}' 2>/dev/null | base64 -d)
+            ROOT_TOKEN=$(kubectl get secret $SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.root-token}' 2>/dev/null | base64 -d)
+            if [ -z "$UNSEAL_KEY" ]; then
+              echo "ERROR: Secret '$SECRET_NAME' not found. Cannot unseal. Manual intervention required."
+              exit 1
+            fi
+            echo "    Unseal key loaded from Secret."
+          else
+            echo "==> Initializing Vault cluster (first time)..."
+            INIT_OUT=$(kubectl exec vault-0 -n $NAMESPACE -- vault operator init -key-shares=1 -key-threshold=1)
+            UNSEAL_KEY=$(echo "$INIT_OUT" | grep "Unseal Key 1:" | awk '{print $NF}')
+            ROOT_TOKEN=$(echo "$INIT_OUT" | grep "Initial Root Token:" | awk '{print $NF}')
+
+            echo ""
+            echo "==> INITIALIZATION SUCCESSFUL"
+            echo "    Unseal Key : $UNSEAL_KEY"
+            echo "    Root Token : $ROOT_TOKEN"
+            echo ""
+
+            echo "==> Saving unseal key to K8s Secret '$SECRET_NAME'..."
+            kubectl create secret generic $SECRET_NAME \
+              --namespace=$NAMESPACE \
+              --from-literal=unseal-key="$UNSEAL_KEY" \
+              --from-literal=root-token="$ROOT_TOKEN" \
+              --save-config \
+              --dry-run=client -o yaml | kubectl apply -f -
+            echo "    Unseal key saved to Secret/$SECRET_NAME."
+          fi
+
+          # ----------------------------------------------------------------
+          # Step 2: Unseal ALL nodes (idempotent)
+          # ----------------------------------------------------------------
+          for i in $NODES; do
+            echo "==> Checking vault-$i..."
+            # Wait for node to be reachable
+            while true; do
+              NODE_STATUS=$(kubectl exec vault-$i -n $NAMESPACE -- vault status 2>/dev/null || true)
+              echo "$NODE_STATUS" | grep -q "Initialized\|Sealed" && break
+              echo "    vault-$i not reachable yet, waiting..."
+              sleep 3
+            done
+
+            if kubectl exec vault-$i -n $NAMESPACE -- vault status 2>/dev/null | grep -q "Sealed.*true"; then
+              echo "    vault-$i is sealed — unsealing..."
+              kubectl exec vault-$i -n $NAMESPACE -- vault operator unseal "$UNSEAL_KEY"
+              echo "    vault-$i unsealed successfully."
+            else
+              echo "    vault-$i is already unsealed."
+            fi
+          done
+
+          # ----------------------------------------------------------------
+          # Step 3: Enable KV v2 engine & create NetPulse token
+          # ----------------------------------------------------------------
+          echo "==> Enabling KV v2 engine at path 'kv/'..."
+          kubectl exec vault-0 -n $NAMESPACE -- sh -c \
+            "VAULT_TOKEN=$ROOT_TOKEN vault secrets enable -path=kv kv-v2" 2>/dev/null \
+            && echo "    KV v2 enabled." \
+            || echo "    KV v2 already enabled (skipping)."
+
+          echo "==> Fetching Operational Token from Secret 'netpulse-secrets' in namespace 'netpulse'..."
+          APP_TOKEN=$(kubectl get secret netpulse-secrets -n netpulse -o jsonpath='{.data.vault-token}' | base64 -d)
+          
+          if [ -z "$APP_TOKEN" ]; then
+            echo "ERROR: Could not find 'vault-token' in Secret 'netpulse-secrets'."
+            exit 1
+          fi
+
+          echo "==> Syncing Operational Token to Vault..."
+          kubectl exec vault-0 -n $NAMESPACE -- sh -c \
+            "VAULT_TOKEN=$ROOT_TOKEN vault token create -id=$APP_TOKEN -policy=root -orphan" \
+            2>/dev/null || true
+
+          echo ""
+          echo "==> Vault HA cluster is fully operational!"
+          echo "    Operational Token is synced and ready for NetPulse."
+
+        env: []
+      restartPolicy: OnFailure
+---
+# ServiceAccount 需要 exec 到 vault pods 以及读写 secrets
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-init
+  namespace: netpulse
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vault-init
+  namespace: netpulse
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: ["netpulse-secrets"]
+  namespace: netpulse
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vault-init
+  namespace: netpulse
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vault-init
+subjects:
+- kind: ServiceAccount
+  name: vault-init
+  namespace: netpulse

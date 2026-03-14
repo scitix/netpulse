@@ -1,0 +1,19 @@
+# 04-nodeport/nodeport.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: netpulse-nodeport
+  namespace: netpulse
+  labels:
+    app: netpulse
+spec:
+  type: NodePort
+  ports:
+  - port: 9000
+    targetPort: 9000
+    nodePort: 30090
+    protocol: TCP
+    name: http
+  selector:
+    app: netpulse
+    component: controller

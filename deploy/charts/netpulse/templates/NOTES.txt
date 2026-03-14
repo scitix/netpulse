@@ -1,0 +1,9 @@
+NetPulse HA has been installed.
+
+1. Get the application URL:
+{{- if .Values.ingress.enabled }}
+  http://{{ .Values.ingress.host }}
+{{- end }}
+
+2. Check Vault Init Job:
+  kubectl logs -f job/{{ include "netpulse.fullname" . }}-vault-init -n {{ .Release.Namespace }}

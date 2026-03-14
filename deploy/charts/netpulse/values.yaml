@@ -1,0 +1,92 @@
+# Default values for NetPulse.
+global:
+  namespace: netpulse
+
+redis-operator:
+  enabled: true
+
+images:
+  controller:
+    repository: localhost/netpulse-controller
+    tag: "0.4.2"
+    pullPolicy: IfNotPresent
+  nodeWorker:
+    repository: localhost/netpulse-node-worker
+    tag: "0.4.2"
+    pullPolicy: IfNotPresent
+  fifoWorker:
+    repository: localhost/netpulse-fifo-worker
+    tag: "0.4.2"
+    pullPolicy: IfNotPresent
+  vault:
+    repository: hashicorp/vault
+    tag: "1.21"
+  vaultInit:
+    # bitnami/kubectl: provides kubectl + sh, used by vault-init job to exec into vault pods
+    repository: bitnami/kubectl
+    tag: "latest"
+
+replicaCount:
+  controller: 3
+  nodeWorker: 18
+  fifoWorker: 12
+  vault: 3
+
+resources:
+  controller:
+    requests:
+      cpu: "2000m"
+      memory: "2Gi"
+    limits:
+      cpu: "4000m"
+      memory: "8Gi"
+  nodeWorker:
+    requests:
+      cpu: "500m"
+      memory: "2Gi"
+    limits:
+      cpu: "2000m"
+      memory: "16Gi"
+  fifoWorker:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2000m"
+      memory: "4Gi"
+
+persistence:
+  size: 100Gi
+  storageClassName: "longhorn"  # Must support ReadWriteMany; use longhorn or equivalent
+
+config:
+  logLevel: "INFO"
+  pinnedPerNode: "128"
+  storage:
+    retentionHours: "24"
+  redis:
+    host: "netpulse-redis-master"
+    port: "6379"
+    tls: "false"
+  vault:
+    addr: "http://vault:8200"
+    allowedPaths: "kv/netpulse"
+    cacheTtl: "60"
+    name: "vault_kv"      # Credential provider name, must match k8s config
+    verify: "false"       # TLS verification disabled (plain HTTP vault)
+
+secrets:
+  # IMPORTANT: Override these with real values at deploy time.
+  # Never commit real credentials to version control.
+  # Use: helm install netpulse ./deploy/charts/netpulse \
+  #        --set secrets.redisPassword=<real-pw> \
+  #        --set secrets.apiKey=<real-key> \
+  #        --set secrets.vaultToken=<real-token>
+  redisPassword: "redis-password-placeholder"
+  apiKey: "api-key-placeholder"
+  vaultToken: "vault-token-placeholder"
+ingress:
+  enabled: true
+  host: netpulse.example.com
+  annotations:
+    kubernetes.io/ingress.class: nginx

@@ -1,0 +1,11 @@
+apiVersion: crd.projectcalico.org/v1
+kind: IPPool
+metadata:
+  name: new-ipv4-ippool-128
+spec:
+  cidr: 172.18.0.0/16
+  blockSize: 25
+  ipipMode: Never
+  vxlanMode: Always
+  natOutgoing: true
+  nodeSelector: all()

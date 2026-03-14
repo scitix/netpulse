@@ -1,0 +1,41 @@
+# 04-nodeport/nodeport.yaml (Converted to L4 LoadBalancer)
+apiVersion: v1
+kind: Service
+metadata:
+  name: netpulse-lb
+  namespace: netpulse
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: 10.155.30.40
+    metallb.universe.tf/allow-shared-ip: "netpulse-services"
+  labels:
+    app: netpulse
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 9000
+    targetPort: 9000
+    protocol: TCP
+    name: http
+  selector:
+    app: netpulse
+    component: controller
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault-lb
+  namespace: netpulse
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: 10.155.30.40
+    metallb.universe.tf/allow-shared-ip: "netpulse-services"
+  labels:
+    app: vault
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8200
+    targetPort: 8200
+    protocol: TCP
+    name: http
+  selector:
+    app: vault

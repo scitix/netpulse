@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "netpulse.fullname" . }}-controller
+  labels:
+    {{- include "netpulse.labels" . | nindent 4 }}
+    component: controller
+spec:
+  replicas: {{ .Values.replicaCount.controller }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      {{- include "netpulse.selectorLabels" . | nindent 6 }}
+      component: controller
+  template:
+    metadata:
+      labels:
+        {{- include "netpulse.selectorLabels" . | nindent 8 }}
+        component: controller
+    spec:
+      terminationGracePeriodSeconds: 60
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                {{- include "netpulse.selectorLabels" . | nindent 16 }}
+                component: controller
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - name: controller
+        image: "{{ .Values.images.controller.repository }}:{{ .Values.images.controller.tag }}"
+        imagePullPolicy: {{ .Values.images.controller.pullPolicy }}
+        resources:
+          {{- toYaml .Values.resources.controller | nindent 10 }}
+        readinessProbe:
+          exec:
+            command:
+            - python3
+            - -c
+            - "import urllib.request, os; req = urllib.request.Request('http://localhost:9000/health', headers={'X-API-KEY': os.environ['NETPULSE_SERVER__API_KEY']}); urllib.request.urlopen(req)"
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          exec:
+            command:
+            - python3
+            - -c
+            - "import urllib.request, os; req = urllib.request.Request('http://localhost:9000/health', headers={'X-API-KEY': os.environ['NETPULSE_SERVER__API_KEY']}); urllib.request.urlopen(req)"
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        envFrom:
+        - configMapRef:
+            name: {{ include "netpulse.fullname" . }}-config
+        env:
+        - name: NETPULSE_SERVER__API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "netpulse.fullname" . }}-secrets
+              key: api-key
+        - name: NETPULSE_REDIS__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "netpulse.fullname" . }}-secrets
+              key: password
+        - name: NETPULSE_REDIS__SENTINEL__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "netpulse.fullname" . }}-secrets
+              key: password
+        - name: NETPULSE_VAULT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "netpulse.fullname" . }}-secrets
+              key: vault-token
+        ports:
+        - containerPort: 9000
+        volumeMounts:
+        - name: netpulse-storage
+          mountPath: /app/storage
+      volumes:
+      - name: netpulse-storage
+        persistentVolumeClaim:
+          claimName: {{ include "netpulse.fullname" . }}-storage
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "netpulse.fullname" . }}
+spec:
+  selector:
+    {{- include "netpulse.selectorLabels" . | nindent 4 }}
+    component: controller
+  ports:
+  - port: 9000
+    targetPort: 9000
+  type: ClusterIP

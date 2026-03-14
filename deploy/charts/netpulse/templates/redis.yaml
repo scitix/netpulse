@@ -1,0 +1,27 @@
+apiVersion: redis.redis.opstreelabs.in/v1beta2
+kind: RedisReplication
+metadata:
+  name: {{ include "netpulse.fullname" . }}-redis
+spec:
+  clusterSize: 3
+  kubernetesConfig:
+    image: quay.io/opstree/redis:v7.0.12
+    redisSecret:
+      name: {{ include "netpulse.fullname" . }}-secrets
+      key: password
+  storage:
+    volumeClaimTemplate:
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "netpulse.fullname" . }}-redis-extra
+data:
+  redis.conf: |-
+    appendonly yes
+    appendfsync everysec

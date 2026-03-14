@@ -1,7 +1,8 @@
 from unittest.mock import MagicMock
 
+from netpulse.models.driver import DriverExecutionResult
 from netpulse.plugins.drivers.paramiko import ParamikoDriver
-from netpulse.plugins.drivers.paramiko.model import ParamikoConnectionArgs
+from netpulse.plugins.drivers.paramiko.model import ParamikoConnectionArgs, ParamikoSendCommandArgs
 
 
 def create_mock_driver():
@@ -164,3 +165,38 @@ def test_paramiko_kill_task():
 
     assert any("kill -15 8888" in cmd and "kill -9 8888" in cmd for cmd in calls)
     assert any(f"rm -f {detached_dir}/np_t4.log" in cmd for cmd in calls)
+
+
+def test_paramiko_launch_detached_no_command_returns_list():
+    """launch_detached with empty command must return list[DriverExecutionResult], not a dict."""
+    driver = create_mock_driver()
+    mock_session = MagicMock()
+
+    def _ok_exec(cmd, **kwargs):
+        ro, re = MagicMock(), MagicMock()
+        ro.read.return_value = b""
+        ro.channel.recv_exit_status.return_value = 0
+        re.read.return_value = b""
+        return MagicMock(), ro, re
+
+    mock_session.exec_command.side_effect = _ok_exec
+
+    result = driver.launch_detached(mock_session, "", "task-no-cmd")
+
+    assert isinstance(result, list), "launch_detached must always return a list"
+    assert len(result) == 1
+    assert isinstance(result[0], DriverExecutionResult)
+    assert result[0].exit_status == 1
+    assert "No command" in result[0].stderr
+
+
+def test_paramiko_execute_script_content_empty_returns_list():
+    """_execute_script_content with no script_content must return [], not {}."""
+    driver = create_mock_driver()
+    mock_session = MagicMock()
+
+    args = ParamikoSendCommandArgs(script_content=None)
+    result = driver._execute_script_content(mock_session, args)
+
+    assert isinstance(result, list), "_execute_script_content must always return a list"
+    assert result == []

@@ -74,8 +74,9 @@ def test_template_source_http(monkeypatch: pytest.MonkeyPatch):
         def raise_for_status(self) -> None:
             calls["raised"] = True
 
-    def fake_get(url: str) -> "DummyResponse":
+    def fake_get(url: str, **kwargs) -> "DummyResponse":
         calls["url"] = url
+        calls["timeout"] = kwargs.get("timeout")
         return DummyResponse(text="from http")
 
     monkeypatch.setattr("netpulse.plugins.templates.requests.get", fake_get)
@@ -83,6 +84,7 @@ def test_template_source_http(monkeypatch: pytest.MonkeyPatch):
     src = TemplateSource("http://example.com/template")
     assert src.load() == "from http"
     assert calls["url"] == "http://example.com/template"
+    assert calls["timeout"] == 30
     assert calls["raised"] is True
 
 

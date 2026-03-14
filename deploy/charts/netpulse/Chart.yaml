@@ -1,0 +1,11 @@
+apiVersion: v2
+name: netpulse
+description: A production-ready Helm chart for NetPulse HA deployment
+type: application
+version: 0.1.0
+appVersion: "0.4.1"
+dependencies:
+  - name: redis-operator
+    version: "0.24.0"
+    repository: "https://ot-container-kit.github.io/helm-charts/"
+    condition: redis-operator.enabled

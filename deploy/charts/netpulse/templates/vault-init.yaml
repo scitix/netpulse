@@ -1,0 +1,94 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "netpulse.fullname" . }}-vault-init
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  template:
+    spec:
+      serviceAccountName: {{ include "netpulse.fullname" . }}-vault-init
+      containers:
+      - name: vault-init
+        image: "{{ .Values.images.vaultInit.repository }}:{{ .Values.images.vaultInit.tag }}"
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          NODES="0 1 2"
+          NAMESPACE="{{ .Release.Namespace }}"
+          SECRET_NAME="vault-unseal-key"
+          NETPULSE_SECRET="{{ include "netpulse.fullname" . }}-secrets"
+          echo "==> Waiting for vault-0..."
+          while true; do
+            STATUS=$(kubectl exec vault-0 -n $NAMESPACE -- vault status 2>/dev/null || true)
+            echo "$STATUS" | grep -q "Initialized" && break
+            sleep 3
+          done
+          INIT_STATUS=$(kubectl exec vault-0 -n $NAMESPACE -- vault status 2>/dev/null || true)
+          if echo "$INIT_STATUS" | grep -q "Initialized.*true"; then
+            UNSEAL_KEY=$(kubectl get secret $SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.unseal-key}' 2>/dev/null | base64 -d)
+            ROOT_TOKEN=$(kubectl get secret $SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.root-token}' 2>/dev/null | base64 -d)
+            if [ -z "$UNSEAL_KEY" ]; then
+              echo "ERROR: Secret '$SECRET_NAME' not found. Cannot unseal. Manual intervention required."
+              exit 1
+            fi
+          else
+            INIT_OUT=$(kubectl exec vault-0 -n $NAMESPACE -- vault operator init -key-shares=1 -key-threshold=1)
+            UNSEAL_KEY=$(echo "$INIT_OUT" | grep "Unseal Key 1:" | awk '{print $NF}')
+            ROOT_TOKEN=$(echo "$INIT_OUT" | grep "Initial Root Token:" | awk '{print $NF}')
+            kubectl create secret generic $SECRET_NAME --namespace=$NAMESPACE --from-literal=unseal-key="$UNSEAL_KEY" --from-literal=root-token="$ROOT_TOKEN" --save-config --dry-run=client -o yaml | kubectl apply -f -
+          fi
+          for i in $NODES; do
+            while true; do
+              NODE_STATUS=$(kubectl exec vault-$i -n $NAMESPACE -- vault status 2>/dev/null || true)
+              echo "$NODE_STATUS" | grep -q "Initialized\|Sealed" && break
+              sleep 3
+            done
+            if kubectl exec vault-$i -n $NAMESPACE -- vault status 2>/dev/null | grep -q "Sealed.*true"; then
+              kubectl exec vault-$i -n $NAMESPACE -- vault operator unseal "$UNSEAL_KEY"
+            fi
+          done
+          kubectl exec vault-0 -n $NAMESPACE -- sh -c "VAULT_TOKEN=$ROOT_TOKEN vault secrets enable -path=kv kv-v2" 2>/dev/null || true
+          APP_TOKEN=$(kubectl get secret $NETPULSE_SECRET -n $NAMESPACE -o jsonpath='{.data.vault-token}' | base64 -d)
+          if [ -z "$APP_TOKEN" ]; then
+            echo "ERROR: Could not find 'vault-token' in Secret '$NETPULSE_SECRET'."
+            exit 1
+          fi
+          kubectl exec vault-0 -n $NAMESPACE -- sh -c "VAULT_TOKEN=$ROOT_TOKEN vault token create -id=$APP_TOKEN -policy=root -orphan" 2>/dev/null || true
+      restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "netpulse.fullname" . }}-vault-init
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "netpulse.fullname" . }}-vault-init
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "netpulse.fullname" . }}-vault-init
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "netpulse.fullname" . }}-vault-init
+subjects:
+- kind: ServiceAccount
+  name: {{ include "netpulse.fullname" . }}-vault-init

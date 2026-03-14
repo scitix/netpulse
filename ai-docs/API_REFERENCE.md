@@ -203,9 +203,29 @@ Provides real-time visibility into active workers (pinned vs fifo), job success 
 ```json
 {
   "status": "online",
-  "workers": { "total": 5, "pinned": 4, "fifo": 1, "idle": 3, "busy": 2 },
-  "self_healing": { "total_triggers": 12 },
-  "uptime_seconds": 3600
+  "workers": {
+    "total": 12,
+    "pinned": 10,
+    "fifo": 2,
+    "node": 0,
+    "idle": 8,
+    "busy": 4
+  },
+  "jobs": {
+    "total": 1500,
+    "succeeded": 1495,
+    "failed": 5,
+    "in_progress": 0,
+    "queued": 0
+  },
+  "nodes": {
+    "active": 3,
+    "total_capacity": 96
+  },
+  "self_healing": {
+    "total_triggers": 2
+  },
+  "uptime_seconds": 86400
 }
 ```
 

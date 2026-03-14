@@ -231,11 +231,12 @@ def test_rpc_disconnect_called_on_exception(monkeypatch, app_config):
     assert disconnect_calls, "disconnect should be invoked on exception"
 
 
-def _req_with_webhook() -> ExecutionRequest:
+def _req_with_webhook(detach: bool = False) -> ExecutionRequest:
     return ExecutionRequest(
-        driver=DriverName.NETMIKO,
+        driver=DriverName.NETMIKO if not detach else DriverName.PARAMIKO,
         connection_args=DriverConnectionArgs(host="10.0.0.1"),
-        command="show version",
+        command="show version" if not detach else "sleep 60",
+        detach=detach,
         webhook=WebHook(name="basic", url=HttpUrl("http://example.com/hook")),
     )
 
@@ -318,8 +319,8 @@ def test_rpc_webhook_callback_failure_uses_unknown_error(monkeypatch):
     assert results == ["Unknown Error"]
 
 
-def test_rpc_webhook_callback_raises_when_webhook_fails(monkeypatch):
-    """Webhook errors should bubble up instead of being swallowed."""
+def test_rpc_webhook_callback_swallows_webhook_errors(monkeypatch):
+    """Webhook errors should be logged but not block downstream processing (registry sync)."""
     req = _req_with_webhook()
 
     class DummyJob:
@@ -340,5 +341,231 @@ def test_rpc_webhook_callback_raises_when_webhook_fails(monkeypatch):
     monkeypatch.setattr(rpc, "webhooks", {"basic": FailingWebhook})
 
     job = DummyJob()
-    with pytest.raises(RuntimeError, match="webhook failed"):
-        rpc.rpc_webhook_callback(job, None, {"ok": True})
+    # Should NOT raise — webhook failure must be swallowed so registry sync still runs
+    rpc.rpc_webhook_callback(job, None, {"ok": True})
+
+
+def test_webhook_retry_scheduled_on_failure(monkeypatch):
+    """On webhook call failure, a retry job should be enqueued in the FIFO queue."""
+    import fakeredis
+    from datetime import timedelta
+    from unittest.mock import MagicMock, patch
+
+    from netpulse.services.rpc import dispatch_webhook, _dispatch_webhook_with_retry
+    from netpulse.models.common import WebHook
+    from pydantic import HttpUrl
+
+    hook = WebHook(url=HttpUrl("http://example.com/hook"), max_retries=3, retry_intervals=[5, 30, 120])
+    enqueued: list[dict] = []
+
+    class FailingCaller:
+        def __init__(self, h):
+            self.config = h
+
+        def call(self, req, job, result, **kwargs):
+            raise ConnectionError("target unreachable")
+
+        def build_payload(self, req, job, result, is_success):
+            return {"id": job.id, "status": "failed"}
+
+    class DummyJob:
+        def __init__(self):
+            self.id = "job-retry"
+            self.kwargs = {}
+            self.meta = {}
+            self.connection = fakeredis.FakeRedis()
+
+    class FakeQueue:
+        def __init__(self, name, connection):
+            pass
+
+        def enqueue_in(self, delay, func, kwargs=None):
+            enqueued.append({"delay": delay, "func": func, "kwargs": kwargs or {}})
+
+    class FakeReq:
+        webhook = hook
+        detach = False
+
+    wobj = FailingCaller(hook)
+    req = FakeReq()
+    job = DummyJob()
+
+    with patch("netpulse.services.rpc.Queue", FakeQueue):
+        _dispatch_webhook_with_retry(wobj, req, job, {"ok": True}, True, job)
+
+    assert len(enqueued) == 1
+    assert enqueued[0]["delay"] == timedelta(seconds=5)
+    assert enqueued[0]["func"] is dispatch_webhook
+    assert enqueued[0]["kwargs"]["attempt"] == 1
+
+
+def test_webhook_no_retry_when_max_retries_zero(monkeypatch):
+    """No retry should be scheduled when max_retries=0."""
+    from unittest.mock import patch
+
+    from netpulse.services.rpc import _dispatch_webhook_with_retry
+    from netpulse.models.common import WebHook
+    from pydantic import HttpUrl
+
+    hook = WebHook(url=HttpUrl("http://example.com/hook"), max_retries=0)
+    enqueued: list = []
+
+    class FailingCaller:
+        def __init__(self, h):
+            pass
+
+        def call(self, req, job, result, **kwargs):
+            raise ConnectionError("down")
+
+        def build_payload(self, req, job, result, is_success):
+            return {}
+
+    class DummyJob:
+        id = "j"
+        connection = None
+
+    class FakeReq:
+        webhook = hook
+        detach = False
+
+    class FakeQueue:
+        def __init__(self, *a, **kw):
+            pass
+
+        def enqueue_in(self, *a, **kw):
+            enqueued.append(1)
+
+    wobj = FailingCaller(hook)
+    with patch("netpulse.services.rpc.Queue", FakeQueue):
+        _dispatch_webhook_with_retry(wobj, FakeReq(), DummyJob(), {}, True, DummyJob())
+
+    assert len(enqueued) == 0
+
+
+def test_dispatch_webhook_retry_chain(monkeypatch):
+    """dispatch_webhook should re-enqueue with incremented attempt on HTTP failure."""
+    import fakeredis
+    from datetime import timedelta
+    from unittest.mock import patch, MagicMock
+
+    from netpulse.services.rpc import dispatch_webhook
+
+    enqueued: list[dict] = []
+
+    class FakeQueue:
+        def __init__(self, name, connection):
+            pass
+
+        def enqueue_in(self, delay, func, kwargs=None):
+            enqueued.append({"delay": delay, "attempt": (kwargs or {}).get("attempt")})
+
+    fake_job = MagicMock()
+    fake_job.connection = fakeredis.FakeRedis()
+
+    with patch("netpulse.services.rpc.requests.request", side_effect=ConnectionError("timeout")), \
+         patch("netpulse.services.rpc.get_current_job", return_value=fake_job), \
+         patch("netpulse.services.rpc.Queue", FakeQueue):  # noqa: E501
+        dispatch_webhook(
+            webhook_data={
+                "name": "basic",
+                "url": "http://example.com/hook",
+                "max_retries": 3,
+                "retry_intervals": [10, 30, 120],
+            },
+            payload={"id": "j1", "status": "success"},
+            attempt=0,
+        )
+
+    assert len(enqueued) == 1
+    assert enqueued[0]["delay"] == timedelta(seconds=10)
+    assert enqueued[0]["attempt"] == 1
+
+
+def test_dispatch_webhook_permanent_failure_no_retry(monkeypatch):
+    """dispatch_webhook should not enqueue after exhausting all retries."""
+    from unittest.mock import patch, MagicMock
+
+    from netpulse.services.rpc import dispatch_webhook
+
+    enqueued: list = []
+
+    class FakeQueue:
+        def __init__(self, *a, **kw):
+            pass
+
+        def enqueue_in(self, *a, **kw):
+            enqueued.append(1)
+
+    fake_job = MagicMock()
+
+    with patch("netpulse.services.rpc.requests.request", side_effect=ConnectionError("timeout")), \
+         patch("netpulse.services.rpc.get_current_job", return_value=fake_job), \
+         patch("netpulse.services.rpc.Queue", FakeQueue):  # noqa: E501
+        dispatch_webhook(
+            webhook_data={
+                "name": "basic",
+                "url": "http://example.com/hook",
+                "max_retries": 2,
+                "retry_intervals": [10, 30],
+            },
+            payload={"id": "j1"},
+            attempt=2,  # Already at max_retries — no more retries
+        )
+
+    assert len(enqueued) == 0
+
+
+def test_rpc_webhook_callback_registry_sync_after_webhook_failure(monkeypatch):
+    """Registry sync must execute even when webhook call raises."""
+    import fakeredis
+
+    req = _req_with_webhook(detach=True)
+
+    class DummyJob:
+        def __init__(self):
+            self.kwargs = {"req": req}
+            self.id = "job-detach"
+            self.meta = {"task_id": "task-abc"}
+
+    class FailingWebhook:
+        webhook_name = "basic"
+
+        def __init__(self, hook):
+            pass
+
+        def call(self, req, job, result, **kwargs):
+            raise RuntimeError("target down")
+
+    # Fake registry backed by fakeredis
+    fake_redis = fakeredis.FakeRedis()
+    from netpulse.services.rediz import DetachedTaskRegistry
+
+    registry = DetachedTaskRegistry.__new__(DetachedTaskRegistry)
+    registry.rdb = fake_redis
+    registry.register("task-abc", {"task_id": "task-abc", "last_offset": 0, "status": "running"})
+
+    monkeypatch.setattr(rpc, "webhooks", {"basic": FailingWebhook})
+    # The registry sync uses a local import inside rpc_webhook_callback, patch at the source
+    import netpulse.services.rediz as rediz_mod
+
+    monkeypatch.setattr(rediz_mod, "g_detached_task_registry", registry)
+
+    result = [
+        DriverExecutionResult(
+            command="query",
+            stdout="log output",
+            stderr="",
+            exit_status=0,
+            metadata={"task_id": "task-abc", "next_offset": 42, "completed": False},
+        )
+    ]
+
+    job = DummyJob()
+    # Must not raise even though webhook fails
+    rpc.rpc_webhook_callback(job, None, result)
+
+    # Registry must be updated despite webhook failure
+    meta = registry.get("task-abc")
+    assert meta is not None
+    assert meta["last_offset"] == 42
+    assert meta["status"] == "running"

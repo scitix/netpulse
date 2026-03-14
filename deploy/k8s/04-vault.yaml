@@ -1,0 +1,185 @@
+# 04-vault.yaml
+# Vault HA cluster (3 nodes, Raft consensus)
+# 设计说明：
+#   - vault-internal: Headless Service，提供 Pod 间 DNS 发现（vault-0.vault-internal...）
+#   - vault: ClusterIP Service，提供 NetPulse 组件的统一访问入口
+#   - Raft 存储模式：数据以 3 副本分布在不同物理节点，无需共享存储
+#   - 启动命令通过环境变量 MY_POD_NAME 注入节点 ID 和通信地址
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault
+  namespace: netpulse
+  labels:
+    app: vault
+spec:
+  ports:
+  - port: 8200
+    targetPort: 8200
+    name: http
+  selector:
+    app: vault
+---
+# Headless Service：为 StatefulSet 提供稳定 DNS（vault-0.vault-internal...）
+# publishNotReadyAddresses=true 确保所有节点在启动阶段都能互相发现
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault-internal
+  namespace: netpulse
+  labels:
+    app: vault
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+  - port: 8200
+    targetPort: 8200
+    name: http
+  - port: 8201
+    targetPort: 8201
+    name: cluster
+  selector:
+    app: vault
+---
+# 关键：vault.hcl 中使用 Vault 原生支持的环境变量插值语法
+# MY_POD_NAME 由 StatefulSet downwardAPI 注入（值如 vault-0 / vault-1 / vault-2）
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-config
+  namespace: netpulse
+data:
+  vault.hcl: |
+    ui            = true
+    disable_mlock = true
+
+    storage "raft" {
+      path    = "/vault/data"
+      node_id = "VAULT_NODE_ID_PLACEHOLDER"
+
+      retry_join {
+        leader_api_addr = "http://vault-0.vault-internal.netpulse.svc.cluster.local:8200"
+      }
+      retry_join {
+        leader_api_addr = "http://vault-1.vault-internal.netpulse.svc.cluster.local:8200"
+      }
+      retry_join {
+        leader_api_addr = "http://vault-2.vault-internal.netpulse.svc.cluster.local:8200"
+      }
+    }
+
+    listener "tcp" {
+      address         = "0.0.0.0:8200"
+      cluster_address = "0.0.0.0:8201"
+      tls_disable     = "true"
+    }
+
+    api_addr     = "http://VAULT_NODE_ID_PLACEHOLDER.vault-internal.netpulse.svc.cluster.local:8200"
+    cluster_addr = "http://VAULT_NODE_ID_PLACEHOLDER.vault-internal.netpulse.svc.cluster.local:8201"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vault
+  namespace: netpulse
+spec:
+  serviceName: vault-internal
+  replicas: 3
+  selector:
+    matchLabels:
+      app: vault
+  template:
+    metadata:
+      labels:
+        app: vault
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: vault
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - name: vault
+        image: hashicorp/vault:1.21
+        imagePullPolicy: IfNotPresent
+        # 用 sed 将占位符 VAULT_NODE_ID_PLACEHOLDER 替换成真实 Pod 名（如 vault-0）
+        # MY_POD_NAME 由 downwardAPI 注入，此处用单引号避免 Shell 提前展开
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "Starting vault node: $MY_POD_NAME"
+          sed "s/VAULT_NODE_ID_PLACEHOLDER/$MY_POD_NAME/g" \
+            /opt/vault/config/vault.hcl > /tmp/vault-resolved.hcl
+          echo "--- Resolved config ---"
+          cat /tmp/vault-resolved.hcl
+          echo "-----------------------"
+          exec vault server -config=/tmp/vault-resolved.hcl
+        env:
+        - name: MY_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: VAULT_ADDR
+          value: "http://127.0.0.1:8200"
+        - name: SKIP_CHOWN
+          value: "true"
+        - name: SKIP_SETCAP
+          value: "true"
+        ports:
+        - containerPort: 8200
+          name: http
+        - containerPort: 8201
+          name: cluster
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "50m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "vault status || [ $? -eq 2 ]"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "vault status || [ $? -eq 2 ]"
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+        securityContext:
+          runAsUser: 100
+          runAsGroup: 1000
+          capabilities:
+            add:
+            - IPC_LOCK
+        volumeMounts:
+        - name: vault-config
+          mountPath: /opt/vault/config
+        - name: netpulse-vault-raft-data
+          mountPath: /vault/data
+      volumes:
+      - name: vault-config
+        configMap:
+          name: vault-config
+  volumeClaimTemplates:
+  - metadata:
+      name: netpulse-vault-raft-data
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+      storageClassName: standard

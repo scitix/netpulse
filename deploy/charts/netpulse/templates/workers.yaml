@@ -1,0 +1,145 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "netpulse.fullname" . }}-node-worker
+  labels:
+    {{- include "netpulse.labels" . | nindent 4 }}
+    component: node-worker
+spec:
+  replicas: {{ .Values.replicaCount.nodeWorker }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      {{- include "netpulse.selectorLabels" . | nindent 6 }}
+      component: node-worker
+  template:
+    metadata:
+      labels:
+        {{- include "netpulse.selectorLabels" . | nindent 8 }}
+        component: node-worker
+    spec:
+      terminationGracePeriodSeconds: 120
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  {{- include "netpulse.selectorLabels" . | nindent 18 }}
+                  component: node-worker
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: node-worker
+        image: "{{ .Values.images.nodeWorker.repository }}:{{ .Values.images.nodeWorker.tag }}"
+        imagePullPolicy: {{ .Values.images.nodeWorker.pullPolicy }}
+        resources:
+          {{- toYaml .Values.resources.nodeWorker | nindent 10 }}
+        envFrom:
+        - configMapRef:
+            name: {{ include "netpulse.fullname" . }}-config
+        env:
+        - name: NETPULSE_SERVER__API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "netpulse.fullname" . }}-secrets
+              key: api-key
+        - name: NETPULSE_REDIS__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "netpulse.fullname" . }}-secrets
+              key: password
+        - name: NETPULSE_REDIS__SENTINEL__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "netpulse.fullname" . }}-secrets
+              key: password
+        - name: NETPULSE_VAULT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "netpulse.fullname" . }}-secrets
+              key: vault-token
+        volumeMounts:
+        - name: netpulse-storage
+          mountPath: /app/storage
+      volumes:
+      - name: netpulse-storage
+        persistentVolumeClaim:
+          claimName: {{ include "netpulse.fullname" . }}-storage
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "netpulse.fullname" . }}-fifo-worker
+  labels:
+    {{- include "netpulse.labels" . | nindent 4 }}
+    component: fifo-worker
+spec:
+  replicas: {{ .Values.replicaCount.fifoWorker }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      {{- include "netpulse.selectorLabels" . | nindent 6 }}
+      component: fifo-worker
+  template:
+    metadata:
+      labels:
+        {{- include "netpulse.selectorLabels" . | nindent 8 }}
+        component: fifo-worker
+    spec:
+      terminationGracePeriodSeconds: 60
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  {{- include "netpulse.selectorLabels" . | nindent 18 }}
+                  component: fifo-worker
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: fifo-worker
+        image: "{{ .Values.images.fifoWorker.repository }}:{{ .Values.images.fifoWorker.tag }}"
+        imagePullPolicy: {{ .Values.images.fifoWorker.pullPolicy }}
+        resources:
+          {{- toYaml .Values.resources.fifoWorker | nindent 10 }}
+        envFrom:
+        - configMapRef:
+            name: {{ include "netpulse.fullname" . }}-config
+        env:
+        - name: NETPULSE_SERVER__API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "netpulse.fullname" . }}-secrets
+              key: api-key
+        - name: NETPULSE_REDIS__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "netpulse.fullname" . }}-secrets
+              key: password
+        - name: NETPULSE_REDIS__SENTINEL__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "netpulse.fullname" . }}-secrets
+              key: password
+        - name: NETPULSE_VAULT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "netpulse.fullname" . }}-secrets
+              key: vault-token
+        volumeMounts:
+        - name: netpulse-storage
+          mountPath: /app/storage
+      volumes:
+      - name: netpulse-storage
+        persistentVolumeClaim:
+          claimName: {{ include "netpulse.fullname" . }}-storage

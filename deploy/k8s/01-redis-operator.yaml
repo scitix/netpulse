@@ -1,0 +1,67 @@
+# k8s/01-redis-operator.yaml
+# Netpulse Redis —— OT-Container-Kit Redis Operator（主从复制模式）
+# API: redis.redis.opstreelabs.in/v1beta2
+#
+# 关键说明:
+#   - 纯主从复制 (1 Master + 2 Replica)，不启用 Sentinel
+#   - AOF 持久化由 Operator 通过 PERSISTENCE_ENABLED=true 自动控制，无需手动配置
+#   - 密码从 netpulse-secrets 动态读取，不硬编码
+#   - 软亲和性反调度，节点不足时仍可调度（通用性优先）
+#   - additionalRedisConfig 字段在 v1beta2 中不生效（redis-server 无配置文件模式启动），已移除
+
+apiVersion: redis.redis.opstreelabs.in/v1beta2
+kind: RedisReplication
+metadata:
+  name: netpulse-redis
+  namespace: netpulse
+  labels:
+    app: netpulse
+    component: redis
+spec:
+  # 副本数: 1 Master + 2 Replica
+  clusterSize: 3
+
+  # 软亲和性: 尽量把 3 个 Pod 分布在不同节点
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app: netpulse-redis
+          topologyKey: kubernetes.io/hostname
+
+  kubernetesConfig:
+    image: redis:7-bookworm
+    imagePullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: "200m"
+        memory: "256Mi"
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+    # 从 netpulse-secrets 动态读取密码
+    redisSecret:
+      name: netpulse-secrets
+      key: password
+    service:
+      serviceType: ClusterIP
+
+  # 持久化存储 (PVC)
+  storage:
+    keepAfterDelete: true
+    volumeClaimTemplate:
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 5Gi
+
+  # 额外 Redis 配置: 引用 ConfigMap 名称
+  # ConfigMap: netpulse-redis-extra (key=redis.conf)
+  # 内容会被挂载到 /etc/redis/external.conf.d/redis.conf
+  redisConfig:
+    additionalRedisConfig: netpulse-redis-extra

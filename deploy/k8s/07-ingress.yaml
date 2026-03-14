@@ -1,0 +1,36 @@
+# 03-ingress/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: netpulse-ingress
+  namespace: netpulse
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"           # "0" 表示禁用上传大小限制（支持 10G+）
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"     # 1 小时超时，适应大文件及长任务
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "on"  # 开启请求缓冲，对超大文件传输更稳定
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: netpulse-api.siflow.cn
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: netpulse
+            port:
+              number: 9000
+  - host: vault.siflow.cn
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: vault
+            port:
+              number: 8200

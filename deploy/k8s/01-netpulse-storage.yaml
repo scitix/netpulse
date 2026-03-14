@@ -1,0 +1,14 @@
+# 06-netpulse-storage.yaml
+# PVC for NetPulse Storage Gateway (Firmware, Scripts, Templates)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: netpulse-storage
+  namespace: netpulse
+spec:
+  accessModes:
+    - ReadWriteMany                   # 使用 Longhorn 支持跨多节点读写 (RWX)
+  resources:
+    requests:
+      storage: 100Gi                  # 满足 10G+ 文件传输和历史记录
+  storageClassName: longhorn          # 仅将此 100G 卷迁移至 Longhorn

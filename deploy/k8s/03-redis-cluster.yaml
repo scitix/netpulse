@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: netpulse-redis-extra
+  namespace: netpulse
+data:
+  redis.conf: |-
+    appendonly yes
+    appendfsync everysec
+    requirepass Rh4eNgEU57fugCl1WPmL2BWRR
