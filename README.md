@@ -5,51 +5,54 @@
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 [![Agent-Ready](https://img.shields.io/badge/Agent--Ready-informational.svg)](ai-docs/llms.txt)
 
-NetPulse is a high-performance, distributed **Connectivity Gateway** designed for large-scale infrastructure interaction. It provides a standardized API-first approach to manage **Network Switches**, **Firewalls**, and **Linux Servers**, specialized for the rigorous demands of **Large-Scale AI Infrastructure** management.
+**NetPulse** is a high-performance **Infrastructure Connectivity API** that bridges the gap between legacy human-oriented SSH/CLI and modern machine-oriented programmable environments. 
 
-Rather than a complex orchestration engine, NetPulse focuses on being the most reliable "Connectivity Layer"—delivering rock-solid interaction even in massive-scale environments like GPU clusters and high-performance RDMA networks.
+It is designed to transform traditional network switches and Linux servers into **AI-programmable assets**, providing the essential connectivity layer for managing massive-scale infrastructure like **AI GPU Clusters** and **RDMA Networks**.
 
-## 🛠 Core Engineering Strengths
+## 🎯 Positioning: The SSH-to-API Bridge
 
-*   **Multi-Vendor Network Interaction**: Standardized CLI/API control for Cisco, Huawei, Arista, Juniper, and more, leveraging battle-tested drivers (Netmiko, NAPALM, PyEAPI).
-*   **High-Resiliency Connectivity**: Beyond traditional SSH, NetPulse implements deep self-healing probes and persistent session pooling ("Pinned Workers") to ensure zero-drop interaction.
-*   **Linux Infrastructure Management**: Native Paramiko integration for server-side operations, supporting sudo handling, SFTP, and persistent detached background tasks.
-*   **AI Infrastructure Optimized**: Engineered to manage the backbone of AI clusters, where managing thousands of RDMA network nodes and GPU servers requires extreme stability and performance.
-*   **Distributed Scalability**: A Controller-Worker architecture that scales horizontally across geo-locations, coordinated via a Redis-backed state machine.
-*   **Agent-Ready Context**: Optimized for AI integration, providing structured JSON outputs and specialized context docs for LLM-driven automation.
+Traditional infrastructure management relies heavily on manual SSH sessions and CLI strings. NetPulse abstracts these complexities into a standardized RESTful API, acting as the reliable "actuator" for:
+- **AI Agents**: Enabling LLMs to orchestrate physical hardware with high fidelity.
+- **Automation Frameworks**: Providing a stable, persistent connectivity foundation for NetOps and SysOps.
+- **Large-Scale Clusters**: Managing high-density AI infrastructure where connection stability is non-negotiable.
+
+## 🛠 Core Engineering Capabilities
+
+*   **SSH-to-API Abstraction**: Effortlessly converts complex CLI interactions from multi-vendor network devices (Cisco, Huawei, Arista, etc.) and Linux servers into clean, structured JSON data.
+*   **Infrastructure-as-an-API**: Unified interaction logic across disparate hardware platforms, eliminating vendor-specific SSH management overhead.
+*   **High-Resiliency Persistent Sessions**: Implements "Pinned Workers" to reuse connections across requests, ensuring zero-drop interaction and ultra-low latency.
+*   **Linux Infrastructure Mastery**: Deep integration for server-side operations, including sudo handling, SFTP file management, and persistent detached background tasks.
+*   **Self-Healing Resilience**: Built-in automated probes and health checks to maintain session integrity and recover connectivity without human intervention.
+*   **AI-Native Context**: Optimized for LLM integration with specialized context documentation (`ai-docs/`) and standardized result modeling.
 
 ## 🏗 System Architecture
 
-NetPulse is designed as a lightweight interaction layer. It offloads command execution to a distributed fleet of Workers, ensuring the central API remains responsive while maintaining thousands of concurrent sessions.
-
-- **Pinned Sessions**: Reuses existing connections to eliminate SSH handshake overhead.
-- **Failover Logic**: Automatically detects and restores stalled sessions without interrupting higher-level logic.
+NetPulse utilizes a distributed **Controller-Worker** model. The Controller provides the standardized API entry point, while a scalable fleet of Workers maintains thousands of persistent sessions, managed and coordinated via a Redis-backed state machine.
 
 ## 📥 Quick Start
 
 ### One-Click Deployment
 
-NetPulse is designed to be deployed quickly in Docker environments:
+NetPulse provides a streamlined deployment experience for Docker environments:
 
 ```bash
 # Clone the repository
 git clone https://github.com/scitix/netpulse.git
 cd netpulse
 
-# One-click deployment using the provided script
+# Launch the automated deployment script
 bash ./scripts/docker_auto_deploy.sh
 ```
 
-### Essential Manual Setup
-If you prefer manual configuration:
-1. Generate env: `bash ./scripts/setup_env.sh generate`
+### Manual Configuration
+1. Generate environment config: `bash ./scripts/setup_env.sh generate`
 2. Update `.env` with your `NETPULSE_REDIS__PASSWORD` and `NETPULSE_SERVER__API_KEY`.
-3. Start: `docker compose up -d`
+3. Start the stack: `docker compose up -d`
 
 ## 🔌 API Interaction Examples
 
-### A. Network Switch Management (Netmiko)
-Execute commands on a switch and retrieve structured data:
+### A. Network Switch Interface (SSH-to-API)
+Connect to a network switch and retrieve structured status data:
 
 ```bash
 curl -X POST http://localhost:9000/device/exec \
@@ -67,8 +70,8 @@ curl -X POST http://localhost:9000/device/exec \
   }'
 ```
 
-### B. Linux Server Management (Paramiko)
-Execute background maintenance tasks with detached tracking:
+### B. Linux Infrastructure Task (Background)
+Execute long-running maintenance with asynchronous log tracking:
 
 ```bash
 curl -X POST http://localhost:9000/device/exec \
