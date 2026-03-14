@@ -12,8 +12,8 @@ router = APIRouter(prefix="/template", tags=["template"])
 
 
 # Render
-@router.post("/render")
-@router.post("/render/{name}")
+@router.post("/render", response_model=str)
+@router.post("/render/{name}", response_model=str)
 def render_template(req: TemplateRenderRequest, name: Optional[str] = None):
     if name:
         req.name = name
@@ -33,8 +33,8 @@ def render_template(req: TemplateRenderRequest, name: Optional[str] = None):
 
 
 # Parse
-@router.post("/parse")
-@router.post("/parse/{name}")
+@router.post("/parse", response_model=dict)
+@router.post("/parse/{name}", response_model=dict)
 def parse_template(req: TemplateParseRequest, name: Optional[str] = None):
     if name:
         req.name = name

@@ -65,62 +65,72 @@ class Manager:
         self.rdb = g_rdb.conn
         self.start_time = datetime.now(timezone.utc)
 
+        # Snapshot the global self-healing counter at startup so we can report
+        # the delta (triggers since this controller process started).
+        try:
+            val = self.rdb.get("netpulse:stats:self_healing_triggers")
+            self._self_healing_baseline: int = int(val) if val else 0
+        except Exception:
+            self._self_healing_baseline = 0
+
     def get_system_stats(self):
         """
         Aggregate connectivity and job execution stats from Redis.
         """
         workers = Worker.all(connection=self.rdb)
-        
+
         stat_workers = {
             "total": len(workers),
             "pinned": 0,
             "fifo": 0,
             "node": 0,
             "idle": 0,
-            "busy": 0
+            "busy": 0,
         }
-        
+
+        # Collect unique queue names seen across workers while classifying them.
+        # Also seeds the FIFO queue so job stats always include it even if no
+        # FIFO worker is currently registered.
+        fifo_q_name = g_config.get_fifo_queue_name()
+        q_names: set[str] = {fifo_q_name}
+
         for w in workers:
             state = w.get_state()
             if state == "busy":
                 stat_workers["busy"] += 1
             else:
                 stat_workers["idle"] += 1
-                
-            q_names = w.queue_names()
-            if any(q.startswith("HostQ_") for q in q_names):
+
+            wq_names = w.queue_names()
+            q_names.update(wq_names)
+
+            if any(q.startswith("HostQ_") for q in wq_names):
                 stat_workers["pinned"] += 1
-            elif any(q.startswith("NodeQ_") for q in q_names):
+            elif any(q.startswith("NodeQ_") for q in wq_names):
                 stat_workers["node"] += 1
-            elif "FifoQ" in q_names:
+            elif fifo_q_name in wq_names:
                 stat_workers["fifo"] += 1
 
-        # Job stats from registries across common queues
-        # Note: These are limited by result_ttl
-        fifo_q = Queue(g_config.get_fifo_queue_name(), connection=self.rdb)
-        
-        # We can't easily iterate ALL HostQ registries efficiently if there are 10,000.
-        # But FinishedJobRegistry is per queue.
-        # For a high-level view, we might just look at the FIFO queue or global counters if we had them.
-        # Since we don't have global counters yet, we'll sum up what we can find from active workers' queues.
-        q_names = set(["FifoQ"])
-        for w in workers:
-            q_names.update(w.queue_names())
-            
-        jobs_stats = {"succeeded": 0, "failed": 0, "started": 0, "queued": 0}
+        # Sum job counts across all known queues.
+        # Counts are bounded by result_ttl so represent "recent" activity.
+        jobs_stats = {"succeeded": 0, "failed": 0, "in_progress": 0, "queued": 0}
         for qn in q_names:
             q = Queue(qn, connection=self.rdb)
             jobs_stats["succeeded"] += FinishedJobRegistry(queue=q).count
             jobs_stats["failed"] += FailedJobRegistry(queue=q).count
-            jobs_stats["started"] += StartedJobRegistry(queue=q).count
+            jobs_stats["in_progress"] += StartedJobRegistry(queue=q).count
             jobs_stats["queued"] += q.count
+        jobs_stats["total"] = sum(jobs_stats.values())
 
         nodes = self.get_all_nodes()
-        
-        # Self-healing triggers
+
+        # Self-healing triggers since this controller process started.
+        # The Redis counter is incremented by Paramiko workers on auto-reconnect;
+        # we subtract the baseline captured at __init__ time.
         try:
             val = self.rdb.get("netpulse:stats:self_healing_triggers")
-            healed_count = int(val) if val else 0
+            total_triggers = int(val) if val else 0
+            healed_count = max(0, total_triggers - self._self_healing_baseline)
         except Exception:
             healed_count = 0
 
@@ -130,12 +140,12 @@ class Manager:
             "jobs": jobs_stats,
             "nodes": {
                 "active": len(nodes),
-                "total_capacity": sum(n.capacity for n in nodes if n.capacity)
+                "total_capacity": sum(n.capacity for n in nodes if n.capacity),
             },
             "self_healing": {
-                "total_triggers": healed_count
+                "total_triggers": healed_count,
             },
-            "uptime_seconds": int((datetime.now(timezone.utc) - self.start_time).total_seconds())
+            "uptime_seconds": int((datetime.now(timezone.utc) - self.start_time).total_seconds()),
         }
 
     def _check_worker_alive(self, q_name: str) -> bool:

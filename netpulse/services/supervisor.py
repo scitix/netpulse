@@ -13,7 +13,7 @@ class DetachedTaskSupervisor:
     incremental log pushes via Webhooks based on the push_interval.
     """
 
-    def __init__(self, interval: float = 5.0):
+    def __init__(self, interval: float = 1.0):
         self.interval = interval
         self.running = False
         self.staging_cleanup_interval = 3600  # Clean staging every hour

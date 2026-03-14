@@ -3,7 +3,11 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query
 
 from ..models.request import DetachedTaskDiscoveryRequest
-from ..models.response import DetachedTaskInResponse
+from ..models.response import (
+    DetachedTaskDiscoverResponse,
+    DetachedTaskInResponse,
+    DetachedTaskQueryResponse,
+)
 from ..services.manager import g_mgr
 from .device import _resolve_request_credentials
 
@@ -22,7 +26,7 @@ def list_detached_tasks(
     return list(tasks.values())
 
 
-@router.get("/detached-tasks/{task_id}")
+@router.get("/detached-tasks/{task_id}", response_model=DetachedTaskQueryResponse)
 def query_detached_task(
     task_id: str,
     offset: Optional[int] = Query(None, ge=0, description="Byte offset to read from log file"),
@@ -33,8 +37,10 @@ def query_detached_task(
     """
     try:
         return g_mgr.query_detached_task(task_id, offset)
-    except Exception as e:
+    except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.delete("/detached-tasks/{task_id}")
@@ -43,12 +49,12 @@ def kill_detached_task(task_id: str):
     Synchronously terminate a detached task and cleanup its resources.
     """
     success = g_mgr.kill_detached_task(task_id)
-    if not success:
-        raise HTTPException(status_code=500, detail=f"Failed to kill detached task {task_id}")
+    if success is None or success is False:
+        raise HTTPException(status_code=404, detail=f"Detached task {task_id} not found or already stopped")
     return {"status": "killed", "task_id": task_id}
 
 
-@router.post("/detached-tasks/discover")
+@router.post("/detached-tasks/discover", response_model=DetachedTaskDiscoverResponse)
 def discover_detached_tasks(req: DetachedTaskDiscoveryRequest):
     """
     Scan a device for active detached tasks and sync the registry.
