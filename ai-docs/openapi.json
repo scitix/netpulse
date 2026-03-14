@@ -1,0 +1,2993 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NetPulse Controller",
+    "description": "NetPulse Controller API",
+    "contact": {
+      "name": "NetPulse"
+    },
+    "version": "0.4.1"
+  },
+  "paths": {
+    "/device/exec": {
+      "post": {
+        "tags": [
+          "device"
+        ],
+        "summary": "Execute On Device",
+        "operationId": "execute_on_device_device_exec_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_execute_on_device_device_exec_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobInResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ]
+      }
+    },
+    "/device/bulk": {
+      "post": {
+        "tags": [
+          "device"
+        ],
+        "summary": "Execute On Bulk Devices",
+        "operationId": "execute_on_bulk_devices_device_bulk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkExecutionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchSubmitJobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ]
+      }
+    },
+    "/device/test": {
+      "post": {
+        "tags": [
+          "device"
+        ],
+        "summary": "Test Device Connection",
+        "operationId": "test_device_connection_device_test_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionTestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ]
+      }
+    },
+    "/template/render/{name}": {
+      "post": {
+        "tags": [
+          "template"
+        ],
+        "summary": "Render Template",
+        "operationId": "render_template_template_render__name__post",
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateRenderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/template/render": {
+      "post": {
+        "tags": [
+          "template"
+        ],
+        "summary": "Render Template",
+        "operationId": "render_template_template_render_post",
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateRenderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/template/parse/{name}": {
+      "post": {
+        "tags": [
+          "template"
+        ],
+        "summary": "Parse Template",
+        "operationId": "parse_template_template_parse__name__post",
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateParseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/template/parse": {
+      "post": {
+        "tags": [
+          "template"
+        ],
+        "summary": "Parse Template",
+        "operationId": "parse_template_template_parse_post",
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateParseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs": {
+      "get": {
+        "tags": [
+          "manage"
+        ],
+        "summary": "Get Jobs",
+        "operationId": "get_jobs_jobs_get",
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "queue",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by queue name",
+              "title": "Queue"
+            },
+            "description": "Filter by queue name"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by job status",
+              "title": "Status"
+            },
+            "description": "Filter by job status"
+          },
+          {
+            "name": "node",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by node name",
+              "title": "Node"
+            },
+            "description": "Filter by node name"
+          },
+          {
+            "name": "host",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by pinned host name",
+              "title": "Host"
+            },
+            "description": "Filter by pinned host name"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JobInResponse"
+                  },
+                  "title": "Response Get Jobs Jobs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "manage"
+        ],
+        "summary": "Delete Jobs",
+        "operationId": "delete_jobs_jobs_delete",
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "queue",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by queue name",
+              "title": "Queue"
+            },
+            "description": "Filter by queue name"
+          },
+          {
+            "name": "host",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by pinned host name",
+              "title": "Host"
+            },
+            "description": "Filter by pinned host name"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs/{id}": {
+      "get": {
+        "tags": [
+          "manage"
+        ],
+        "summary": "Get Job",
+        "operationId": "get_job_jobs__id__get",
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobInResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "manage"
+        ],
+        "summary": "Delete Job",
+        "description": "Cancel a queued job.",
+        "operationId": "delete_job_jobs__id__delete",
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workers": {
+      "get": {
+        "tags": [
+          "manage"
+        ],
+        "summary": "Get Workers",
+        "operationId": "get_workers_workers_get",
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "queue",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by queue name",
+              "title": "Queue"
+            },
+            "description": "Filter by queue name"
+          },
+          {
+            "name": "node",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by node name",
+              "title": "Node"
+            },
+            "description": "Filter by node name"
+          },
+          {
+            "name": "host",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by pinned host name",
+              "title": "Host"
+            },
+            "description": "Filter by pinned host name"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkerInResponse"
+                  },
+                  "title": "Response Get Workers Workers Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "manage"
+        ],
+        "summary": "Delete Workers",
+        "operationId": "delete_workers_workers_delete",
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "queue",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by queue name",
+              "title": "Queue"
+            },
+            "description": "Filter by queue name"
+          },
+          {
+            "name": "node",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by node name",
+              "title": "Node"
+            },
+            "description": "Filter by node name"
+          },
+          {
+            "name": "host",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by pinned host name",
+              "title": "Host"
+            },
+            "description": "Filter by pinned host name"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workers/{name}": {
+      "delete": {
+        "tags": [
+          "manage"
+        ],
+        "summary": "Delete Worker",
+        "operationId": "delete_worker_workers__name__delete",
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "manage"
+        ],
+        "summary": "Health Check",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ]
+      }
+    },
+    "/detached-tasks": {
+      "get": {
+        "tags": [
+          "detached-task"
+        ],
+        "summary": "List Detached Tasks",
+        "description": "List all registered detached tasks.",
+        "operationId": "list_detached_tasks_detached_tasks_get",
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status (running/completed/launching)",
+              "title": "Status"
+            },
+            "description": "Filter by status (running/completed/launching)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DetachedTaskInResponse"
+                  },
+                  "title": "Response List Detached Tasks Detached Tasks Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/detached-tasks/{task_id}": {
+      "get": {
+        "tags": [
+          "detached-task"
+        ],
+        "summary": "Query Detached Task",
+        "description": "Synchronously query a detached task's logs and status.\nReturns the latest output and task metadata.",
+        "operationId": "query_detached_task_detached_tasks__task_id__get",
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Byte offset to read from log file",
+              "title": "Offset"
+            },
+            "description": "Byte offset to read from log file"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "detached-task"
+        ],
+        "summary": "Kill Detached Task",
+        "description": "Synchronously terminate a detached task and cleanup its resources.",
+        "operationId": "kill_detached_task_detached_tasks__task_id__delete",
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/detached-tasks/discover": {
+      "post": {
+        "tags": [
+          "detached-task"
+        ],
+        "summary": "Discover Detached Tasks",
+        "description": "Scan a device for active detached tasks and sync the registry.",
+        "operationId": "discover_detached_tasks_detached_tasks_discover_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DetachedTaskDiscoveryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyQuery": []
+          },
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ]
+      }
+    },
+    "/storage/fetch/{file_id}": {
+      "get": {
+        "tags": [
+          "storage"
+        ],
+        "summary": "Fetch Staged File",
+        "description": "Fetch a staged download file by its ID (relative path in downloads directory).",
+        "operationId": "fetch_staged_file_storage_fetch__file_id__get",
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BatchFailedItem": {
+        "properties": {
+          "host": {
+            "type": "string",
+            "title": "Host"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "host",
+          "reason"
+        ],
+        "title": "BatchFailedItem",
+        "description": "Item representing a failed job submission in a batch."
+      },
+      "BatchSubmitJobResponse": {
+        "properties": {
+          "succeeded": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/JobInResponse"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Succeeded"
+          },
+          "failed": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/BatchFailedItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed"
+          }
+        },
+        "type": "object",
+        "title": "BatchSubmitJobResponse",
+        "example": {
+          "failed": [
+            {
+              "host": "192.168.1.1",
+              "reason": "Vault key not found"
+            }
+          ],
+          "succeeded": [
+            {
+              "id": "job_1",
+              "queue": "fifo",
+              "status": "queued"
+            }
+          ]
+        }
+      },
+      "Body_execute_on_device_device_exec_post": {
+        "properties": {
+          "file": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "binary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          },
+          "request_data": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Data"
+          }
+        },
+        "type": "object",
+        "title": "Body_execute_on_device_device_exec_post"
+      },
+      "BulkDeviceRequest": {
+        "properties": {
+          "device_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Type",
+            "description": "Device type"
+          },
+          "host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Host",
+            "description": "Device IP/hostname"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username",
+            "description": "Device username"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password",
+            "description": "Device password"
+          },
+          "command": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Command",
+            "description": "Device-specific command override (exclusive with config)"
+          },
+          "config": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config",
+            "description": "Device-specific config override (exclusive with command)"
+          },
+          "file_transfer": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Transfer",
+            "description": "Device-specific file transfer override"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "BulkDeviceRequest",
+        "description": "Extended device request for bulk operations.\nAllows per-device command/config override.",
+        "example": {
+          "command": [
+            "show ip int brief"
+          ],
+          "device_type": "cisco_ios",
+          "host": "192.168.1.1",
+          "password": "admin",
+          "username": "admin"
+        }
+      },
+      "BulkExecutionRequest": {
+        "properties": {
+          "driver": {
+            "$ref": "#/components/schemas/DriverName",
+            "description": "Device driver (netmiko, napalm, pyeapi)"
+          },
+          "driver_args": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DriverArgs"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Driver-specific parameters"
+          },
+          "connection_args": {
+            "$ref": "#/components/schemas/DriverConnectionArgs",
+            "description": "Device connection parameters"
+          },
+          "credential": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CredentialRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "External credential reference to populate connection_args"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config",
+            "description": "configuration to apply (exclusive with command field)"
+          },
+          "command": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Command",
+            "description": "Command to execute (exclusive with config field)"
+          },
+          "file_transfer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FileTransferModel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Standardized file transfer operation (top-level citizen)"
+          },
+          "rendering": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TemplateRenderRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Configuration template rendering settings"
+          },
+          "parsing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TemplateParseRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Output template parsing settings"
+          },
+          "queue_strategy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueueStrategy"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Queue strategy (fifo/pinned). Auto-selected by driver if not specified"
+          },
+          "ttl": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 86400.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ttl",
+            "description": "Job timeout in seconds",
+            "default": 600
+          },
+          "execution_timeout": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 86400.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Timeout",
+            "description": "Execution Timeout: Maximum execution time of the job in seconds"
+          },
+          "result_ttl": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 604800.0,
+                "minimum": 60.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Ttl",
+            "description": "Result retention time in seconds. If not set, uses system default. Useful for long-running tasks that need result retention (e.g., 48-hour stress tests)"
+          },
+          "webhook": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WebHook"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Webhook callback after Job completion"
+          },
+          "detach": {
+            "type": "boolean",
+            "title": "Detach",
+            "description": "Run command in background and return a Task ID immediately",
+            "default": false
+          },
+          "push_interval": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3600.0,
+                "minimum": 5.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Push Interval",
+            "description": "Interval (seconds) for incremental webhook log pushes. Requires detach=True"
+          },
+          "staged_file_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Staged File Id",
+            "description": "Internal reference to the staged file (Multipart mode)"
+          },
+          "devices": {
+            "items": {
+              "$ref": "#/components/schemas/BulkDeviceRequest"
+            },
+            "type": "array",
+            "title": "Devices",
+            "description": "Device list for batch operation. Each device can override connection_args and optionally override command/config from base request"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "driver",
+          "connection_args",
+          "devices"
+        ],
+        "title": "BulkExecutionRequest",
+        "example": {
+          "command": [
+            "show version"
+          ],
+          "devices": [
+            {
+              "device_type": "cisco_ios",
+              "host": "172.17.0.1",
+              "password": "pass",
+              "username": "admin"
+            },
+            {
+              "command": [
+                "show ip interface brief"
+              ],
+              "device_type": "cisco_xe",
+              "host": "172.17.0.2",
+              "password": "pass",
+              "username": "admin"
+            }
+          ],
+          "driver": "netmiko"
+        }
+      },
+      "ConnectionTestRequest": {
+        "properties": {
+          "driver": {
+            "$ref": "#/components/schemas/DriverName",
+            "description": "Device driver"
+          },
+          "connection_args": {
+            "$ref": "#/components/schemas/DriverConnectionArgs",
+            "description": "Device connection parameters"
+          },
+          "credential": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CredentialRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "External credential reference to populate connection_args"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "driver",
+          "connection_args"
+        ],
+        "title": "ConnectionTestRequest",
+        "description": "Request model for device connection testing",
+        "example": {
+          "connection_args": {
+            "device_type": "cisco_ios",
+            "host": "192.168.1.1",
+            "password": "admin",
+            "timeout": 30,
+            "username": "admin"
+          },
+          "driver": "netmiko"
+        }
+      },
+      "ConnectionTestResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "latency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency",
+            "description": "Time taken to establish the connection in seconds"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "Error message if the connection failed"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeviceTestInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Device information if the connection succeeded"
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp",
+            "description": "Timestamp of the test result is generated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "ConnectionTestResponse",
+        "description": "Response model for device connection testing",
+        "example": {
+          "latency": 0.045,
+          "result": {
+            "driver": "netmiko",
+            "host": "192.168.1.1",
+            "prompt": "router#"
+          },
+          "success": true,
+          "timestamp": "2024-02-23T10:05:00+08:00"
+        }
+      },
+      "CredentialRef": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Credential provider name"
+          },
+          "ref": {
+            "type": "string",
+            "title": "Ref",
+            "description": "Provider-specific reference (e.g., secret path or ID)"
+          },
+          "mount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mount",
+            "description": "Optional mount point or backend name"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version",
+            "description": "Optional version for versioned stores"
+          },
+          "field_mapping": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Mapping",
+            "description": "Mapping from provider fields to connection_args keys"
+          },
+          "namespace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Namespace",
+            "description": "Optional namespace or tenant scope"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "ref"
+        ],
+        "title": "CredentialRef",
+        "description": "Reference to a credential entry resolved by credential providers.",
+        "example": {
+          "field_mapping": {
+            "password": "pass",
+            "username": "user"
+          },
+          "mount": "kv",
+          "name": "vault_kv",
+          "ref": "netpulse/device-a"
+        }
+      },
+      "DetachedTaskDiscoveryRequest": {
+        "properties": {
+          "driver": {
+            "$ref": "#/components/schemas/DriverName",
+            "description": "Device driver"
+          },
+          "connection_args": {
+            "$ref": "#/components/schemas/DriverConnectionArgs",
+            "description": "Device connection parameters"
+          },
+          "credential": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CredentialRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "External credential reference to populate connection_args"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "driver",
+          "connection_args"
+        ],
+        "title": "DetachedTaskDiscoveryRequest",
+        "description": "Request model for detached task discovery on a device",
+        "example": {
+          "connection_args": {
+            "host": "192.168.1.1",
+            "password": "admin",
+            "username": "admin"
+          },
+          "driver": "paramiko"
+        }
+      },
+      "DetachedTaskInResponse": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "title": "Task Id"
+          },
+          "command": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Command"
+          },
+          "host": {
+            "type": "string",
+            "title": "Host"
+          },
+          "driver": {
+            "type": "string",
+            "title": "Driver"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "last_sync": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "push_interval": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Push Interval"
+          },
+          "last_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Offset"
+          },
+          "connection_args": {
+            "type": "object",
+            "title": "Connection Args"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "command",
+          "host",
+          "driver",
+          "status",
+          "connection_args"
+        ],
+        "title": "DetachedTaskInResponse",
+        "description": "Metadata for a detached task, with sensitive data masked.",
+        "example": {
+          "command": [
+            "stress --cpu 4 --timeout 60s"
+          ],
+          "connection_args": {
+            "host": "192.168.1.100",
+            "password": "******",
+            "username": "admin"
+          },
+          "driver": "paramiko",
+          "host": "192.168.1.100",
+          "last_sync": "2024-02-23T10:10:00+08:00",
+          "status": "running",
+          "task_id": "task_abc_789"
+        }
+      },
+      "DeviceTestInfo": {
+        "properties": {
+          "driver": {
+            "$ref": "#/components/schemas/DriverName",
+            "description": "Driver name used in the test"
+          },
+          "host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Host",
+            "description": "Device IP/hostname"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "driver"
+        ],
+        "title": "DeviceTestInfo",
+        "description": "Base model for device connection test results."
+      },
+      "DriverArgs": {
+        "properties": {},
+        "additionalProperties": true,
+        "type": "object",
+        "title": "DriverArgs",
+        "description": "This is a generic model for driver arguments.\nDepends on the driver's method, the arguments can be different."
+      },
+      "DriverConnectionArgs": {
+        "properties": {
+          "device_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Type",
+            "description": "Device type"
+          },
+          "host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Host",
+            "description": "Device IP/hostname"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username",
+            "description": "Device username"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password",
+            "description": "Device password"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "DriverConnectionArgs",
+        "description": "",
+        "example": {
+          "device_type": "cisco_ios",
+          "host": "172.17.0.1",
+          "password": "admin",
+          "username": "admin"
+        }
+      },
+      "DriverExecutionResult": {
+        "properties": {
+          "command": {
+            "type": "string",
+            "title": "Command",
+            "default": ""
+          },
+          "stdout": {
+            "title": "Stdout",
+            "default": ""
+          },
+          "stderr": {
+            "type": "string",
+            "title": "Stderr",
+            "default": ""
+          },
+          "exit_status": {
+            "type": "integer",
+            "title": "Exit Status",
+            "default": 0
+          },
+          "download_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Url"
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Metadata"
+          },
+          "parsed": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parsed"
+          }
+        },
+        "type": "object",
+        "title": "DriverExecutionResult",
+        "description": "Standardized result for a single command or config operation.",
+        "example": {
+          "command": "show version",
+          "exit_status": 0,
+          "metadata": {
+            "duration_seconds": 0.123,
+            "host": "172.17.0.1",
+            "session_reused": true
+          },
+          "parsed": {
+            "model": "vEOS",
+            "version": "4.25.4M"
+          },
+          "stderr": "",
+          "stdout": "Arista vEOS\nHardware version: 4.25.4M"
+        }
+      },
+      "DriverName": {
+        "type": "string",
+        "enum": [
+          "napalm",
+          "netmiko",
+          "paramiko",
+          "pyeapi"
+        ],
+        "title": "DriverName"
+      },
+      "FileTransferModel": {
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "download"
+            ],
+            "title": "Operation",
+            "description": "Transfer operation type: upload or download"
+          },
+          "remote_path": {
+            "type": "string",
+            "title": "Remote Path",
+            "description": "Remote file path"
+          },
+          "local_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Path",
+            "description": "Local file path. For download, use staged task folder if not provided."
+          },
+          "overwrite": {
+            "type": "boolean",
+            "title": "Overwrite",
+            "description": "Overwrite destination if exists",
+            "default": true
+          },
+          "resume": {
+            "type": "boolean",
+            "title": "Resume",
+            "description": "Whether to resume interrupted transfer",
+            "default": false
+          },
+          "recursive": {
+            "type": "boolean",
+            "title": "Recursive",
+            "description": "Whether to transfer directory recursively",
+            "default": false
+          },
+          "sync_mode": {
+            "type": "string",
+            "enum": [
+              "full",
+              "hash"
+            ],
+            "title": "Sync Mode",
+            "description": "Sync mode: full (always transfer) or hash (skip if MD5 matches)",
+            "default": "full"
+          },
+          "hash_algorithm": {
+            "type": "string",
+            "title": "Hash Algorithm",
+            "description": "Hash algorithm for verification",
+            "default": "md5"
+          },
+          "verify_file": {
+            "type": "boolean",
+            "title": "Verify File",
+            "description": "Verify file integrity after transfer",
+            "default": true
+          },
+          "chunk_size": {
+            "type": "integer",
+            "title": "Chunk Size",
+            "description": "Transfer chunk size (bytes), default 32KB",
+            "default": 32768
+          },
+          "chmod": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chmod",
+            "description": "Set permissions (e.g., '0755') after transfer"
+          },
+          "execute_after_upload": {
+            "type": "boolean",
+            "title": "Execute After Upload",
+            "description": "Whether to execute execute_command after upload",
+            "default": false
+          },
+          "execute_command": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execute Command",
+            "description": "Command to execute after transfer"
+          },
+          "cleanup_after_exec": {
+            "type": "boolean",
+            "title": "Cleanup After Exec",
+            "description": "Cleanup the file if execution succeeds",
+            "default": true
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "operation",
+          "remote_path"
+        ],
+        "title": "FileTransferModel",
+        "description": "Standardized model for file transfer operations.\nMoved to top-level citizen for better API consistency.",
+        "example": {
+          "execute_after_upload": true,
+          "execute_command": "ls -l /tmp/config.cfg",
+          "local_path": "staged://abc-123",
+          "operation": "upload",
+          "overwrite": true,
+          "remote_path": "/tmp/config.cfg"
+        }
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "JobInResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "enqueued_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enqueued At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "queue": {
+            "type": "string",
+            "title": "Queue"
+          },
+          "worker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worker"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Id"
+          },
+          "device_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Name"
+          },
+          "command": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Command"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration",
+            "description": "Task execution duration (seconds)",
+            "readOnly": true
+          },
+          "queue_time": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queue Time",
+            "description": "Queue waiting time (seconds)",
+            "readOnly": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "queue",
+          "duration",
+          "queue_time"
+        ],
+        "title": "JobInResponse",
+        "description": "Wrapping rq.Job object for response",
+        "example": {
+          "created_at": "2024-02-23T10:00:00+08:00",
+          "duration": 0.5,
+          "id": "job_123456",
+          "queue": "fifo",
+          "result": {
+            "retval": [
+              {
+                "command": "show version",
+                "exit_status": 0,
+                "metadata": {
+                  "duration_seconds": 0.123,
+                  "host": "172.17.0.1"
+                },
+                "stderr": "",
+                "stdout": "Arista vEOS\nHardware version: 4.25.4M"
+              }
+            ],
+            "type": 1
+          },
+          "status": "finished",
+          "worker": "worker@hostname"
+        }
+      },
+      "JobResult": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/ResultType"
+          },
+          "retval": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DriverExecutionResult"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retval"
+          },
+          "error": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "JobResult",
+        "description": "A customized version of `rq.job.Result`.",
+        "example": {
+          "error": {
+            "message": "Something went wrong",
+            "type": "ValueError"
+          },
+          "retval": [
+            {
+              "command": "show version",
+              "exit_status": 0,
+              "metadata": {
+                "duration_seconds": 0.123,
+                "host": "172.17.0.1",
+                "session_reused": true
+              },
+              "parsed": {
+                "model": "vEOS",
+                "version": "4.25.4M"
+              },
+              "stderr": "",
+              "stdout": "Arista vEOS\nHardware version: 4.25.4M"
+            }
+          ],
+          "type": 1
+        }
+      },
+      "QueueStrategy": {
+        "type": "string",
+        "enum": [
+          "fifo",
+          "pinned"
+        ],
+        "title": "QueueStrategy"
+      },
+      "ResultType": {
+        "type": "integer",
+        "enum": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "title": "ResultType"
+      },
+      "TemplateParseRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Parser name",
+            "description": "Parser name to use",
+            "default": ""
+          },
+          "template": {
+            "type": "string",
+            "title": "Template source",
+            "description": "Template source URI (default: plain text)"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context",
+            "description": "Context content to be parsed"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "template"
+        ],
+        "title": "TemplateParseRequest",
+        "description": "Base request model for template parsing",
+        "example": {
+          "context": "Cisco IOS Software, v15.2...",
+          "name": "textfsm",
+          "template": "cisco_ios_show_version.textfsm"
+        }
+      },
+      "TemplateRenderRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Renderer name",
+            "description": "Renderer name to use",
+            "default": "jinja2"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template source",
+            "description": "Template source URI (default: plain text)"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context",
+            "description": "Context data for rendering"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "TemplateRenderRequest",
+        "description": "Base request model for template rendering",
+        "example": {
+          "context": {
+            "desc": "Configured by Jinja",
+            "hostname": "router1",
+            "intf": "Gi0/1"
+          },
+          "name": "jinja2",
+          "template": "hostname {{ hostname }}\ninterface {{ intf }}"
+        }
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WebHook": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Name of the WebHookCaller",
+            "default": "basic"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url",
+            "description": "Webhook URL"
+          },
+          "method": {
+            "$ref": "#/components/schemas/WebHookMethod",
+            "description": "HTTP method for webhook",
+            "default": "POST"
+          },
+          "headers": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Headers",
+            "description": "Custom headers for the request"
+          },
+          "cookies": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cookies",
+            "description": "Cookies to send with the request"
+          },
+          "auth": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth",
+            "description": "(Username, Password) for Basic Auth"
+          },
+          "timeout": {
+            "type": "number",
+            "maximum": 120.0,
+            "minimum": 0.5,
+            "title": "Timeout",
+            "description": "Request timeout in seconds (default 5s)",
+            "default": 5.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "WebHook",
+        "example": {
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "method": "POST",
+          "name": "basic",
+          "timeout": 5.0,
+          "url": "http://localhost:5000/webhook"
+        }
+      },
+      "WebHookMethod": {
+        "type": "string",
+        "enum": [
+          "GET",
+          "POST",
+          "PUT",
+          "DELETE",
+          "PATCH"
+        ],
+        "title": "WebHookMethod"
+      },
+      "WorkerInResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "pid": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pid"
+          },
+          "hostname": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hostname"
+          },
+          "queues": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queues"
+          },
+          "last_heartbeat": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Heartbeat"
+          },
+          "birth_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth At"
+          },
+          "successful_job_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Successful Job Count"
+          },
+          "failed_job_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed Job Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "status"
+        ],
+        "title": "WorkerInResponse",
+        "description": "Wrapping rq.Worker object for response"
+      }
+    },
+    "securitySchemes": {
+      "APIKeyQuery": {
+        "type": "apiKey",
+        "in": "query",
+        "name": "X-API-KEY"
+      },
+      "APIKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-KEY"
+      },
+      "APIKeyCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "X-API-KEY"
+      }
+    }
+  }
+}
