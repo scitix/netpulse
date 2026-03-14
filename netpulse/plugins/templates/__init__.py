@@ -89,7 +89,7 @@ class TemplateSource:
                 return f.read()
 
         elif self.protocol == self.SourceType.HTTP:
-            response = requests.get(self.source)
+            response = requests.get(self.source, timeout=30)
             response.raise_for_status()
             return response.text
 

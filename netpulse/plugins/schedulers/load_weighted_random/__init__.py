@@ -47,6 +47,9 @@ class LoadWeightedRandomScheduler(BaseScheduler):
             if rand <= cumulative:
                 return available_nodes[i]
 
+        # Fallback for floating-point edge case where rand == total_weight
+        return available_nodes[-1]
+
     def batch_node_select(self, nodes: List[NodeInfo], hosts: List[str]) -> List[NodeInfo | None]:
         """
         Batch scheduling with controlled randomness to reduce node contention.
