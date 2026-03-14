@@ -15,28 +15,27 @@ from pydantic import (
 )
 
 from .common import BatchFailedItem, DeviceTestInfo, JobAdditionalData, JobResult
+from .driver import DriverExecutionResult
 
 
 def _serialize_datetime_with_tz(dt: Optional[datetime], _info=None) -> Optional[str]:
-    """Convert datetime to configured timezone and ISO format"""
-    DEFAULT_TZ = "Asia/Shanghai"
+    """Convert datetime to configured timezone and ISO format.
 
+    Timezone is resolved from the TZ environment variable; defaults to UTC.
+    """
     if dt is None:
         return None
 
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
 
-    # Fallback order: TZ -> Asia/Shanghai -> UTC
-    configured_tz: zoneinfo.ZoneInfo | timezone | None = None
-    try:
-        tz_name = os.getenv("TZ", DEFAULT_TZ)
-        configured_tz = zoneinfo.ZoneInfo(tz_name)
-    except Exception:
+    configured_tz: zoneinfo.ZoneInfo | timezone = timezone.utc
+    tz_name = os.getenv("TZ", "")
+    if tz_name:
         try:
-            configured_tz = zoneinfo.ZoneInfo(DEFAULT_TZ)
+            configured_tz = zoneinfo.ZoneInfo(tz_name)
         except Exception:
-            configured_tz = timezone.utc
+            pass  # Invalid TZ — silently fall back to UTC
 
     return dt.astimezone(configured_tz).isoformat()
 
@@ -305,6 +304,57 @@ class DetachedTaskInResponse(BaseModel):
                     "username": "admin",
                     "password": "******",
                 },
+            }
+        }
+    )
+
+
+class DetachedTaskQueryResponse(BaseModel):
+    """Response for a synchronous detached task log query."""
+
+    task_id: str
+    status: str
+    result: List[DriverExecutionResult]
+
+
+class DetachedTaskDiscoverResponse(BaseModel):
+    """Response for a detached task discovery scan."""
+
+    discovered: int = Field(description="Number of active tasks found on the remote host")
+    synced_off: int = Field(description="Number of registry tasks marked completed (no longer running)")
+    tasks: List[dict] = Field(description="Raw task info from the remote host")
+
+
+class SystemStatsResponse(BaseModel):
+    """Aggregated system performance and connectivity stats."""
+
+    status: str = "online"
+    workers: dict = Field(default_factory=dict, description="Worker distribution and state")
+    jobs: dict = Field(default_factory=dict, description="Recent job volume and success rates")
+    nodes: dict = Field(default_factory=dict, description="Compute node availability")
+    self_healing: dict = Field(default_factory=dict, description="Recovery statistics")
+    uptime_seconds: int = Field(0, description="Process uptime")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "status": "online",
+                "workers": {
+                    "total": 12,
+                    "pinned": 10,
+                    "fifo": 2,
+                    "idle": 8,
+                    "busy": 4
+                },
+                "jobs": {
+                    "total_recent": 1500,
+                    "succeeded": 1495,
+                    "failed": 5
+                },
+                "nodes": {
+                    "active": 3,
+                    "total_capacity": 96
+                }
             }
         }
     )

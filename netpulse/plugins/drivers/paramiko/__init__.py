@@ -172,6 +172,12 @@ class ParamikoDriver(BaseDriver):
             # When connection is disconnected, the worker should suicide.
             if suicide:
                 log.info(f"Pinned worker for {host} suicides.")
+                try:
+                    # Optional: Increment global counter for visibility in /system/stats
+                    from netpulse.services.rediz import g_rdb
+                    g_rdb.conn.incr("netpulse:stats:self_healing_triggers")
+                except Exception:
+                    pass
                 os.kill(os.getpid(), signal.SIGTERM)
 
             sys.exit(0)
@@ -504,14 +510,14 @@ class ParamikoDriver(BaseDriver):
                 final_cmd = f"{interpreter} {script_path}"
 
         if not final_cmd:
-            return {
-                "launch": DriverExecutionResult(
+            return [
+                DriverExecutionResult(
                     stdout="",
                     stderr="No command provided for detached execution.",
                     exit_status=1,
                     metadata={},
                 )
-            }
+            ]
 
         # Handle working directory
         if self.args and getattr(self.args, "working_directory", None):
@@ -1136,7 +1142,7 @@ class ParamikoDriver(BaseDriver):
     ) -> list[DriverExecutionResult]:
         """Execute script content directly via stdin"""
         if not args.script_content:
-            return {}
+            return []
 
         start_time = time.perf_counter()
 

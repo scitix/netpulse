@@ -2,11 +2,19 @@ from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from ..models.response import JobInResponse, WorkerInResponse
+from ..models.response import JobInResponse, SystemStatsResponse, WorkerInResponse
 from ..services.manager import g_mgr
 from ..utils import g_config
 
 router = APIRouter(tags=["manage"])
+
+
+@router.get("/system/stats", response_model=SystemStatsResponse)
+def get_system_stats():
+    """
+    Get aggregated system performance and connectivity statistics.
+    """
+    return g_mgr.get_system_stats()
 
 
 @router.get("/jobs", response_model=List[JobInResponse])

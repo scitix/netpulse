@@ -191,9 +191,27 @@ Returns `ConnectionTestResponse`:
 
 `GET /workers` supports the same filtering parameters as `GET /jobs` (`queue`/`node`/`host`).
 
+### 3.4 System Statistics
+
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| `GET` | `/system/stats` | Get aggregated system performance and connectivity stats |
+
+Provides real-time visibility into active workers (pinned vs fifo), job success rates, and self-healing (Session recovery) events.
+
+**Example Response**:
+```json
+{
+  "status": "online",
+  "workers": { "total": 5, "pinned": 4, "fifo": 1, "idle": 3, "busy": 2 },
+  "self_healing": { "total_triggers": 12 },
+  "uptime_seconds": 3600
+}
+```
+
 ---
 
-### 3.4 Health Check
+### 3.5 Health Check
 
 ```
 GET /health → { "status": "ok" }
@@ -201,7 +219,7 @@ GET /health → { "status": "ok" }
 
 ---
 
-### 3.5 Linux Detached Tasks (Detached Tasks)
+### 3.6 Linux Detached Tasks (Detached Tasks)
 
 | Method | Path | Description |
 | :--- | :--- | :--- |
@@ -237,7 +255,7 @@ GET /health → { "status": "ok" }
 
 ---
 
-### 3.6 Template Engine (Template)
+### 3.7 Template Engine (Template)
 
 #### `POST /template/render` — Jinja2 Rendering
 Render template + variables into final context text. Can also be directly integrated into the `rendering` field of an execution request.
@@ -267,7 +285,7 @@ Returns a structured JSON array.
 
 ---
 
-### 3.7 File Storage (Storage)
+### 3.8 File Storage (Storage)
 
 #### `GET /storage/fetch/{file_id}` — Download File (**No Auth Required**)
 Used for downloading files pulled (SFTP download) from devices. `file_id` comes from `DriverExecutionResult.download_url`.
