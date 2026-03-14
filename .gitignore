@@ -1,10 +1,12 @@
+# Editor and AI integration
 .vscode/
-.vscode/settings.json
 .cursor/
-.cursor/worktrees.json
+.cursorrules
+.claude/
+.devcontainer/
+.idea/
 .ruff_cache/
 .pytest_cache/
-.idea/
 .env
 
 venv/
@@ -37,9 +39,6 @@ drafts/
 site/
 docs-local/
 site*
-.cursor/
-.claude/
-
 # Containerlab labs
 tests/clab/clab-netpulse-e2e/
 
