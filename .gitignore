@@ -23,9 +23,13 @@ prd/
 redis/tls
 redis/data
 
-# Kubernetes deployment files
-k8s/00-secrets-deploy.yaml
-k8s/02-netpulse-deploy.yaml
+# Kubernetes deployment files (with real credentials, auto-generated)
+deploy/k8s/00-secrets-deploy.yaml
+# deploy/k8s/06-netpulse-core.yaml  # NOT ignored: safe to commit (no real credentials)
+
+# Helm dependency packages (fetched via `helm dependency update`, no need to commit)
+deploy/charts/*/charts/
+# Chart.lock is intentionally NOT ignored: commit it to pin dependency versions (like package-lock.json)
 
 *.pid
 *.lock
@@ -34,6 +38,7 @@ site/
 docs-local/
 site*
 .cursor/
+.claude/
 
 # Containerlab labs
 tests/clab/clab-netpulse-e2e/
@@ -45,6 +50,3 @@ vault/logs/
 # Ignore these files even if they are generated elsewhere.
 *.token
 *.key
-# AI Documentation artifacts
-ai-docs/
-

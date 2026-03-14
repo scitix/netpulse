@@ -99,7 +99,7 @@ services:
       - ./scripts/vault_auto_init.sh:/usr/local/bin/vault_auto_init.sh:ro
       - ./vault/data:/vault/data:z
     entrypoint: ["/bin/sh", "/usr/local/bin/vault_auto_init.sh"]
-    restart: always
+    restart: on-failure
     env_file:
       - .env
     environment:
