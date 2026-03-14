@@ -118,7 +118,10 @@ class WebHook(BaseModel):
     )
     retry_intervals: List[int] = Field(
         default=[10, 30, 120],
-        description="Delay in seconds between retries. Last value is reused when list is shorter than max_retries.",
+        description=(
+            "Delay in seconds between retries. "
+            "Last value is reused when list is shorter than max_retries."
+        ),
     )
 
     model_config = ConfigDict(

@@ -152,16 +152,19 @@ class ParamikoDriver(BaseDriver):
                     # Keepalive - send a null request + occasional deep check
                     try:
                         transport.send_ignore()
-                        
+
                         deep_check_counter += 1
                         if deep_check_counter >= 5:
                             deep_check_counter = 0
                             # Robust check: ensure we can still open channels and execute commands
-                            # This catches "Zombie" sessions that respond to TCP but are dead at the app layer
+                            # This catches "Zombie" sessions that respond to TCP but are dead at the
+                            # app layer
                             _, stdout, _ = session.exec_command("echo 1", timeout=5)
                             if stdout.read().strip() != b"1":
                                 raise RuntimeError("Deep health check failed: invalid response")
-                            log.debug(f"Deep health check (channel verification) passed for {host}")
+                            log.debug(
+                                f"Deep health check (channel verification) passed for {host}"
+                            )
                     except Exception as e:
                         log.warning(f"Connection health check failed for {host}: {e}")
                         suicide = True
@@ -175,6 +178,7 @@ class ParamikoDriver(BaseDriver):
                 try:
                     # Optional: Increment global counter for visibility in /system/stats
                     from netpulse.services.rediz import g_rdb
+
                     g_rdb.conn.incr("netpulse:stats:self_healing_triggers")
                 except Exception:
                     pass

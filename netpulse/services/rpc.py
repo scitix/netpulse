@@ -25,9 +25,7 @@ from ..worker.node import start_pinned_worker
 log = logging.getLogger(__name__)
 
 
-def manage_detached_task(
-    task_id: str, action: str, params: Optional[dict] = None
-):
+def manage_detached_task(task_id: str, action: str, params: Optional[dict] = None):
     """
     Synchronous detached task management RPC.
     Actions: query, kill
@@ -331,8 +329,7 @@ def dispatch_webhook(webhook_data: dict, payload: dict, attempt: int = 0):
         )
         resp.raise_for_status()
         log.info(
-            f"Webhook delivered to {webhook.url} "
-            f"(attempt {attempt + 1}/{webhook.max_retries + 1})"
+            f"Webhook delivered to {webhook.url} (attempt {attempt + 1}/{webhook.max_retries + 1})"
         )
     except Exception as e:
         next_attempt = attempt + 1
@@ -460,9 +457,7 @@ def rpc_webhook_callback(*args):
                 task_id = job.meta.get("task_id") if job.meta else None
                 job_resp.id = task_id or job.id
 
-                _dispatch_webhook_with_retry(
-                    wobj, req, job_resp, result, is_success, job
-                )
+                _dispatch_webhook_with_retry(wobj, req, job_resp, result, is_success, job)
             else:
                 _dispatch_webhook_with_retry(wobj, req, job, result, is_success, job)
         except Exception as e:

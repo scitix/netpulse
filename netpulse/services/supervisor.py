@@ -55,15 +55,18 @@ class DetachedTaskSupervisor:
         now = time.time()
         ttl = g_config.storage.retention_hours * 3600
 
-        log.info(f"Starting staging cleanup in {staging_dir} (TTL: {g_config.storage.retention_hours}h)...")
+        log.info(
+            f"Starting staging cleanup in {staging_dir} "
+            f"(TTL: {g_config.storage.retention_hours}h)..."
+        )
         count = 0
 
         try:
             for filename in os.listdir(staging_dir):
                 item_path = os.path.join(staging_dir, filename)
-                
+
                 # Prevent deleting protected directories if any (none for now)
-                
+
                 mtime = os.path.getmtime(item_path)
                 if now - mtime > ttl:
                     try:
@@ -71,13 +74,13 @@ class DetachedTaskSupervisor:
                             os.remove(item_path)
                             count += 1
                         elif os.path.isdir(item_path):
-                            # Recursively check subdirectories? 
+                            # Recursively check subdirectories?
                             # For simplicity, we just remove the whole old directory in staging
                             shutil.rmtree(item_path)
                             count += 1
                     except Exception as e:
                         log.warning(f"Failed to remove {item_path}: {e}")
-            
+
             if count > 0:
                 log.info(f"Cleaned up {count} stale items from staging.")
         except Exception as e:

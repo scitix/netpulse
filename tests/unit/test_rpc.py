@@ -347,15 +347,20 @@ def test_rpc_webhook_callback_swallows_webhook_errors(monkeypatch):
 
 def test_webhook_retry_scheduled_on_failure(monkeypatch):
     """On webhook call failure, a retry job should be enqueued in the FIFO queue."""
-    import fakeredis
     from datetime import timedelta
-    from unittest.mock import MagicMock, patch
+    from unittest.mock import patch
 
-    from netpulse.services.rpc import dispatch_webhook, _dispatch_webhook_with_retry
-    from netpulse.models.common import WebHook
+    import fakeredis
     from pydantic import HttpUrl
 
-    hook = WebHook(url=HttpUrl("http://example.com/hook"), max_retries=3, retry_intervals=[5, 30, 120])
+    from netpulse.models.common import WebHook
+    from netpulse.services.rpc import _dispatch_webhook_with_retry, dispatch_webhook
+
+    hook = WebHook(
+        url=HttpUrl("http://example.com/hook"),
+        max_retries=3,
+        retry_intervals=[5, 30, 120],
+    )
     enqueued: list[dict] = []
 
     class FailingCaller:
@@ -403,9 +408,10 @@ def test_webhook_no_retry_when_max_retries_zero(monkeypatch):
     """No retry should be scheduled when max_retries=0."""
     from unittest.mock import patch
 
-    from netpulse.services.rpc import _dispatch_webhook_with_retry
-    from netpulse.models.common import WebHook
     from pydantic import HttpUrl
+
+    from netpulse.models.common import WebHook
+    from netpulse.services.rpc import _dispatch_webhook_with_retry
 
     hook = WebHook(url=HttpUrl("http://example.com/hook"), max_retries=0)
     enqueued: list = []
@@ -444,9 +450,10 @@ def test_webhook_no_retry_when_max_retries_zero(monkeypatch):
 
 def test_dispatch_webhook_retry_chain(monkeypatch):
     """dispatch_webhook should re-enqueue with incremented attempt on HTTP failure."""
-    import fakeredis
     from datetime import timedelta
-    from unittest.mock import patch, MagicMock
+    from unittest.mock import MagicMock, patch
+
+    import fakeredis
 
     from netpulse.services.rpc import dispatch_webhook
 
@@ -462,9 +469,11 @@ def test_dispatch_webhook_retry_chain(monkeypatch):
     fake_job = MagicMock()
     fake_job.connection = fakeredis.FakeRedis()
 
-    with patch("netpulse.services.rpc.requests.request", side_effect=ConnectionError("timeout")), \
-         patch("netpulse.services.rpc.get_current_job", return_value=fake_job), \
-         patch("netpulse.services.rpc.Queue", FakeQueue):  # noqa: E501
+    with (
+        patch("netpulse.services.rpc.requests.request", side_effect=ConnectionError("timeout")),
+        patch("netpulse.services.rpc.get_current_job", return_value=fake_job),
+        patch("netpulse.services.rpc.Queue", FakeQueue),
+    ):
         dispatch_webhook(
             webhook_data={
                 "name": "basic",
@@ -483,7 +492,7 @@ def test_dispatch_webhook_retry_chain(monkeypatch):
 
 def test_dispatch_webhook_permanent_failure_no_retry(monkeypatch):
     """dispatch_webhook should not enqueue after exhausting all retries."""
-    from unittest.mock import patch, MagicMock
+    from unittest.mock import MagicMock, patch
 
     from netpulse.services.rpc import dispatch_webhook
 
@@ -498,9 +507,11 @@ def test_dispatch_webhook_permanent_failure_no_retry(monkeypatch):
 
     fake_job = MagicMock()
 
-    with patch("netpulse.services.rpc.requests.request", side_effect=ConnectionError("timeout")), \
-         patch("netpulse.services.rpc.get_current_job", return_value=fake_job), \
-         patch("netpulse.services.rpc.Queue", FakeQueue):  # noqa: E501
+    with (
+        patch("netpulse.services.rpc.requests.request", side_effect=ConnectionError("timeout")),
+        patch("netpulse.services.rpc.get_current_job", return_value=fake_job),
+        patch("netpulse.services.rpc.Queue", FakeQueue),
+    ):
         dispatch_webhook(
             webhook_data={
                 "name": "basic",

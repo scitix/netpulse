@@ -32,5 +32,5 @@ class DriverExecutionResult(BaseModel):
                 },
                 "parsed": {"version": "4.25.4M", "model": "vEOS"},
             }
-        }
+        },
     )

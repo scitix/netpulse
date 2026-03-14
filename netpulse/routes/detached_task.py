@@ -50,7 +50,9 @@ def kill_detached_task(task_id: str):
     """
     success = g_mgr.kill_detached_task(task_id)
     if success is None or success is False:
-        raise HTTPException(status_code=404, detail=f"Detached task {task_id} not found or already stopped")
+        raise HTTPException(
+            status_code=404, detail=f"Detached task {task_id} not found or already stopped"
+        )
     return {"status": "killed", "task_id": task_id}
 
 

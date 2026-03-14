@@ -321,7 +321,9 @@ class DetachedTaskDiscoverResponse(BaseModel):
     """Response for a detached task discovery scan."""
 
     discovered: int = Field(description="Number of active tasks found on the remote host")
-    synced_off: int = Field(description="Number of registry tasks marked completed (no longer running)")
+    synced_off: int = Field(
+        description="Number of registry tasks marked completed (no longer running)"
+    )
     tasks: List[dict] = Field(description="Raw task info from the remote host")
 
 
@@ -352,16 +354,11 @@ class SystemStatsResponse(BaseModel):
                     "succeeded": 1495,
                     "failed": 5,
                     "in_progress": 0,
-                    "queued": 0
+                    "queued": 0,
                 },
-                "nodes": {
-                    "active": 3,
-                    "total_capacity": 96
-                },
-                "self_healing": {
-                    "total_triggers": 2
-                },
-                "uptime_seconds": 86400
+                "nodes": {"active": 3, "total_capacity": 96},
+                "self_healing": {"total_triggers": 2},
+                "uptime_seconds": 86400,
             }
         }
     )

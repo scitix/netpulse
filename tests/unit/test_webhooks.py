@@ -65,7 +65,10 @@ def test_basic_webhook_calls_requests(monkeypatch):
 
 
 def test_basic_webhook_raises_on_request_errors(monkeypatch):
-    """HTTP errors from BasicWebHookCaller.call() should propagate so callers can schedule retries."""
+    """
+    HTTP errors from BasicWebHookCaller.call() should propagate
+    so callers can schedule retries.
+    """
     hook = WebHook(name="basic", url=HttpUrl("http://example.com/hook"))
     calls: list[int] = []
 

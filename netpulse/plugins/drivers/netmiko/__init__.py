@@ -292,7 +292,6 @@ class NetmikoDriver(BaseDriver):
         start_time = time.perf_counter()
         try:
             with self._monitor_lock:
-
                 # Proactive insurance: Clear any stale hostname/prompt from session persistence
                 session.set_base_prompt()
 

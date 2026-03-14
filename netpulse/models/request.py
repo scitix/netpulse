@@ -115,12 +115,14 @@ class ExecutionRequest(BaseModel):
     ttl: Optional[int] = Field(
         default=300,
         description="Queue TTL: How long the job can remain queued before being discarded",
-        ge=1, le=86400
+        ge=1,
+        le=86400,
     )
     execution_timeout: Optional[int] = Field(
         default=None,
         description="Execution Timeout: Maximum execution time of the job in seconds",
-        ge=1, le=86400
+        ge=1,
+        le=86400,
     )
     result_ttl: Optional[int] = Field(
         default=None,
