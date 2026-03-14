@@ -41,35 +41,43 @@ class DetachedTaskSupervisor:
 
     def _cleanup_staging(self):
         """
-        Cleanup files in staging/downloads older than 24 hours.
+        Cleanup files in staging older than configured retention hours.
         """
         import os
+        import shutil
 
         from ..utils import g_config
 
         staging_dir = str(g_config.storage.staging)
-        download_dir = os.path.join(staging_dir, "downloads")
-
-        if not os.path.exists(download_dir):
+        if not os.path.exists(staging_dir):
             return
 
         now = time.time()
-        ttl = 86400  # 24 hours in seconds
+        ttl = g_config.storage.retention_hours * 3600
 
-        log.info(f"Starting staging cleanup in {download_dir}...")
+        log.info(f"Starting staging cleanup in {staging_dir} (TTL: {g_config.storage.retention_hours}h)...")
         count = 0
-        import shutil
 
         try:
-            for filename in os.listdir(download_dir):
-                item_path = os.path.join(download_dir, filename)
+            for filename in os.listdir(staging_dir):
+                item_path = os.path.join(staging_dir, filename)
+                
+                # Prevent deleting protected directories if any (none for now)
+                
                 mtime = os.path.getmtime(item_path)
                 if now - mtime > ttl:
-                    if os.path.isfile(item_path) or os.path.islink(item_path):
-                        os.remove(item_path)
-                    elif os.path.isdir(item_path):
-                        shutil.rmtree(item_path)
-                    count += 1
+                    try:
+                        if os.path.isfile(item_path) or os.path.islink(item_path):
+                            os.remove(item_path)
+                            count += 1
+                        elif os.path.isdir(item_path):
+                            # Recursively check subdirectories? 
+                            # For simplicity, we just remove the whole old directory in staging
+                            shutil.rmtree(item_path)
+                            count += 1
+                    except Exception as e:
+                        log.warning(f"Failed to remove {item_path}: {e}")
+            
             if count > 0:
                 log.info(f"Cleaned up {count} stale items from staging.")
         except Exception as e:
@@ -128,7 +136,6 @@ class DetachedTaskSupervisor:
 
         try:
             from ..models.common import DriverConnectionArgs, QueueStrategy
-            from ..models.request import ExecutionRequest, WebHook
             from ..services.rpc import manage_detached_task, rpc_webhook_callback
 
             webhook_cfg = meta.get("webhook")
@@ -136,14 +143,6 @@ class DetachedTaskSupervisor:
             on_success = rpc_webhook_callback if (trigger_webhook and webhook_cfg) else None
 
             conn_arg = DriverConnectionArgs(**meta["connection_args"])
-
-            req = ExecutionRequest(
-                driver=meta["driver"],
-                connection_args=meta["connection_args"],
-                command=meta.get("command", ""),
-                detach=True,
-                webhook=WebHook(**webhook_cfg) if webhook_cfg else None,
-            )
 
             # Dispatch job with the standard webhook callback (if requested)
             g_mgr.dispatch_rpc_job(
@@ -154,7 +153,6 @@ class DetachedTaskSupervisor:
                     "task_id": task_id,
                     "action": "query",
                     "params": {"offset": last_offset},
-                    "req": req,
                 },
                 on_success=on_success,
                 on_failure=None,
