@@ -33,6 +33,7 @@ Understanding these tools is key to successful development:
 - **Auth**: Primary via `X-API-KEY` header. Backup via `?api_key=` or cookies.
 - **Keepalive**: Use `keepalive: true` in `connection_args` to pin a connection to a specific worker for sub-second latency on subsequent requests.
 - **Async Execution**: Long tasks return a `task_id` for polling via `GET /v1/manage/task/{task_id}`.
+- **File Handling**: Supports `upload` and `download` operations. Staged downloads automatically generate a `download_url` in the result metadata for easy retrieval.
 
 ## 6. The Commandments (Development Rules)
 - **Async Mandate**: API routes MUST use `asyncio`. Drivers running in workers use synchronous code.
