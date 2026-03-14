@@ -3,109 +3,109 @@
 ## [0.4.0] - 2026-02-23
 
 > [!CAUTION]
-> **不兼容变更**: 此版本属于重大更新，对 API 和 Response 结构进行了重大重构，不向下兼容。
+> **BREAKING CHANGES**: This version introduces a major update with significant refactoring of the API and Response structures. It is NOT backward compatible.
 
 ### Added
 
-- **API 结构扁平化**: 重构了响应模型并移除了冗余的嵌套层级。API 返回结果更加直观，显著降低了第三方系统集成和前端展示的开发复杂度。
-- **驱动返回格式标准化**: 统一了 Arista、思科及 Linux 等各类驱动的执行结果模型（list[DriverExecutionResult]）。开发者可以使用一致的逻辑处理跨厂商设备的执行结果。
-- **后台异步任务系统增强 (Paramiko)**:
-  - **非阻塞任务初始化**: 优化了启动流程，彻底解决了 Worker 在启动长耗时任务时的主进程阻塞死锁问题。
-  - **任务自动发现与恢复**: 引入了任务扫描机制，支持在服务重启或连接断开后从远程主机自动找回并重新追踪任务进度。
-  - **高效增量日志追踪**: 引入基于字节偏移量的读取算法，支持对后台任务输出进行“增量拉取”，大幅降低了查看 GB 级日志文件时的网络开销。
-  - **精准 ID 进程标识**: 采用 Task ID 注入技术（exec -a），确保后台进程标识的唯一性，杜绝了基于进程名检查时的误报与清理冲突。
-- **运维自动化与安全增强**:
-  - **动态路径模板渲染**: 允许在文件传输路径中使用 Jinja2 模板，可根据主机名、日期等元数据自动生成存放目录，便于文件的自动化归档。
-  - **凭据资产安全闭环**: 深度集成 Vault 凭据系统，支持将加密存储的私钥或授权文件安全传输至目标设备，确保敏感资产在传输过程中的安全性。
-  - **指令级结构化解析**: 支持对批量指令中的每一条输出进行独立解析，实现了执行序列与结构化数据（JSON）的精确映射。
-- **多级持久化凭据缓存**: 实现了基于 Memory + Redis 的两级持久化缓存机制。在管理大规模设备时，有效减轻了 Vault 服务器负载，提升了连接建立的整体稳定性。
-- **AI 原生支持**: 构建 AI 知识库体系（包含 `llms.txt`、`openapi.json` 及 `repomix` 源码语境），显著提升大语言模型对复杂系统的理解与辅助开发效率。
+- **API Structure Flattening**: Refactored response models and removed redundant nesting layers. API results are now more intuitive, significantly reducing development complexity for third-party integrations and frontend displays.
+- **Standardized Driver Output**: Unified the execution result models (`list[DriverExecutionResult]`) across various drivers including Arista, Cisco, and Linux. Developers can now use consistent logic to process execution results from cross-vendor devices.
+- **Enhanced Background Async Task System (Paramiko)**:
+  - **Non-blocking Task Initialization**: Optimized the startup process, completely resolving the main process blocking and deadlock issues when Workers initiate long-running tasks.
+  - **Task Auto-Discovery and Recovery**: Introduced a task scanning mechanism that supports automatically finding and re-tracking task progress from remote hosts after service restarts or connection disruptions.
+  - **Efficient Incremental Log Tracking**: Introduced a read algorithm based on byte offsets, supporting "incremental pulling" of background task outputs, drastically reducing network overhead when viewing GB-level log files.
+  - **Precise ID-based Process Identification**: Adopted Task ID injection technology (`exec -a`) to ensure the uniqueness of background process identification, eliminating false positives and cleanup conflicts that occur with process name-based checks.
+- **Operations Automation and Security Enhancements**:
+  - **Dynamic Path Template Rendering**: Enabled the use of Jinja2 templates in file transfer paths to automatically generate storage directories based on metadata such as hostnames and dates, facilitating automated file archiving.
+  - **Secure Credential Asset Lifecycle**: Deeply integrated with the Vault credential system to support the secure transmission of encrypted private keys or authorization files to target devices, ensuring the safety of sensitive assets during transit.
+  - **Command-Level Structured Parsing**: Supported independent parsing for each output in batch commands, achieving precise mapping between execution sequences and structured data (JSON).
+- **Multi-level Persistent Credential Caching**: Implemented a two-tier persistent caching mechanism based on Memory + Redis. This effectively reduces Vault server load and improves overall connection stability when managing large-scale infrastructure.
+- **AI-Native Support**: Built an AI knowledge base system (including `llms.txt`, `openapi.json`, and `repomix` source context), significantly enhancing LLMs' understanding of complex systems and boosting AI-assisted development efficiency.
 
 ### Changed
 
-- **逻辑清理**: 移除了非标的自动 JSON 探测逻辑，统一由解析插件处理。
-- **API 集合同步**: 按照最新 RESTful 标准全量更新了 Postman API Collection，涵盖了所有后台任务管理接口。
+- **Logic Cleanup**: Removed non-standard automatic JSON detection logic, centralizing it to be handled by parsing plugins.
+- **API Collection Synchronization**: Fully updated the Postman API Collection to the latest RESTful standards, covering all background task management endpoints.
 
 ### Fixed
 
-- **运行期 NameError 修复**: 解决了驱动层由于循环导入和 Pydantic 校验时机导致的严重 NameError。
-- **后台任务追踪修复**: 修复了异步任务日志 Offset 和运行状态在 Redis 注册表中无法正确同步的 Bug。
-- **统一模型路径**: 修复了 `ParamikoFileTransferOperation` 的导入冲突，现已统一合并至全平台通用的 `FileTransferModel`。
-- **驱动返回一致性**: 修复了 Napalm 驱动在空指令下返回字典而非列表的问题，消除了各驱动间的格式差异。
+- **Runtime NameError Fix**: Resolved a critical NameError in the driver layer caused by circular imports and Pydantic validation timing.
+- **Background Task Tracking Fix**: Fixed a bug where async task log offsets and running statuses could not be correctly synchronized in the Redis registry.
+- **Unified Model Paths**: Resolved the import conflict for `ParamikoFileTransferOperation`, which is now merged into the cross-platform universal `FileTransferModel`.
+- **Driver Return Consistency**: Fixed the issue where the Napalm driver returned a dictionary instead of a list for empty commands, eliminating format discrepancies across drivers.
 
 
-## [0.3.0] - 2025-12-14
+## [0.3.0] - 2025-12-15
 
-### Added 
+### Added
 
-- **凭据插件架构**: 新增可扩展的凭据插件系统，支持从外部凭据管理系统动态获取设备认证信息
-  - 插件化设计，支持多种凭据提供器
-  - 自动解析凭据并注入到连接参数中
-  - 支持在 API 请求中通过 `credential` 字段引用凭据，避免在请求中传递明文密码
-- **Vault KV 凭据插件**: 集成 HashiCorp Vault KV v2 引擎，实现安全的凭据管理
-  - 支持从 Vault KV v2 读取设备凭据（用户名、密码等）
-  - 支持 Token 和 AppRole 两种认证方式
-  - 支持路径 white list（`allowed_paths`）限制访问范围，提升安全性
-  - 支持命名空间（namespace）隔离
-  - 支持凭据缓存（`cache_ttl`）提升性能，减少 Vault API 调用
-  - 支持自定义字段映射（`field_mapping`），灵活适配不同的 Vault 数据结构
-  - 支持版本化密钥读取
-  - 完整的单元测试覆盖
-- 支持在任意命令之前执行 template rendering，在命令执行之后进行 template parsing
-- 添加单元测试、端到端测试、CI/CD 集成
-- **增强 Webhook 上报数据**: Webhook 通知现在包含完整的任务上下文信息
-  - 设备信息（host, device_type）用于任务追踪
-  - 驱动信息用于识别执行方法
-  - 命令/配置信息用于追踪执行的操作
-  - 状态字段（success/failed）用于快速识别
-  - 改进多命令结果的格式化，提供更易读看输出
-  - 支持嵌套字典结果格式（如 paramiko 驱动）
+- **Credential Plugin Architecture**: New extensible credential plugin system that supports dynamically retrieving device authentication information from external credential management systems
+  - Plugin-based design supporting multiple credential providers
+  - Automatic credential resolution and injection into connection parameters
+  - Support for referencing credentials via `credential` field in API requests, eliminating the need to pass plaintext passwords in requests
+- **Vault KV Credential Plugin**: Integration with HashiCorp Vault KV v2 engine for secure credential management
+  - Support for reading device credentials (username, password, etc.) from Vault KV v2
+  - Support for both Token and AppRole authentication methods
+  - Support for path whitelist (`allowed_paths`) to restrict access scope and enhance security
+  - Support for namespace isolation
+  - Support for credential caching (`cache_ttl`) to improve performance and reduce Vault API calls
+  - Support for custom field mapping (`field_mapping`) to flexibly adapt to different Vault data structures
+  - Support for versioned secret reading
+  - Complete unit test coverage
+- Support for template rendering before command execution and template parsing after execution
+- Unit tests, end-to-end tests, and CI/CD integration
+- **Enhanced Webhook Payload**: Webhook notifications now include comprehensive task context
+  - Device information (host, device_type) for better task traceability
+  - Driver information to identify execution method
+  - Command/config information to track executed operations
+  - Status field (success/failed) for quick identification
+  - Improved formatting for multi-command results with readable output
+  - Support for nested dict results (e.g., paramiko driver format)
 
 ### Changed
 
-- **重大 API 重构**: 统一 API 和 CLI 体验，简化使用方式
-  - **统一设备操作接口** `/device/exec`: 自动识别操作类型（查询/配置），无需区分不同端点
-    - 包含 `command` 字段时自动识别为查询操作
-    - 包含 `config`字段时自动识别为配置操作
-    - 根据驱动类型自动选择队列策略（可手动指定）
-  - **统一模板接口**: `/template/render` 和 `/template/parse` 支持自动识别引擎/解析器
-  - **简化请求模型**: 统一请求/响应格式，减少 API 复杂度
-  - **CLI 集成**: 将独立的 `netpulse-client` 包集成到主项目，统一开发体验
-  - 重构后的 API 设计提升了扩展性和可维护性
-- 优化 Docker 镜像构建流程，减小镜像体积
-- 升级 TTP 模板解析器到 0.10.0
+- **Major API Refactoring**: Unified API and CLI experience for simplified usage
+  - **Unified Device Operation Interface** `/device/exec`: Automatically detects operation type (query/config), eliminating the need for separate endpoints
+    - Automatically identifies as query operation when `command` field is present
+    - Automatically identifies as config operation when `config` field is present
+    - Auto-selects queue strategy based on driver type (can be manually specified)
+  - **Unified Template Interface**: `/template/render` and `/template/parse` support automatic engine/parser detection
+  - **Simplified Request Models**: Unified request/response format, reducing API complexity
+  - **CLI Integration**: Integrated standalone `netpulse-client` package into main project for unified development experience
+  - Refactored API design improves extensibility and maintainability
+- Optimized Docker image build process to reduce image size
+- Upgraded TTP template parser to 0.10.0
 
 ### Fixed
 
-- 修复批量任务中缺失的失败回调
-- 修复序列化错误
-- 修复验证相关的 bug
-- 修复测试配置读取问题
-- 修复 Postman collection：将测试响应字段 from `connection_time` 更新为 `latency`
-- 修复多个测试用例中的 bug
+- Fixed missing failure callback in batch jobs
+- Fixed serialization errors
+- Fixed validation bugs
+- Fixed test configuration reading issues
+- Fixed Postman collection: updated test response field from `connection_time` to `latency`
+- Fixed various test case bugs
 
 ### Documentation
 
-- 新增凭据配置指南文档（中英文），详细介绍 Vault KV 凭据插件的配置和使用方法
-- 更新 API 文档，补充凭据相关字段说明
-- 修复 Postman collection 示例
-- 修复文档中的选项说明
+- Added credential configuration guide documentation (English and Chinese), providing detailed instructions on configuring and using the Vault KV credential plugin
+- Updated API documentation with credential-related field descriptions
+- Fixed Postman collection examples
+- Fixed documentation options
 
 ## [0.2.0] - 2025-11-09
 
 ### Added
 
-- **Paramiko 驱动**: 新增 Paramiko 驱动，支持 Linux 服务器管理
-  - 支持多种认证方式（密码、密钥文件、密钥内容）
-  - 支持 SFTP 文件传输（上传/下载/断点续传）
-  - 支持 SSH 代理/跳板机连接
-  - 支持 sudo 权限执行和 PTY 模式
+- **Paramiko Driver**: New Paramiko driver supporting Linux server management
+  - Support for multiple authentication methods (password, key file, key content)
+  - SFTP file transfer (upload/download/resume)
+  - Support for SSH proxy/jump host connections
+  - Support for sudo privilege execution and PTY mode
 
 ## [0.1.0] - 2025-7-04
 
 ### Added
 
-- 初始版本发布
-- 支持 Netmiko、NAPALM、PyEAPI 驱动
-- 支持 long connection 技术、分布式架构、插件系统
-- 支持模板引擎（Jinja2、TextFSM、TTP）和 Webhook 通知
+- Initial version release
+- Support for Netmiko, NAPALM, PyEAPI drivers
+- Support for persistent connections, distributed architecture, and plugin system
+- Support for template engines (Jinja2, TextFSM, TTP) and Webhook notifications
