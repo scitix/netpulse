@@ -186,7 +186,7 @@ class NodeWorker(RedisWorker):
         except Exception as e:
             log.error(f"Error in starting the pinned worker: {e}")
             self.rdb.hdel(self.host_to_node_map, host)
-            raise e
+            raise
 
         # Commit the change after the worker is started
         self._pid_to_host_map[p.pid] = host

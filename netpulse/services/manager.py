@@ -53,7 +53,7 @@ class Manager:
             self.scheduler = schedulers[g_config.worker.scheduler]()
         except Exception as e:
             log.error(f"Unable to load scheduler {g_config.worker.scheduler}: {e}")
-            raise e
+            raise
 
         # IP <=> Node Mapping
         self.host_to_node_map = g_config.redis.key.host_to_node_map
@@ -127,7 +127,7 @@ class Manager:
                     final_results[idx] = NodeInfo.model_validate_json(value)
                 except Exception as e:
                     log.error(f"Error in validating node info: {e}")
-                    raise e
+                    raise
 
         return final_results[0] if is_single else final_results
 
@@ -778,8 +778,11 @@ class Manager:
         q = Queue(q_name, connection=self.rdb)
         for j in q.get_jobs():
             if j.get_status() == "queued":
-                j.cancel()
-                cancelled.append(j.id)
+                try:
+                    j.cancel()
+                    cancelled.append(j.id)
+                except (InvalidJobOperation, Exception) as e:
+                    log.warning(f"Error in cancelling job {j.id}: {e}")
 
         return cancelled
 
@@ -858,6 +861,7 @@ class Manager:
             rq_job = Job.fetch(job.id, connection=self.rdb)
             if rq_job.is_finished:
                 result = rq_job.result
+                is_running = True
                 # Update registry after successful query to move the offset
                 try:
                     # result is {"query": DriverExecutionResult}
@@ -880,11 +884,7 @@ class Manager:
 
                 return {
                     "task_id": task_id,
-                    "status": (
-                        "running"
-                        if (is_running if "is_running" in locals() else True)
-                        else "completed"
-                    ),
+                    "status": "running" if is_running else "completed",
                     "result": result,
                 }
             if rq_job.is_failed:

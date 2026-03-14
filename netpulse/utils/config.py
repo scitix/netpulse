@@ -103,6 +103,7 @@ class LogConfig(BaseModel):
 
 class StorageConfig(BaseModel):
     staging: Path = Path("/app/storage/staging")
+    retention_hours: int = 24  # Default to 24 hours
 
 
 class AppConfig(BaseSettings):
@@ -159,4 +160,4 @@ def initialize_config() -> AppConfig:
         return AppConfig()  # type: ignore
     except ValidationError as e:
         log.error(f"Error in reading config: {e}")
-        raise e
+        raise

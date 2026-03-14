@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 
 
 def manage_detached_task(
-    task_id: str, action: str, params: Optional[dict] = None, req: Optional[ExecutionRequest] = None
+    task_id: str, action: str, params: Optional[dict] = None
 ):
     """
     Synchronous detached task management RPC.
@@ -142,7 +142,7 @@ def execute(req: ExecutionRequest):
             req.rendering = None
         except Exception as e:
             log.error(f"Error in rendering: {e}")
-            raise e
+            raise
     if payload is None:
         payload = []
     elif isinstance(payload, str):
@@ -168,7 +168,7 @@ def execute(req: ExecutionRequest):
         dobj = drivers[req.driver].from_execution_request(req)
     except Exception as e:
         log.error(f"Error in initializing driver: {e}")
-        raise e
+        raise
 
     # Depend command or config, do config or send.
     session = None
@@ -221,7 +221,6 @@ def execute(req: ExecutionRequest):
             result = dobj.send(session, payload)
         else:
             result = dobj.config(session, payload)
-        dobj.disconnect(session)
     except Exception as e:
         log.error(f"Error in connection or execution: {e}")
         return [
@@ -258,7 +257,7 @@ def execute(req: ExecutionRequest):
                     val["parsed"] = parser.parse(val["stdout"])
         except Exception as e:
             log.error(f"Error in parsing: {e}")
-            raise e
+            raise
 
     return result
 
@@ -362,7 +361,7 @@ def rpc_webhook_callback(*args):
                 wobj.call(req=req, job=job, result=result, is_success=is_success)
         except Exception as e:
             log.warning(f"Error in webhook execution: {e}")
-            raise e
+            raise
 
     # --- New: Transform Local Paths to Download URLs ---
     if is_success and isinstance(result, list):
@@ -433,7 +432,7 @@ def rpc_webhook_callback(*args):
                     break
         except Exception as e:
             log.warning(f"Error in updating detach registry: {e}")
-            raise e
+            raise
 
 
 def rpc_exception_callback(
