@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 import uuid
@@ -129,7 +130,7 @@ async def execute_on_device(
         raise ValueError(f"Unsupported driver: {req.driver}")
     dobj.validate(req)
 
-    return g_mgr.execute_on_device(req)
+    return await asyncio.to_thread(g_mgr.execute_on_device, req)
 
 
 @router.post("/bulk", response_model=BatchSubmitJobResponse, status_code=201)

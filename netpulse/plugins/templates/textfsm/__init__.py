@@ -46,14 +46,14 @@ class TextFSMTemplateParser(BaseTemplateParser):
                 s = s.load()
             except Exception as e:
                 log.error(f"Error in loading template from {source}: {e}")
-                raise e
+                raise
 
             try:
                 template_stream = io.StringIO(s)
                 self.template = TextFSM(template_stream)
             except Exception as e:
                 log.error(f"Error in building template from {source}: {e}")
-                raise e
+                raise
 
     def _ntc_parse(self, context: str) -> list[dict]:
         assert self.ntc_args is not None
@@ -72,7 +72,7 @@ class TextFSMTemplateParser(BaseTemplateParser):
             return self._ntc_parse(context) if self.use_ntc else self._template_parse(context)
         except Exception as e:
             log.error(f"Error in parsing context: {e}")
-            raise e
+            raise
 
 
 __all__ = ["TextFSMTemplateParser"]

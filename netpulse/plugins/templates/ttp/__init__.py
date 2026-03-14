@@ -39,7 +39,7 @@ class TTPTemplateParser(BaseTemplateParser):
                 s = s.load()
             except Exception as e:
                 log.error(f"Error in loading template from {source}: {e}")
-                raise e
+                raise
 
             if s is None or len(s) == 0:
                 log.error(f"Error in building template from {source}: Empty template")
@@ -62,7 +62,7 @@ class TTPTemplateParser(BaseTemplateParser):
             parser.parse()
         except Exception as e:
             log.error(f"Error in parsing template: {e}")
-            raise e
+            raise
 
         return parser.result(structure="dictionary")  # type: ignore
 
@@ -71,7 +71,7 @@ class TTPTemplateParser(BaseTemplateParser):
             return self._ttp_template_parse(context) if self.use_ttp else self._parse(context)
         except Exception as e:
             log.error(f"Error in parsing template: {e}")
-            raise e
+            raise
 
 
 __all__ = ["TTPTemplateParser"]

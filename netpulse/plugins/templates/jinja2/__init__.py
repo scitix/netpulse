@@ -26,7 +26,7 @@ class Jinja2Renderer(BaseTemplateRenderer):
             options_dict["source"] = s.load()
         except Exception as e:
             log.error(f"Error in loading template from {s}: {e}")
-            raise e
+            raise
 
         self.template = Template(**options_dict)
 
@@ -41,7 +41,7 @@ class Jinja2Renderer(BaseTemplateRenderer):
             rendered = self.template.render(**context)
         except Exception as e:
             log.error(f"Error in rendering template: {e}")
-            raise e
+            raise
 
         return rendered
 
