@@ -142,7 +142,10 @@ class ParamikoSendCommandArgs(DriverArgs):
     )
     # Metadata Control
     read_detached_task_logs: Optional[dict] = Field(
-        default=None, description="Internal use only: instructions for reading detached task logs"
+        default=None,
+        description="Internal use only: instructions for reading detached task logs",
+        json_schema_extra={"x-internal": True},
+        exclude=True,
     )
     list_active_detached_tasks: bool = Field(
         default=False, description="List all active background/detached tasks on the target machine"

@@ -127,7 +127,7 @@ class NapalmDriver(BaseDriver):
             del conn_args_dict["device_type"]
         except KeyError as e:
             log.error(f"Failed to init NAPALM driver: {e}")
-            raise e
+            raise
 
         # Handle optional arguments
         optional_args = conn_args.optional_args if conn_args.optional_args else {}
@@ -146,7 +146,7 @@ class NapalmDriver(BaseDriver):
             return driver(**self.conn_args_dict)
         except Exception as e:
             log.error(f"Connection failed: {e}")
-            raise e
+            raise
 
     def send(self, session: NetworkDriver, command: list[str]) -> list[DriverExecutionResult]:
         """
@@ -294,7 +294,7 @@ class NapalmDriver(BaseDriver):
             return True
         except Exception as e:
             log.error(f"Disconnection failed: {e}")
-            raise e
+            raise
 
     @classmethod
     def test(cls, connection_args: NapalmConnectionArgs) -> NapalmDeviceTestInfo:

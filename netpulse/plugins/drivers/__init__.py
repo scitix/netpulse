@@ -49,10 +49,15 @@ class BaseDriver:
         Standardized method to get the effective destination path for downloads.
         If local_path is not absolute, it will be placed in the staging area
         under a subfolder named by the Job ID to preserve the original filename.
+        If local_path is a directory (ends with / or is an existing dir), the
+        fallback_name (remote filename) is appended automatically.
         """
         import os
 
         if local_path and os.path.isabs(local_path):
+            if local_path.endswith("/") or os.path.isdir(local_path):
+                fname = fallback_name or "download"
+                return os.path.join(local_path.rstrip("/"), fname)
             return local_path
 
         from ...utils import g_config
@@ -66,6 +71,16 @@ class BaseDriver:
 
         filename = os.path.basename(local_path) if local_path else (fallback_name or "download")
         return os.path.join(job_dir, filename)
+
+    def _get_effective_remote_path(self, remote_path: str, local_path: Optional[str]) -> str:
+        """
+        If remote_path ends with /, append the local filename automatically.
+        """
+        import os
+
+        if remote_path.endswith("/") and local_path:
+            return remote_path.rstrip("/") + "/" + os.path.basename(local_path)
+        return remote_path
 
     @classmethod
     def from_execution_request(cls, req: ExecutionRequest) -> "BaseDriver":

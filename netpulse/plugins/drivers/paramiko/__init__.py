@@ -128,6 +128,7 @@ class ParamikoDriver(BaseDriver):
 
         def monitor():
             suicide = False
+            deep_check_counter = 0
             log.info(f"Paramiko monitoring thread started ({host})")
             assert cls._monitor_stop_event is not None
 
@@ -148,11 +149,21 @@ class ParamikoDriver(BaseDriver):
                         cls._monitor_stop_event.set()
                         break
 
-                    # Keepalive - send a null request
+                    # Keepalive - send a null request + occasional deep check
                     try:
                         transport.send_ignore()
+                        
+                        deep_check_counter += 1
+                        if deep_check_counter >= 5:
+                            deep_check_counter = 0
+                            # Robust check: ensure we can still open channels and execute commands
+                            # This catches "Zombie" sessions that respond to TCP but are dead at the app layer
+                            _, stdout, _ = session.exec_command("echo 1", timeout=5)
+                            if stdout.read().strip() != b"1":
+                                raise RuntimeError("Deep health check failed: invalid response")
+                            log.debug(f"Deep health check (channel verification) passed for {host}")
                     except Exception as e:
-                        log.warning(f"Error in sending keepalive to {host}: {e}")
+                        log.warning(f"Connection health check failed for {host}: {e}")
                         suicide = True
                         cls._monitor_stop_event.set()
 
@@ -463,8 +474,7 @@ class ParamikoDriver(BaseDriver):
         if self.file_transfer and self.file_transfer.operation == "upload":
             log.info(f"Detached: Performing upload before launch for task {task_id}")
             up_res = self._handle_file_transfer(session, self.file_transfer, skip_exec=True)
-            up_key = f"file_transfer_{self.file_transfer.operation}"
-            if up_res.get(up_key) and up_res[up_key].exit_status == 0:
+            if up_res and up_res[0].exit_status == 0:
                 if self.file_transfer.execute_after_upload and self.file_transfer.execute_command:
                     final_cmd = self.file_transfer.execute_command
             else:
@@ -477,8 +487,7 @@ class ParamikoDriver(BaseDriver):
             if ft_op and ft_op.operation == "upload":
                 log.info(f"Detached: Performing nested upload before launch for task {task_id}")
                 up_res = self._handle_file_transfer(session, ft_op, skip_exec=True)
-                up_key = f"file_transfer_{ft_op.operation}"
-                if up_res.get(up_key) and up_res[up_key].exit_status == 0:
+                if up_res and up_res[0].exit_status == 0:
                     if ft_op.execute_after_upload and ft_op.execute_command:
                         final_cmd = ft_op.execute_command
                 else:
@@ -734,8 +743,8 @@ class ParamikoDriver(BaseDriver):
         """Helper to prepend environment variables to a command string"""
         if not env:
             return command
-        # Build export commands
-        env_exports = [f"export {k}='{v}'" for k, v in env.items()]
+        # Use shlex.quote to safely handle values containing single quotes or special chars
+        env_exports = [f"export {shlex.quote(k)}={shlex.quote(str(v))}" for k, v in env.items()]
         return f"{' && '.join(env_exports)} && {command}"
 
     def _handle_file_transfer(
@@ -754,10 +763,13 @@ class ParamikoDriver(BaseDriver):
                 if not effective_local_path:
                     raise ValueError("No local path or staged file provided for upload.")
 
+                effective_remote_path = self._get_effective_remote_path(
+                    file_transfer_op.remote_path, effective_local_path
+                )
                 result = self._upload_file(
                     session,
                     effective_local_path,
-                    file_transfer_op.remote_path,
+                    effective_remote_path,
                     file_transfer_op.resume,
                     file_transfer_op.recursive,
                     file_transfer_op.sync_mode,
@@ -783,7 +795,8 @@ class ParamikoDriver(BaseDriver):
             bytes_used = result.get("transferred_bytes", 0)
             total_bytes = result.get("total_bytes", 0)
 
-            op_key = f"{file_transfer_op.operation} {file_transfer_op.remote_path}"
+            actual_remote = result.get("remote_path", file_transfer_op.remote_path)
+            op_key = f"{file_transfer_op.operation} {actual_remote}"
             transfer_metadata = self._get_base_metadata(start_time)
             transfer_metadata.update(
                 {
@@ -1008,6 +1021,18 @@ class ParamikoDriver(BaseDriver):
         if args and args.environment:
             exec_cmd = self._apply_env_to_command(cmd, args.environment)
 
+        # Apply sudo if requested (send path)
+        _sudo = args and isinstance(args, ParamikoSendCommandArgs) and getattr(args, "sudo", False)
+        _sudo_password = getattr(args, "sudo_password", None) if _sudo else None
+        if _sudo:
+            has_shell_chars = any(c in exec_cmd for c in (">", "|", ">>", "<<", "<"))
+            if has_shell_chars and "bash -c" not in exec_cmd:
+                exec_cmd = f"sudo -S bash -c {shlex.quote(exec_cmd)}"
+            else:
+                exec_cmd = f"sudo -S {exec_cmd}"
+            if not exec_kwargs.get("get_pty") and _sudo_password:
+                exec_kwargs["get_pty"] = True
+
         # Use interactive handler if expect_map is provided
         if expect_map:
             stdout, stderr, exit_status = self._execute_interactive(
@@ -1015,9 +1040,14 @@ class ParamikoDriver(BaseDriver):
             )
         else:
             _stdin, stdout_channel, stderr_channel = session.exec_command(exec_cmd, **exec_kwargs)
+            if _sudo and _sudo_password:
+                _stdin.write(f"{_sudo_password}\n")
+                _stdin.flush()
             stdout = stdout_channel.read().decode("utf-8", errors="replace")
             stderr = stderr_channel.read().decode("utf-8", errors="replace")
             exit_status = stdout_channel.channel.recv_exit_status()
+            if _sudo and _sudo_password:
+                stdout = self._clean_sudo_output(stdout, _sudo_password)
 
         duration_metadata = self._get_base_metadata(start_time)
 
@@ -1045,6 +1075,8 @@ class ParamikoDriver(BaseDriver):
         poll_interval = 0.2
         max_no_output = int((timeout or 60) / poll_interval)
         no_output_count = 0
+        # Track responded prompts to avoid duplicate responses across chunks
+        responded_prompts: set = set()
 
         while not stdout.channel.exit_status_ready():
             if stdout.channel.recv_ready():
@@ -1053,11 +1085,12 @@ class ParamikoDriver(BaseDriver):
                     full_stdout += chunk
                     no_output_count = 0
 
-                    # Check if any prompt matches
+                    # Check accumulated buffer (not just current chunk) to handle split packets
                     for prompt, response in expect_map.items():
-                        if prompt in chunk:
+                        if prompt in full_stdout and prompt not in responded_prompts:
                             stdin.write(response + "\n")
                             stdin.flush()
+                            responded_prompts.add(prompt)
                             break
             else:
                 time.sleep(poll_interval)
@@ -1115,12 +1148,14 @@ class ParamikoDriver(BaseDriver):
         if args.working_directory:
             cmd = f"cd {args.working_directory} && {cmd}"
 
+        # Inject environment via export (reliable, doesn't depend on sshd AcceptEnv)
+        if args.environment:
+            cmd = self._apply_env_to_command(cmd, args.environment)
+
         exec_kwargs = {}
         if args.timeout:
             exec_kwargs["timeout"] = args.timeout
         exec_kwargs["get_pty"] = args.get_pty
-        if args.environment:
-            exec_kwargs["environment"] = args.environment
         if args.bufsize != -1:
             exec_kwargs["bufsize"] = args.bufsize
 

@@ -142,7 +142,7 @@ class NetmikoDriver(BaseDriver):
         if cls._monitor_stop_event:
             cls._monitor_stop_event.set()
         if cls._monitor_thread and cls._monitor_thread.is_alive():
-            cls._monitor_thread.join()
+            cls._monitor_thread.join(timeout=5)
         cls._monitor_thread = None
         cls._monitor_stop_event = None
 
@@ -205,7 +205,7 @@ class NetmikoDriver(BaseDriver):
             return session
         except Exception as e:
             log.error(f"Error in connecting: {e}")
-            raise e
+            raise
 
     def send(self, session: BaseConnection, command: list[str]) -> list[DriverExecutionResult]:
         """Execute commands and return rich results with metadata"""
@@ -213,6 +213,7 @@ class NetmikoDriver(BaseDriver):
 
         from ....models.driver import DriverExecutionResult
 
+        start_time = time.perf_counter()
         try:
             with self._monitor_lock:
                 if self.enabled:
@@ -288,9 +289,9 @@ class NetmikoDriver(BaseDriver):
 
         from ....models.driver import DriverExecutionResult
 
+        start_time = time.perf_counter()
         try:
             with self._monitor_lock:
-                start_time = time.perf_counter()
 
                 # Proactive insurance: Clear any stale hostname/prompt from session persistence
                 session.set_base_prompt()
@@ -467,7 +468,8 @@ class NetmikoDriver(BaseDriver):
                     if results:
                         results[-1].stdout += f"\n{commit}"
 
-                if self.save:
+                all_success = all(r.exit_status == 0 for r in results)
+                if self.save and all_success:
                     session.set_base_prompt()
                     save_res = session.save_config()
                     if results and save_res:
@@ -526,7 +528,9 @@ class NetmikoDriver(BaseDriver):
                 if not effective_local_path:
                     raise ValueError("No local path or staged file provided for upload.")
                 source_file = effective_local_path
-                dest_file = file_transfer_op.remote_path
+                dest_file = self._get_effective_remote_path(
+                    file_transfer_op.remote_path, effective_local_path
+                )
                 direction = "put"
             else:  # download
                 effective_local_path = self._get_effective_dest_path(
@@ -547,7 +551,8 @@ class NetmikoDriver(BaseDriver):
 
             results = file_transfer(**transfer_args)
 
-            op_name = f"{file_transfer_op.operation} {file_transfer_op.remote_path}"
+            actual_remote = dest_file if direction == "get" else source_file
+            op_name = f"{file_transfer_op.operation} {actual_remote}"
             transfer_metadata = self._get_base_metadata(start_time)
             transfer_metadata.update(
                 {
@@ -555,7 +560,7 @@ class NetmikoDriver(BaseDriver):
                     "transfer_success": bool(results.get("file_exists")),
                     "md5_verified": bool(results.get("file_verified")),
                     "local_path": dest_file if direction == "get" else source_file,
-                    "remote_path": source_file if direction == "get" else dest_file,
+                    "remote_path": actual_remote,
                 }
             )
             return [
@@ -583,8 +588,8 @@ class NetmikoDriver(BaseDriver):
         """
         Disconnect the session and stop monitor thread.
         """
-        # We only disconnect if reset is True, so that we can reuse the connection
-        if not reset:
+        # If keepalive is enabled and not resetting, keep the connection
+        if self.conn_args.keepalive and not reset:
             return
 
         with self._monitor_lock:
@@ -593,7 +598,7 @@ class NetmikoDriver(BaseDriver):
                 session.disconnect()
             except Exception as e:
                 log.error(f"Error in disconnecting (reset): {e}")
-                raise e
+                raise
             finally:
                 self._set_persisted_session(None, self.conn_args)
 

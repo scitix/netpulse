@@ -85,7 +85,7 @@ class PyeapiDriver(BaseDriver):
             return session
         except Exception as e:
             log.error(f"Error in connecting: {e}")
-            raise e
+            raise
 
     def send(
         self, session: "pyeapi.client.Node", command: list[str]
@@ -96,6 +96,7 @@ class PyeapiDriver(BaseDriver):
         import time
 
         session = session if session else self.connection
+        start_time = time.perf_counter()
         try:
             if session is None:
                 log.error("Connection is not established")
@@ -104,8 +105,6 @@ class PyeapiDriver(BaseDriver):
             if command is None:
                 log.warning("No command provided")
                 return []
-
-            start_time = time.perf_counter()
             # session.enable returns a list of result objects for each command
             raw_results = session.enable(commands=command, send_enable=self.enabled, **self.args)
             duration_metadata = self._get_base_metadata(start_time)
@@ -143,6 +142,7 @@ class PyeapiDriver(BaseDriver):
         import time
 
         session = session if session else self.connection
+        start_time = time.perf_counter()
         try:
             if session is None:
                 log.error("Connection is not established")
@@ -151,8 +151,6 @@ class PyeapiDriver(BaseDriver):
             if not config:
                 log.warning("No config provided")
                 return []
-
-            start_time = time.perf_counter()
             full_config = config.copy()
             if self.save:
                 full_config.append("write memory")
