@@ -97,10 +97,10 @@ def test_detached_launch_with_binary_upload(mock_transfer, mock_session):
         file_transfer=file_op,
     )
 
-    # Mock successful upload
-    mock_transfer.return_value = {
-        "file_transfer_upload": DriverExecutionResult(stdout="uploaded", exit_status=0)
-    }
+    # Mock successful upload (_handle_file_transfer returns list[DriverExecutionResult])
+    mock_transfer.return_value = [
+        DriverExecutionResult(command="upload /tmp/tools", stdout="uploaded", exit_status=0)
+    ]
 
     # Act
     driver.launch_detached(mock_session, "", "task-binary")

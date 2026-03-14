@@ -44,7 +44,7 @@ def test_paramiko_send_uses_exec_args(monkeypatch):
     for cmd, kwargs in session.calls:
         assert kwargs["timeout"] == 1.5
         assert kwargs["get_pty"] is True
-        assert cmd.startswith("export k='v'")
+        assert "export k=v" in cmd  # shlex.quote omits quotes for safe values
         assert "environment" not in kwargs
         assert kwargs["bufsize"] == 1024
 
