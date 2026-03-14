@@ -15,6 +15,6 @@ class BaseWebHookCaller:
 
     def call(self, req: Any, job: rq.job.Job, result: Any, **kwargs):
         """
-        (noexcept) This method must throw no exceptions.
+        Deliver the webhook. Raises on delivery failure so the caller can schedule retries.
         """
         raise NotImplementedError

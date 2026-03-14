@@ -113,6 +113,13 @@ class WebHook(BaseModel):
     timeout: float = Field(
         default=5.0, ge=0.5, le=120.0, description="Request timeout in seconds (default 5s)"
     )
+    max_retries: int = Field(
+        default=3, ge=0, le=10, description="Maximum delivery retries on failure (0 disables retry)"
+    )
+    retry_intervals: List[int] = Field(
+        default=[10, 30, 120],
+        description="Delay in seconds between retries. Last value is reused when list is shorter than max_retries.",
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -122,6 +129,8 @@ class WebHook(BaseModel):
                 "method": "POST",
                 "headers": {"Content-Type": "application/json"},
                 "timeout": 5.0,
+                "max_retries": 3,
+                "retry_intervals": [10, 30, 120],
             }
         }
     )

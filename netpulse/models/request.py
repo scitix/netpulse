@@ -145,7 +145,7 @@ class ExecutionRequest(BaseModel):
     )
     push_interval: Optional[int] = Field(
         default=None,
-        ge=5,
+        ge=1,
         le=3600,
         description="Interval (seconds) for incremental webhook log pushes. Requires detach=True",
     )

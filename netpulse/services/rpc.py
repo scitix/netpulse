@@ -7,10 +7,12 @@ import logging
 import os
 import time
 import uuid
+from datetime import timedelta
 from typing import Callable, Optional
 
+import requests
 from pydantic import ValidationError
-from rq import get_current_job
+from rq import Queue, get_current_job
 from rq.job import Callback, Job
 
 from ..models import JobAdditionalData, QueueStrategy
@@ -309,6 +311,108 @@ def rpc_callback_factory(func: Optional[Callable], timeout: Optional[float] = No
     )
 
 
+def dispatch_webhook(webhook_data: dict, payload: dict, attempt: int = 0):
+    """
+    Deliver a pre-built webhook payload. On failure, re-enqueues itself with exponential
+    backoff using the FIFO queue. This is the retry-safe delivery function for webhooks.
+    """
+    from ..models.common import WebHook
+
+    webhook = WebHook.model_validate(webhook_data)
+    try:
+        resp = requests.request(
+            method=webhook.method.value,
+            url=webhook.url.unicode_string(),
+            headers=webhook.headers,
+            cookies=webhook.cookies,
+            timeout=webhook.timeout,
+            auth=webhook.auth,
+            json=payload,
+        )
+        resp.raise_for_status()
+        log.info(
+            f"Webhook delivered to {webhook.url} "
+            f"(attempt {attempt + 1}/{webhook.max_retries + 1})"
+        )
+    except Exception as e:
+        next_attempt = attempt + 1
+        if next_attempt <= webhook.max_retries:
+            intervals = webhook.retry_intervals
+            delay = intervals[attempt] if attempt < len(intervals) else intervals[-1]
+            job = get_current_job()
+            conn = job.connection if job else None
+            if conn:
+                q = Queue("fifo", connection=conn)
+                q.enqueue_in(
+                    timedelta(seconds=delay),
+                    dispatch_webhook,
+                    kwargs={
+                        "webhook_data": webhook_data,
+                        "payload": payload,
+                        "attempt": next_attempt,
+                    },
+                )
+                log.warning(
+                    f"Webhook delivery failed for {webhook.url} "
+                    f"(attempt {next_attempt}/{webhook.max_retries + 1}), "
+                    f"retrying in {delay}s: {e}"
+                )
+            else:
+                log.error(
+                    f"Webhook delivery failed for {webhook.url} "
+                    f"(attempt {next_attempt}/{webhook.max_retries + 1}), "
+                    f"no RQ connection available for retry: {e}"
+                )
+        else:
+            log.error(
+                f"Webhook permanently failed after {webhook.max_retries + 1} attempt(s) "
+                f"for {webhook.url}: {e}"
+            )
+
+
+def _dispatch_webhook_with_retry(wobj, req, job_obj, result, is_success, rq_job):
+    """
+    Attempt webhook delivery via the plugin. On failure, enqueue a retry via dispatch_webhook.
+    """
+    try:
+        wobj.call(req=req, job=job_obj, result=result, is_success=is_success)
+    except Exception as e:
+        webhook = req.webhook
+        if not webhook or webhook.max_retries == 0:
+            log.warning(f"Webhook delivery failed (no retry configured): {e}")
+            return
+
+        # Build the payload independently so dispatch_webhook can re-deliver without req/job
+        try:
+            payload = wobj.build_payload(req, job_obj, result, is_success)
+        except Exception as build_err:
+            log.warning(f"Could not build webhook payload for retry: {build_err}")
+            return
+
+        webhook_data = webhook.model_dump(mode="json")
+        intervals = webhook.retry_intervals
+        delay = intervals[0] if intervals else 10
+
+        conn = rq_job.connection if rq_job else None
+        if conn:
+            q = Queue("fifo", connection=conn)
+            q.enqueue_in(
+                timedelta(seconds=delay),
+                dispatch_webhook,
+                kwargs={
+                    "webhook_data": webhook_data,
+                    "payload": payload,
+                    "attempt": 1,
+                },
+            )
+            log.warning(
+                f"Webhook delivery failed for {webhook.url}, "
+                f"retry 1/{webhook.max_retries} scheduled in {delay}s: {e}"
+            )
+        else:
+            log.error(f"Webhook delivery failed for {webhook.url}, no RQ connection for retry: {e}")
+
+
 def rpc_webhook_callback(*args):
     """
     If job has a webhook, this function is called when job succeeded / failed.
@@ -356,12 +460,13 @@ def rpc_webhook_callback(*args):
                 task_id = job.meta.get("task_id") if job.meta else None
                 job_resp.id = task_id or job.id
 
-                wobj.call(req=req, job=job_resp, result=result, is_success=is_success)
+                _dispatch_webhook_with_retry(
+                    wobj, req, job_resp, result, is_success, job
+                )
             else:
-                wobj.call(req=req, job=job, result=result, is_success=is_success)
+                _dispatch_webhook_with_retry(wobj, req, job, result, is_success, job)
         except Exception as e:
             log.warning(f"Error in webhook execution: {e}")
-            raise
 
     # --- New: Transform Local Paths to Download URLs ---
     if is_success and isinstance(result, list):

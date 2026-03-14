@@ -16,43 +16,27 @@ class BasicWebHookCaller(BaseWebHookCaller):
     def __init__(self, hook: WebHook):
         self.config = hook
 
-    def call(self, req: Any, job: Any, result: Any, **kwargs):
-        # Determine success status and format result
-        is_success = kwargs.get("is_success")
-        if is_success is None:
-            # Fallback logic if is_success not explicitly passed
-            if hasattr(job, "get_status"):
-                status = job.get_status()
-                # Handle RQ JobStatus enum (which has .value) or raw string
-                status_str = status.value if hasattr(status, "value") else str(status)
-                is_success = status_str == "finished"
-            else:
-                # JobInResponse or other objects
-                is_success = getattr(job, "status", "unknown") == "finished"
-
+    def build_payload(self, req: Any, job: Any, result: Any, is_success: bool) -> dict:
+        """Build the JSON payload dict for webhook delivery."""
         # If result is an exception tuple or JobAdditionalData (containing error)
         if isinstance(result, tuple) and len(result) == 2:
             is_success = False
             result_payload = f"{result[0]}: {result[1]}"
         elif hasattr(result, "error") and result.error:
-            # Handle JobAdditionalData or similar models
             is_success = False
             exc_type, exc_msg = result.error
             result_payload = f"{exc_type}: {exc_msg}"
         elif isinstance(result, list):
-            # Use the formatting logic for list results
             result_payload = self._format_result(result)
         else:
             result_payload = str(result)
 
-        # Build webhook payload with comprehensive information
         data = {
             "id": job.id,
             "status": "success" if is_success else "failed",
             "result": result_payload,
         }
 
-        # Add device information
         if req:
             conn_args = getattr(req, "connection_args", None)
             if conn_args:
@@ -66,12 +50,10 @@ class BasicWebHookCaller(BaseWebHookCaller):
                 if device_info:
                     data["device"] = device_info
 
-            # Add driver information
             driver = getattr(req, "driver", None)
             if driver:
                 data["driver"] = driver.value if hasattr(driver, "value") else str(driver)
 
-            # Add command or config information
             command = getattr(req, "command", None)
             if command is not None:
                 if isinstance(command, list):
@@ -88,21 +70,31 @@ class BasicWebHookCaller(BaseWebHookCaller):
                     else:
                         data["config"] = str(config)
 
-        try:
-            resp = requests.request(
-                method=self.config.method.value,
-                url=self.config.url.unicode_string(),
-                headers=self.config.headers,
-                cookies=self.config.cookies,
-                timeout=self.config.timeout,
-                auth=self.config.auth,
-                json=data,
-            )
-            resp.raise_for_status()
-        except Exception as e:
-            log.warning(f"Failed to call webhook {self.config.url}: {e}")
-        else:
-            log.debug(f"Webhook {self.config.url} called successfully")
+        return data
+
+    def call(self, req: Any, job: Any, result: Any, **kwargs):
+        is_success = kwargs.get("is_success")
+        if is_success is None:
+            if hasattr(job, "get_status"):
+                status = job.get_status()
+                status_str = status.value if hasattr(status, "value") else str(status)
+                is_success = status_str == "finished"
+            else:
+                is_success = getattr(job, "status", "unknown") == "finished"
+
+        data = self.build_payload(req, job, result, is_success)
+
+        resp = requests.request(
+            method=self.config.method.value,
+            url=self.config.url.unicode_string(),
+            headers=self.config.headers,
+            cookies=self.config.cookies,
+            timeout=self.config.timeout,
+            auth=self.config.auth,
+            json=data,
+        )
+        resp.raise_for_status()
+        log.debug(f"Webhook {self.config.url} called successfully")
 
     def _format_result(self, result: list) -> str:
         """
@@ -113,7 +105,6 @@ class BasicWebHookCaller(BaseWebHookCaller):
 
         lines = []
         for res in result:
-            # Handle DriverExecutionResult object
             if isinstance(res, DriverExecutionResult):
                 lines.append(f"Command: {res.command}")
                 lines.append(f"Output:\n{res.stdout}")
@@ -121,7 +112,6 @@ class BasicWebHookCaller(BaseWebHookCaller):
                     lines.append(f"Error: {res.stderr}")
                 lines.append(f"Exit Status: {res.exit_status}")
             elif isinstance(res, dict):
-                # Handle dict format (e.g., if somehow a dict is passed in the list)
                 cmd = res.get("command", "unknown")
                 lines.append(f"Command: {cmd}")
                 output = res.get("stdout")
@@ -133,7 +123,6 @@ class BasicWebHookCaller(BaseWebHookCaller):
                 if "exit_status" in res:
                     lines.append(f"Exit Status: {res['exit_status']}")
             else:
-                # Simple string or other output
                 lines.append(str(res))
             lines.append("")  # Empty line between commands
 
