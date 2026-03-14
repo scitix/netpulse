@@ -5,56 +5,51 @@
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 [![Agent-Ready](https://img.shields.io/badge/Agent--Ready-informational.svg)](ai-docs/llms.txt)
 
-NetPulse is a high-performance, distributed infrastructure orchestration engine. It provides a unified, API-first approach to managing both **Network Devices** (Routers, Switches, Firewalls) and **Linux Servers** at scale.
+NetPulse is a high-performance, distributed **Connectivity Gateway** designed for large-scale infrastructure interaction. It provides a standardized API-first approach to manage **Network Switches**, **Firewalls**, and **Linux Servers**, specialized for the rigorous demands of **Large-Scale AI Infrastructure** management.
 
-By utilizing persistent connection pooling and a distributed worker architecture, NetPulse transforms legacy CLI-based infrastructure into a cloud-native, programmable ecosystem that is highly optimized for integration with **AI Agents** and modern automated workflows.
+Rather than a complex orchestration engine, NetPulse focuses on being the most reliable "Connectivity Layer"—delivering rock-solid interaction even in massive-scale environments like GPU clusters and high-performance RDMA networks.
 
-## 🚀 Key Features
+## 🛠 Core Engineering Strengths
 
-*   **Unified Orchestration**: A single API logic to manage multi-vendor Network CLI (Cisco, Huawei, Arista, etc.) and Linux/Unix systems.
-*   **High-Performance Persistent Sessions**: Uses "Pinned Workers" to maintain long-lived SSH/API connections, reducing execution latency from seconds to milliseconds.
-*   **Distributed Architecture**: Cloud-native design with a Controller-Worker model. Scalable on Kubernetes/Docker with dynamic node discovery and Redis-backed task scheduling.
-*   **Linux Detached Tasks**: Launch long-running maintenance jobs (e.g., system upgrades) that run independently on the remote host with incremental log streaming and automatic tracking.
-*   **Agent-Ready Design**: Engineered for LLM integration. Provides comprehensive context (`llms.txt`, specialized AI docs) and structured JSON outputs for seamless Agentic control.
-*   **Production Hardening**: Deep self-healing session monitoring, HashiCorp Vault integration for zero-leak credentials, and automated storage lifecycle management.
+*   **Multi-Vendor Network Interaction**: Standardized CLI/API control for Cisco, Huawei, Arista, Juniper, and more, leveraging battle-tested drivers (Netmiko, NAPALM, PyEAPI).
+*   **High-Resiliency Connectivity**: Beyond traditional SSH, NetPulse implements deep self-healing probes and persistent session pooling ("Pinned Workers") to ensure zero-drop interaction.
+*   **Linux Infrastructure Management**: Native Paramiko integration for server-side operations, supporting sudo handling, SFTP, and persistent detached background tasks.
+*   **AI Infrastructure Optimized**: Engineered to manage the backbone of AI clusters, where managing thousands of RDMA network nodes and GPU servers requires extreme stability and performance.
+*   **Distributed Scalability**: A Controller-Worker architecture that scales horizontally across geo-locations, coordinated via a Redis-backed state machine.
+*   **Agent-Ready Context**: Optimized for AI integration, providing structured JSON outputs and specialized context docs for LLM-driven automation.
 
 ## 🏗 System Architecture
 
-NetPulse utilizes a distributed architecture where a central **Controller** manages API requests and a fleet of **Workers** handle the heavy lifting of device/server interaction.
+NetPulse is designed as a lightweight interaction layer. It offloads command execution to a distributed fleet of Workers, ensuring the central API remains responsive while maintaining thousands of concurrent sessions.
 
-- **Pinned Sessions**: Connections are bound to specific workers to minimize handshake overhead.
-- **Failover & Recovery**: Workers automatically detect stalled sessions and self-heal via internal probes.
-
-## 🔌 Plugin System
-
-*   **Infrastructure Drivers**: 
-    - **Paramiko**: Advanced Linux management (Detached, Sudo, SFTP, Agent Forwarding).
-    - **Netmiko**: Universal Network CLI support (Cisco, Huawei, Juniper, etc.).
-    - **NAPALM**: Standardized state verification and configuration management.
-    - **PyEAPI**: Arista EOS JSON-RPC optimization.
-
-*   **Logic & Rendering**: 
-    - **Templates**: Jinja2 configuration rendering.
-    - **Parsers**: TextFSM and TTP for converting raw CLI output into structured JSON.
-    - **Webhooks**: Event-driven callbacks for task completion and incremental logs.
+- **Pinned Sessions**: Reuses existing connections to eliminate SSH handshake overhead.
+- **Failover Logic**: Automatically detects and restores stalled sessions without interrupting higher-level logic.
 
 ## 📥 Quick Start
 
-### Docker Quick Deploy
+### One-Click Deployment
+
+NetPulse is designed to be deployed quickly in Docker environments:
 
 ```bash
 # Clone the repository
 git clone https://github.com/scitix/netpulse.git
 cd netpulse
 
-# One-click deployment
-docker compose up -d
+# One-click deployment using the provided script
+bash ./scripts/docker_auto_deploy.sh
 ```
 
-### API Examples
+### Essential Manual Setup
+If you prefer manual configuration:
+1. Generate env: `bash ./scripts/setup_env.sh generate`
+2. Update `.env` with your `NETPULSE_REDIS__PASSWORD` and `NETPULSE_SERVER__API_KEY`.
+3. Start: `docker compose up -d`
 
-#### A. Network Device Execution (Cisco)
-Connect to a switch and retrieve structured interface data:
+## 🔌 API Interaction Examples
+
+### A. Network Switch Management (Netmiko)
+Execute commands on a switch and retrieve structured data:
 
 ```bash
 curl -X POST http://localhost:9000/device/exec \
@@ -63,7 +58,7 @@ curl -X POST http://localhost:9000/device/exec \
     "driver": "netmiko",
     "connection_args": {
       "device_type": "cisco_ios",
-      "host": "192.168.1.1",
+      "host": "10.0.0.1",
       "username": "admin",
       "password": "pass"
     },
@@ -72,29 +67,27 @@ curl -X POST http://localhost:9000/device/exec \
   }'
 ```
 
-#### B. Linux Detached Maintenance (Background)
-Launch a system upgrade that continues running even if the API call finishes:
+### B. Linux Server Management (Paramiko)
+Execute background maintenance tasks with detached tracking:
 
 ```bash
 curl -X POST http://localhost:9000/device/exec \
   -H "X-API-KEY: your_api_key" \
   -d '{
     "driver": "paramiko",
-    "connection_args": {"host": "10.0.0.1", "username": "root"},
-    "command": ["apt-get update && apt-get upgrade -y"],
+    "connection_args": {"host": "10.0.0.100", "username": "root"},
+    "command": ["yum update -y"],
     "detach": true,
-    "webhook": {"url": "https://callback.your-app.com/jobs"}
+    "webhook": {"url": "https://callback.your-app.com/notify"}
   }'
 ```
 
 ## 📖 AI & Developer Resources
 
-For humans and AI Agents, NetPulse provides optimized context for deep integration:
-
-*   🤖 **[Agent Guide (llms.txt)](llms.txt)** - The primary source of truth for LLM context.
-*   🔌 **[API Manual](ai-docs/API_REFERENCE.md)** - Simplified API reference optimized for AI parsing.
-*   🏗️ **[Documentation](https://netpulse.readthedocs.io/)** - Full architecture and deployment guides.
-*   🐛 **[Issues](https://github.com/scitix/netpulse/issues)** - Bug reports and feature requests.
+* 🤖 **[Agent Guide (llms.txt)](llms.txt)** - Essential context for LLM integration.
+* 🔌 **[API Manual](ai-docs/API_REFERENCE.md)** - Cleaned and optimized for AI parsing.
+* 🏗️ **[Documentation](https://netpulse.readthedocs.io/)** - Full architecture and deployment guides.
+* 🐛 **[Issues](https://github.com/scitix/netpulse/issues)** - Bug reports and feature requests.
 
 ## License
 
@@ -104,7 +97,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 * **Locus Li** – Creator & Maintainer
 * **Yongkun Li** – Lead Developer
-
----
-
-**NetPulse** - Empowering AI to orchestrate the world's infrastructure.
