@@ -236,8 +236,9 @@ class NetmikoDriver(BaseDriver):
                     if self.args:
                         if isinstance(self.args, NetmikoSendCommandArgs):
                             user_args = self.args.model_dump()
-                            # If user didn't explicitly set cmd_verify, we use our default False
-                            if "cmd_verify" not in user_args or self.args.cmd_verify is True:
+                            # Override cmd_verify to False only when the user did not
+                            # explicitly set it (Pydantic default is True).
+                            if "cmd_verify" not in self.args.model_fields_set:
                                 user_args["cmd_verify"] = False
                             response = session.send_command(cmd, **user_args)
                         else:

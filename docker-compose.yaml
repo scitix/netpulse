@@ -81,7 +81,7 @@ services:
     restart: on-failure  # exits 0 when MongoDB disabled (no restart); restarts on connection errors
 
   vault:
-    image: hashicorp/vault:1.15
+    image: hashicorp/vault:1.21
     container_name: netpulse-vault
     env_file:
       - .env
@@ -111,7 +111,7 @@ services:
       start_period: 15s
 
   vault-init:
-    image: hashicorp/vault:1.15
+    image: hashicorp/vault:1.21
     container_name: netpulse-vault-init
     depends_on:
       vault:

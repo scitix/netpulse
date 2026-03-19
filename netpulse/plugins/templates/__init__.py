@@ -94,7 +94,7 @@ class TemplateSource:
             return response.text
 
         elif self.protocol == self.SourceType.FTP:
-            with urllib.request.urlopen(self.source) as fp:
+            with urllib.request.urlopen(self.source, timeout=30) as fp:
                 return fp.read().decode("utf-8")
 
         else:

@@ -759,7 +759,7 @@ class ParamikoDriver(BaseDriver):
 
     def _handle_file_transfer(
         self, session: paramiko.SSHClient, file_transfer_op, skip_exec: bool = False
-    ) -> dict:
+    ) -> list:
         if not isinstance(file_transfer_op, FileTransferModel):
             file_transfer_op = FileTransferModel.model_validate(file_transfer_op)
 

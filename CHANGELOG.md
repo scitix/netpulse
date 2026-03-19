@@ -1,5 +1,53 @@
 # Changelog
 
+## [0.4.2] - 2026-03-19
+
+### Added
+
+- **`/system/stats` Endpoint**: New system statistics endpoint with self-healing telemetry for runtime observability.
+- **Detached Task Supervisor**: Background supervisor that monitors detached tasks, triggers incremental log pushes via webhooks, and auto-syncs stale tasks.
+- **Automated Staging Cleanup**: Configurable retention-based cleanup of staging directory files to prevent disk exhaustion.
+- **Webhook Retry Mechanism**: Automatic retry with configurable attempts for webhook delivery failures, improving reliability in unreliable network conditions.
+- **Asynchronous Audit Log Archiver**: MongoDB-backed audit log archiver worker for persistent job history and compliance.
+- **Kubernetes Deployment**: Helm chart and raw K8s manifests for production deployment, including Vault auto-init, Redis operator integration, and multi-replica scaling.
+
+### Changed
+
+- Unified Vault image version to 1.21 across Docker Compose and Kubernetes deployments.
+- Reorganized deployment structure under `deploy/` directory (Helm charts, K8s manifests, scripts).
+
+### Fixed
+
+- Fixed scheduler edge cases in `batch_node_select` capacity validation.
+- Added timeout for remote template fetching to prevent hanging on unreachable URLs.
+- Fixed supervisor sync bug where registry updates could be lost.
+- Fixed `_handle_file_transfer()` return type annotation (`dict` → `list`).
+- Extracted and centralized sensitive data masking in logger to prevent credential leakage.
+
+## [0.4.1] - 2026-03-05
+
+### Added
+
+- **Deep Health Checks**: Paramiko driver now performs periodic channel-level verification to detect zombie SSH sessions.
+- **Execution Timeout**: Introduced `execution_timeout` to distinguish queue TTL from actual command execution timeout.
+- **Rate-limited Cleanup**: Expired detached task file cleanup now uses rate limiting to prevent cleanup storms.
+
+### Changed
+
+- **Netmiko Driver Refactor**: Configuration commands are now executed line-by-line for finer-grained results and improved error handling. Channel-level write with pattern matching replaces `send_config_set` for better performance.
+- **DriverExecutionResult Fields**: Renamed `output`/`error` to `stdout`/`stderr` for consistency across all drivers.
+- **Redis Optimization**: Replaced `KEYS` command with `scan_iter` to avoid blocking in large-scale deployments.
+- Improved prompt synchronization in Netmiko driver.
+- Enhanced exception handling and core service robustness.
+- Standardized template parsing and routing exception handling.
+
+### Fixed
+
+- Fixed uninitialized `meta` variable in job dispatch.
+- Corrected worker heartbeat interval calculation direction.
+- Fixed connection leaks in Netmiko driver during reconnection.
+- Fixed multi-line f-string formatting in error messages.
+
 ## [0.4.0] - 2026-02-23
 
 > [!CAUTION]
