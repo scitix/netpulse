@@ -66,10 +66,20 @@ spec:
         volumeMounts:
         - name: netpulse-storage
           mountPath: /app/storage
+        {{- if eq .Values.config.redis.tls "true" }}
+        - name: redis-tls
+          mountPath: /app/redis/tls
+          readOnly: true
+        {{- end }}
       volumes:
       - name: netpulse-storage
         persistentVolumeClaim:
           claimName: {{ include "netpulse.fullname" . }}-storage
+      {{- if eq .Values.config.redis.tls "true" }}
+      - name: redis-tls
+        secret:
+          secretName: {{ include "netpulse.fullname" . }}-redis-tls
+      {{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -139,7 +149,69 @@ spec:
         volumeMounts:
         - name: netpulse-storage
           mountPath: /app/storage
+        {{- if eq .Values.config.redis.tls "true" }}
+        - name: redis-tls
+          mountPath: /app/redis/tls
+          readOnly: true
+        {{- end }}
       volumes:
       - name: netpulse-storage
         persistentVolumeClaim:
           claimName: {{ include "netpulse.fullname" . }}-storage
+      {{- if eq .Values.config.redis.tls "true" }}
+      - name: redis-tls
+        secret:
+          secretName: {{ include "netpulse.fullname" . }}-redis-tls
+      {{- end }}
+---
+{{- if eq .Values.config.mongodb.enabled "true" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "netpulse.fullname" . }}-archiver-worker
+  labels:
+    {{- include "netpulse.labels" . | nindent 4 }}
+    component: archiver-worker
+spec:
+  replicas: {{ .Values.replicaCount.archiverWorker }}
+  selector:
+    matchLabels:
+      {{- include "netpulse.selectorLabels" . | nindent 6 }}
+      component: archiver-worker
+  template:
+    metadata:
+      labels:
+        {{- include "netpulse.selectorLabels" . | nindent 8 }}
+        component: archiver-worker
+    spec:
+      containers:
+      - name: archiver-worker
+        image: "{{ .Values.images.archiverWorker.repository }}:{{ .Values.images.archiverWorker.tag }}"
+        imagePullPolicy: {{ .Values.images.archiverWorker.pullPolicy }}
+        resources:
+          {{- toYaml .Values.resources.archiverWorker | nindent 10 }}
+        envFrom:
+        - configMapRef:
+            name: {{ include "netpulse.fullname" . }}-config
+        env:
+        - name: NETPULSE_REDIS__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "netpulse.fullname" . }}-secrets
+              key: password
+        - name: NETPULSE_REDIS__SENTINEL__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "netpulse.fullname" . }}-secrets
+              key: password
+        {{- if eq .Values.config.redis.tls "true" }}
+        volumeMounts:
+        - name: redis-tls
+          mountPath: /app/redis/tls
+          readOnly: true
+      volumes:
+      - name: redis-tls
+        secret:
+          secretName: {{ include "netpulse.fullname" . }}-redis-tls
+        {{- end }}
+{{- end }}

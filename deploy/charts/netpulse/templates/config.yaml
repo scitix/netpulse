@@ -15,6 +15,12 @@ data:
   NETPULSE_CREDENTIAL__VERIFY: {{ .Values.config.vault.verify | quote }}
   NETPULSE_CREDENTIAL__CACHE_TTL: {{ .Values.config.vault.cacheTtl | quote }}
   NETPULSE_STORAGE__RETENTION_HOURS: {{ .Values.config.storage.retentionHours | quote }}
+  NETPULSE_STORAGE__STAGING: {{ .Values.config.storage.staging | quote }}
+  NETPULSE_MONGODB__ENABLED: {{ .Values.config.mongodb.enabled | quote }}
+  NETPULSE_MONGODB__URI: {{ .Values.config.mongodb.uri | quote }}
+  NETPULSE_MONGODB__DATABASE: {{ .Values.config.mongodb.database | quote }}
+  NETPULSE_MONGODB__COLLECTION: {{ .Values.config.mongodb.collection | quote }}
+  NETPULSE_MONGODB__DETACHED_COLLECTION: {{ .Values.config.mongodb.detachedCollection | quote }}
   PYTHONUNBUFFERED: "1"
 ---
 apiVersion: v1

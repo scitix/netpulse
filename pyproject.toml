@@ -36,9 +36,10 @@ dependencies = [
     "requests~=2.32.3",
     "hvac~=2.3.0",
 
-    # Redis
+    # Redis & MongoDB
     "redis~=5.2.1",
     "rq~=2.3.1",
+    "pymongo~=4.11.1",
 
     # Drivers
     "napalm~=5.1.0",

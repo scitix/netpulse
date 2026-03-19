@@ -63,6 +63,23 @@ services:
       - "netpulse-network"
     restart: unless-stopped
 
+  archiver-worker:
+    image: localhost/netpulse-archiver-worker:latest
+    build:
+      context: .
+      dockerfile: docker/archiver_worker.dockerfile
+    env_file:
+      - .env
+    volumes:
+      - ./config:/app/config:z
+      - ./redis/tls:/app/redis/tls:ro,z
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - "netpulse-network"
+    restart: on-failure  # exits 0 when MongoDB disabled (no restart); restarts on connection errors
+
   vault:
     image: hashicorp/vault:1.15
     container_name: netpulse-vault
@@ -83,7 +100,11 @@ services:
       - "netpulse-network"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "vault", "status", "-address=http://127.0.0.1:8200"]
+      # `vault status` exits 2 when sealed (not an error for us), 0 when unsealed.
+      # Exit codes 1+ are errors; exit 2 means "sealed but reachable" which is healthy enough
+      # for vault-init to proceed. Without this, Docker marks the container unhealthy
+      # while sealed, and vault-init (which depends on service_healthy) never starts.
+      test: ["CMD-SHELL", "vault status -address=http://127.0.0.1:8200 || [ $? -eq 2 ]"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -94,7 +115,7 @@ services:
     container_name: netpulse-vault-init
     depends_on:
       vault:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - ./scripts/vault_auto_init.sh:/usr/local/bin/vault_auto_init.sh:ro
       - ./vault/data:/vault/data:z
@@ -133,8 +154,7 @@ networks:
 volumes:
   redis_data:
     name: "netpulse-redis-data"
-  vault_data:
-    name: "netpulse-vault-data"
+
   vault_logs:
     name: "netpulse-vault-logs"
   netpulse_staging:

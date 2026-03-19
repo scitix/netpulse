@@ -18,18 +18,23 @@ images:
     repository: localhost/netpulse-fifo-worker
     tag: "0.4.2"
     pullPolicy: IfNotPresent
+  archiverWorker:
+    repository: localhost/netpulse-archiver-worker
+    tag: "0.4.2"
+    pullPolicy: IfNotPresent
   vault:
     repository: hashicorp/vault
     tag: "1.21"
   vaultInit:
     # bitnami/kubectl: provides kubectl + sh, used by vault-init job to exec into vault pods
     repository: bitnami/kubectl
-    tag: "latest"
+    tag: "1.27"
 
 replicaCount:
   controller: 3
   nodeWorker: 18
   fifoWorker: 12
+  archiverWorker: 2
   vault: 3
 
 resources:
@@ -54,6 +59,13 @@ resources:
     limits:
       cpu: "2000m"
       memory: "4Gi"
+  archiverWorker:
+    requests:
+      cpu: "200m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
 
 persistence:
   size: 100Gi
@@ -64,6 +76,7 @@ config:
   pinnedPerNode: "128"
   storage:
     retentionHours: "24"
+    staging: "/app/storage/staging"
   redis:
     host: "netpulse-redis-master"
     port: "6379"
@@ -74,6 +87,12 @@ config:
     cacheTtl: "60"
     name: "vault_kv"      # Credential provider name, must match k8s config
     verify: "false"       # TLS verification disabled (plain HTTP vault)
+  mongodb:
+    enabled: "false"
+    uri: "mongodb://localhost:27017"
+    database: "netpulse"
+    collection: "audit_jobs"
+    detachedCollection: "audit_detached_tasks"
 
 secrets:
   # IMPORTANT: Override these with real values at deploy time.

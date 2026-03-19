@@ -88,35 +88,38 @@ generate_secure_values() {
 # NetPulse Environment Configuration
 # Generated on $(date)
 
-# Redis Password (Required)
+# ==========================================
+# Core Authentication
+# ==========================================
 NETPULSE_REDIS__PASSWORD=$redis_password
-
-# API Key (Required)
 NETPULSE_SERVER__API_KEY=$api_key
 
-# Optional: External URL for downloads (e.g., http://your-ip:9000)
+# ==========================================
+# Server Settings
+# ==========================================
 # NETPULSE_SERVER__EXTERNAL_URL=http://localhost:9000
-
-# Optional: Time Zone
 TZ=Asia/Shanghai
-
-# Optional: Log Level (DEBUG, INFO, WARNING, ERROR)
 NETPULSE_LOG__LEVEL=INFO
 
-# Optional: Credential Provider (enabled by default, set enabled=false to disable)
+# ==========================================
+# Credential Management (Vault)
+# ==========================================
 NETPULSE_CREDENTIAL__ENABLED=true
 NETPULSE_CREDENTIAL__NAME=vault_kv
-
-# Optional: Vault KV v2 settings (token OR AppRole)
 NETPULSE_CREDENTIAL__ADDR=http://vault:8200
 NETPULSE_CREDENTIAL__ALLOWED_PATHS=kv/netpulse
 NETPULSE_CREDENTIAL__VERIFY=false
 NETPULSE_CREDENTIAL__CACHE_TTL=30
-
-# Vault Token (randomly generated for each deployment)
-# This token will be used as the root token for Vault dev mode
-# For production, generate a proper token with limited permissions via Vault CLI
 NETPULSE_VAULT_TOKEN=$vault_token
+
+# ==========================================
+# Audit & Compliance (MongoDB)
+# ==========================================
+NETPULSE_MONGODB__ENABLED=false
+NETPULSE_MONGODB__URI=mongodb://localhost:27017
+NETPULSE_MONGODB__DATABASE=netpulse
+NETPULSE_MONGODB__COLLECTION=audit_jobs
+NETPULSE_MONGODB__DETACHED_COLLECTION=audit_detached_tasks
 ENVEOF
     
     print_success "Secure environment variables generated!"
