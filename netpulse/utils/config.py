@@ -101,6 +101,14 @@ class LogConfig(BaseModel):
     level: str = "INFO"
 
 
+class MongoDBConfig(BaseModel):
+    enabled: bool = False
+    uri: str = "mongodb://localhost:27017"
+    database: str = "netpulse"
+    collection: str = "audit_jobs"
+    detached_collection: str = "audit_detached_tasks"
+
+
 class StorageConfig(BaseModel):
     staging: Path = Path("/app/storage/staging")
     retention_hours: int = 24  # Default to 24 hours
@@ -112,6 +120,7 @@ class AppConfig(BaseSettings):
     worker: WorkerConfig
     redis: RedisConfig
     plugin: PluginConfig
+    mongodb: MongoDBConfig = MongoDBConfig()
     storage: StorageConfig = StorageConfig()
 
     # With default values

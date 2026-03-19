@@ -20,6 +20,7 @@ from ..models.driver import DriverExecutionResult
 from ..models.request import ExecutionRequest
 from ..plugins import drivers, parsers, renderers, webhooks
 from ..services.rediz import g_detached_task_registry
+from ..utils import g_config
 from ..worker.node import start_pinned_worker
 
 log = logging.getLogger(__name__)
@@ -213,7 +214,7 @@ def execute(req: ExecutionRequest):
                 "created_at": time.time(),
                 "status": "running" if is_running else "completed",
             }
-            g_detached_task_registry.register(task_id, meta)
+            g_detached_task_registry.register(task_id, meta, job_id=job.id if job else None)
             return result
 
         if has_command:
@@ -339,7 +340,7 @@ def dispatch_webhook(webhook_data: dict, payload: dict, attempt: int = 0):
             job = get_current_job()
             conn = job.connection if job else None
             if conn:
-                q = Queue("fifo", connection=conn)
+                q = Queue(g_config.get_fifo_queue_name(), connection=conn)
                 q.enqueue_in(
                     timedelta(seconds=delay),
                     dispatch_webhook,
@@ -392,7 +393,7 @@ def _dispatch_webhook_with_retry(wobj, req, job_obj, result, is_success, rq_job)
 
         conn = rq_job.connection if rq_job else None
         if conn:
-            q = Queue("fifo", connection=conn)
+            q = Queue(g_config.get_fifo_queue_name(), connection=conn)
             q.enqueue_in(
                 timedelta(seconds=delay),
                 dispatch_webhook,
@@ -437,6 +438,14 @@ def rpc_webhook_callback(*args):
         log.warning("Webhook handler is called with unexpected args.")
         return
 
+    # Audit log (moved from Manager for RQ compatibility)
+    if g_config.mongodb.enabled:
+        from .audit import rpc_audit_callback
+        try:
+            rpc_audit_callback(*args)
+        except Exception as e:
+            log.warning(f"Error in audit callback: {e}")
+
     # To cut down Redis memory usage, we get req from job.kwargs,
     # which is not elegant, but it is a trade-off.
     req: ExecutionRequest = job.kwargs.get("req", None)
@@ -465,7 +474,6 @@ def rpc_webhook_callback(*args):
 
     # --- New: Transform Local Paths to Download URLs ---
     if is_success and isinstance(result, list):
-        from ..utils import g_config
 
         staging_dir = str(g_config.storage.staging)
         download_base = os.path.join(staging_dir, "downloads")
@@ -528,11 +536,12 @@ def rpc_webhook_callback(*args):
                         else:
                             meta["status"] = "running"
 
-                        g_detached_task_registry.register(task_id, meta)
+                        g_detached_task_registry.register(task_id, meta, job_id=job.id)
                     break
         except Exception as e:
+            # Don't re-raise: registry sync is secondary to job execution.
+            # Re-raising here would mark an already-successful job as FAILED.
             log.warning(f"Error in updating detach registry: {e}")
-            raise
 
 
 def rpc_exception_callback(
@@ -557,5 +566,13 @@ def rpc_exception_callback(
 
     job.meta = meta.model_dump()
     job.save_meta()
+
+    # Audit log (moved from Manager for RQ compatibility)
+    if g_config.mongodb.enabled:
+        from .audit import rpc_audit_callback
+        try:
+            rpc_audit_callback(job, conn, exc_type, exc_value, tb)
+        except Exception as e:
+            log.warning(f"Error in audit callback (failure): {e}")
 
     return meta

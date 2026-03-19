@@ -167,12 +167,31 @@ class DetachedTaskRegistry:
     def __init__(self, rediz: Rediz):
         self.rdb = rediz.conn
 
-    def register(self, task_id: str, metadata: dict):
+    def register(self, task_id: str, metadata: dict, job_id: Optional[str] = None):
         """Register a new task with its metadata."""
         import json
 
         self.rdb.hset(self.KEY, task_id, json.dumps(metadata))
         log.info(f"Detached Task {task_id} registered in Registry.")
+
+        # Audit hook: only fire on meaningful lifecycle transitions, not on every
+        # offset update (which occurs every push_interval second from the supervisor).
+        if g_config.mongodb.enabled and metadata.get("status") in ("launching", "completed"):
+            try:
+                from rq import Queue
+
+                from netpulse.worker.archiver import process_detached_audit
+
+                q = Queue("AuditLogQ", connection=self.rdb)
+                q.enqueue(
+                    process_detached_audit,
+                    task_id=task_id,
+                    metadata=metadata,
+                    job_id=job_id,
+                    timeout=60,
+                )
+            except Exception as e:
+                log.warning(f"Failed to enqueue detached audit for {task_id}: {e}")
 
     def get(self, task_id: str) -> Optional[dict]:
         """Retrieve task metadata by ID."""

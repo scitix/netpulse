@@ -290,7 +290,6 @@ class Manager:
 
         job_timeout = timeout if timeout is not None else self.job_timeout
 
-        # Wraps the function with timeout in a Callback object
         on_success_cb = rpc_callback_factory(on_success, timeout=job_timeout)
         on_failure_cb = rpc_callback_factory(on_failure, timeout=job_timeout)
 
@@ -337,7 +336,6 @@ class Manager:
 
         job_timeout = timeout if timeout is not None else self.job_timeout
 
-        # Wraps the function with timeout in a Callback object
         on_success_cb = rpc_callback_factory(on_success, timeout=job_timeout)
         on_failure_cb = rpc_callback_factory(on_failure, timeout=job_timeout)
 
@@ -627,28 +625,8 @@ class Manager:
 
         # Generate task_id early if detach is requested
         if req.detach:
-            import time
             import uuid
-
             meta.task_id = str(uuid.uuid4())[:12]
-            # Pre-register in registry so it's immediately visible
-            from .rediz import g_detached_task_registry
-
-            g_detached_task_registry.register(
-                meta.task_id,
-                {
-                    "task_id": meta.task_id,
-                    "status": "launching",
-                    "host": req.connection_args.host,
-                    "driver": req.driver,
-                    "worker_id": None,
-                    "push_interval": req.push_interval,
-                    "webhook": req.webhook.model_dump(mode="json") if req.webhook else None,
-                    "connection_args": req.connection_args.model_dump(mode="json"),
-                    "last_sync": 0,
-                    "created_at": time.time(),
-                },
-            )
 
         # Add webhook handler
         if req.webhook:
@@ -687,6 +665,27 @@ class Manager:
             on_failure=failure_handler,
             meta=meta.model_dump(),
         )
+
+        if req.detach:
+            import time
+
+            from .rediz import g_detached_task_registry
+            g_detached_task_registry.register(
+                meta.task_id,
+                {
+                    "task_id": meta.task_id,
+                    "status": "launching",
+                    "host": req.connection_args.host,
+                    "driver": req.driver,
+                    "worker_id": None,
+                    "push_interval": req.push_interval,
+                    "webhook": req.webhook.model_dump(mode="json") if req.webhook else None,
+                    "connection_args": req.connection_args.model_dump(mode="json"),
+                    "last_sync": 0,
+                    "created_at": time.time(),
+                },
+                job_id=r.id,
+            )
 
         return r
 
@@ -961,7 +960,7 @@ class Manager:
                                     m["last_offset"] = next_offset
                                 m["last_sync"] = time.time()
                                 m["status"] = "running" if is_running else "completed"
-                                g_detached_task_registry.register(task_id, m)
+                                g_detached_task_registry.register(task_id, m, job_id=job.id)
                             break
                 except Exception as e:
                     log.warning(f"Failed to update registry after sync query: {e}")
@@ -1063,7 +1062,7 @@ class Manager:
                         if not found:
                             meta["status"] = "completed"
                             meta["last_sync"] = time.time()
-                            g_detached_task_registry.register(tid, meta)
+                            g_detached_task_registry.register(tid, meta, job_id=job.id)
                             updated_count += 1
 
                 return {
