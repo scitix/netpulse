@@ -133,10 +133,6 @@ class DetachedTaskSupervisor:
         """
         last_offset = meta.get("last_offset", 0)
 
-        # Update last_sync immediately to avoid double triggers
-        meta["last_sync"] = time.time()
-        g_detached_task_registry.register(task_id, meta)
-
         try:
             from ..models.common import DriverConnectionArgs, QueueStrategy
             from ..services.rpc import manage_detached_task, rpc_webhook_callback
@@ -148,7 +144,7 @@ class DetachedTaskSupervisor:
             conn_arg = DriverConnectionArgs(**meta["connection_args"])
 
             # Dispatch job with the standard webhook callback (if requested)
-            g_mgr.dispatch_rpc_job(
+            job_resp = g_mgr.dispatch_rpc_job(
                 conn_arg=conn_arg,
                 q_strategy=QueueStrategy.PINNED,
                 func=manage_detached_task,
@@ -162,6 +158,11 @@ class DetachedTaskSupervisor:
                 result_ttl=60,
                 meta={"task_id": task_id},
             )
+
+            # Update last_sync AFTER successful dispatch to avoid skipping
+            # the next push interval when dispatch fails.
+            meta["last_sync"] = time.time()
+            g_detached_task_registry.register(task_id, meta, job_id=job_resp.id)
 
         except Exception as e:
             log.error(f"Failed to trigger push for task {task_id}: {e}")

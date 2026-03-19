@@ -11,9 +11,11 @@ from colorlog import ColoredFormatter
 class ScrubFilter(logging.Filter):
     def __init__(self):
         super().__init__()
-        # Replace sensitive information (ignoring case)
+        # Mask sensitive information (ignoring case)
+        # Handles JSON ("key": "val"), Python dict ('key': 'val'), and Kwargs (key='val')
         self.pattern = re.compile(
-            r'(?i)("(?:password|token|key|secret|community)"\s*:\s*["\'])(.*?)(["\'])'
+            r'(?i)((?:["\']?(?:password|token|secret|key|private_key|passphrase|community)["\']?\s*[=:]\s*["\']))'
+            r'(?:.*?)(["\'])'
         )
 
     def filter(self, record: logging.LogRecord) -> bool:
@@ -28,7 +30,7 @@ class ScrubFilter(logging.Filter):
         if not isinstance(message, str):
             return message
         try:
-            return self.pattern.sub(r"\1******\3", message)
+            return self.pattern.sub(r"\1******\2", message)
         except Exception as e:
             logging.debug(f"Scrubbing error: {e!s}", exc_info=True)
             return message

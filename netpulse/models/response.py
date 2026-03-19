@@ -271,13 +271,9 @@ class DetachedTaskInResponse(BaseModel):
     @field_serializer("connection_args")
     def mask_password(self, args: dict, _info):
         """Mask sensitive information in connection_args."""
-        if not args or not isinstance(args, dict):
-            return args
-        masked = args.copy()
-        for key in ["password", "secret", "private_key"]:
-            if masked.get(key):
-                masked[key] = "******"
-        return masked
+        from ..utils import mask_sensitive_data
+
+        return mask_sensitive_data(args)
 
     @model_validator(mode="before")
     @classmethod
