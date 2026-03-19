@@ -1,176 +1,85 @@
 # Development Guide
 
-This document introduces how to set up NetPulse development environment.
+## Requirements
 
-## Environment Requirements
+- Python 3.12+, Redis 6.0+, Git
+- Docker 20.10+ (optional, for Redis)
 
-- Python 3.12+
-- Redis 6.0+
-- Git
-- Docker 20.10+ and Docker Compose 2.0+ (optional)
+## Setup
 
-## Quick Start
-
-1. **Clone Project**
 ```bash
 git clone git@github.com:scitix/netpulse.git
 cd netpulse
-```
 
-2. **Install uv** (if not already installed)
-```bash
+# Install uv if needed
 curl -LsSf https://astral.sh/uv/install.sh | sh
-```
 
-3. **Install Dependencies**
-```bash
-# Install development dependencies
-uv sync --extra dev
-
-# Or install full environment
+# Install dependencies
 uv sync --extra api --extra tool --extra dev
-```
 
-4. **Start Redis**
-```bash
+# Start Redis
 docker compose -f docker-compose.yaml up -d redis
+
+# Verify
+uv run python -c "import redis; r = redis.Redis(); print('OK' if r.ping() else 'FAIL')"
 ```
 
-5. **Verify Environment**
+## Workflow
+
 ```bash
-# Check Redis connection
-uv run python -c "import redis; r = redis.Redis(host='localhost', port=6379); print('Redis connection successful' if r.ping() else 'Redis connection failed')"
-```
+# 1. Create branch
+git checkout -b feature/your-feature
 
-## Development Workflow
+# 2. Write code (PEP 8, type hints, 100 char line limit)
 
-### Basic Process
+# 3. Lint and format
+uv run ruff check --fix .
+uv run ruff format .
 
-1. **Create Feature Branch**
-```bash
-git checkout -b feature/your-feature-name
-```
+# 4. Test
+uv run pytest tests/unit/
 
-2. **Write Code**
-- Follow PEP 8 code style
-- Add type annotations and docstrings
-- Write appropriate comments
-
-3. **Code Check and Formatting**
-```bash
-uv run black netpulse/
-uv run ruff check netpulse/
-```
-
-4. **Commit Code**
-```bash
-git add .
+# 5. Commit
 git commit -m "feat: add new feature"
 ```
 
-5. **Create Pull Request**
-
-### Code Standards
-
-**Tool Configuration**
-- **Formatting**: Black
-- **Checking**: Ruff
-- **Documentation**: mkdocs-material
-
-**Commit Message Standards**
-
-Use [Conventional Commits](https://www.conventionalcommits.org/) format:
-
-```
-<type>[optional scope]: <description>
-```
-
-Types include:
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation update
-- `style`: Code format adjustment
-- `refactor`: Code refactoring
-- `test`: Test related
-- `chore`: Build process or auxiliary tool changes
+**Commit format**: `<type>: <description>` — types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
 ## Project Structure
 
 ```
 netpulse/
 ├── netpulse/                 # Core code
-│   ├── cli/                 # CLI tools
-│   ├── models/              # Data models
-│   ├── plugins/             # Plugin system
-│   │   ├── drivers/         # Device drivers
-│   │   ├── schedulers/      # Schedulers
-│   │   ├── templates/       # Templates
-│   │   └── webhooks/        # Webhooks
-│   ├── routes/              # API routes
-│   ├── services/            # Business logic
-│   ├── server/              # Server
-│   ├── utils/               # Utility functions
-│   ├── worker/              # Worker processes
-│   └── controller.py        # Controller
-├── docs/                    # Documentation
-├── docker/                  # Docker configuration
-├── docker-compose.yaml      # Production environment configuration
-└── docker-compose.dev.yaml  # Development environment configuration
+│   ├── controller.py         # FastAPI entry point
+│   ├── routes/               # API endpoints
+│   ├── services/             # Business logic
+│   ├── worker/               # Worker types
+│   ├── models/               # Pydantic schemas
+│   ├── plugins/              # Plugin system
+│   │   ├── drivers/          # Device drivers
+│   │   ├── templates/        # Template engines
+│   │   ├── schedulers/       # Scheduling algorithms
+│   │   └── webhooks/         # Event handlers
+│   └── utils/                # Shared utilities
+├── docs/                     # Documentation (MkDocs)
+├── docker/                   # Dockerfiles
+└── docker-compose.yaml       # Production compose
 ```
 
 ## Plugin Development
 
-NetPulse adopts plugin architecture, supporting custom drivers, schedulers, templates, and Webhooks.
+Create a new directory under the appropriate `netpulse/plugins/` subdirectory, inherit the base class, and export via `__all__`. See [Plugin System](../architecture/plugin-system.md).
 
-### Driver Plugin
-Create new driver module in `netpulse/plugins/drivers/` directory.
+## Running Services Locally
 
-### Scheduler Plugin
-Create new scheduler module in `netpulse/plugins/schedulers/` directory.
-
-### Template Plugin
-Create new template module in `netpulse/plugins/templates/` directory.
-
-### Webhook Plugin
-Create new Webhook module in `netpulse/plugins/webhooks/` directory.
-
-## Debugging
-
-### Log Configuration
-```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
-```
-
-### Using Debugger
-```python
-import pdb; pdb.set_trace()
-```
-
-### Docker Development
-
-**Start Complete Environment**
 ```bash
-docker compose up -d
-```
+# Development mode
+uv run python -m netpulse.controller     # Terminal 1
+uv run python -m netpulse.worker fifo    # Terminal 2
+uv run python -m netpulse.worker node    # Terminal 3
 
-**Development Environment**
-```bash
+# Or use Docker
 docker compose -f docker-compose.dev.yaml up -d
 ```
 
-## Common Questions
-
-**Q: How to add new device driver?**
-A: Refer to existing driver implementation, create new driver module in `netpulse/plugins/drivers/` directory.
-
-**Q: How to debug API requests?**
-A: Use FastAPI's automatic documentation feature, access `http://localhost:9000/docs`.
-
-**Q: How to add new development dependencies?**
-A: Use `uv add --extra dev package-name` command.
-
-## Get Help
-
-- **GitHub Issues**: Report issues and request features
-- **Documentation**: View related documentation
+FastAPI auto-docs available at `http://localhost:9000/docs`.

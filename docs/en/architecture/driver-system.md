@@ -1,19 +1,17 @@
-# Device Driver System
+# Driver System
 
-NetPulse provides extensible driver support through its plugin system. Users can use the four built-in supported drivers, or develop custom drivers as needed.
+NetPulse provides extensible driver support through its plugin system.
 
-## Core Drivers
+## Built-in Drivers
 
-| Driver   | Protocol      | Vendor Support              | Key Features                              | Dependencies      |
-|----------|---------------|-----------------------------|-------------------------------------------|-------------------|
-| Netmiko  | SSH/Telnet    | 30+ vendors                 | CLI command execution, **SSH keepalive** | netmiko~=4.5.0    |
-| NAPALM   | API/SSH       | Multi-vendor (Cisco/Juniper/Arista) | Configuration management, state collection | napalm~=5.0.0     |
-| PyEAPI   | HTTP/HTTPS    | Arista EOS only             | Native EOS API access, HTTP-based eAPI | pyeapi~=1.0.4     |
-| Paramiko | SSH           | Linux servers               | Native SSH, file transfer, proxy connections, sudo | paramiko~=3.0.0  |
+| Driver | Protocol | Vendor Support | Key Features | Dependency |
+|--------|----------|---------------|--------------|------------|
+| Netmiko | SSH/Telnet | 30+ vendors | CLI execution, **SSH keepalive** | netmiko~=4.5.0 |
+| NAPALM | API/SSH | Multi-vendor | Config merge/replace/rollback | napalm~=5.0.0 |
+| PyEAPI | HTTP/HTTPS | Arista EOS only | Native eAPI, JSON output | pyeapi~=1.0.4 |
+| Paramiko | SSH | Linux servers | File transfer, proxy, sudo | paramiko~=3.0.0 |
 
-## Specify Device Driver
-
-In /device/exec and /device/bulk APIs, use the `driver` field to specify the driver to be used for this task:
+Specify the driver via the `driver` field in API requests:
 
 ```json
 {
@@ -22,146 +20,85 @@ In /device/exec and /device/bulk APIs, use the `driver` field to specify the dri
     "device_type": "cisco_ios",
     "host": "192.168.1.1",
     "username": "admin",
-    "password": "password123"
+    "password": "password"
   },
-  ...
+  "command": "show version"
 }
 ```
 
-Note that when selecting different drivers, fields in `connection_args` may change. Please refer to the driver documentation for details.
+See [Driver Selection Guide](../drivers/index.md) for detailed parameters and selection advice.
 
+## Persistent Connection Technology
 
-## Custom Driver Development
+Persistent connections are NetPulse's core performance optimization. Pinned Workers maintain SSH sessions between tasks, avoiding repeated connection establishment.
 
-To add support for new protocols/vendors, implement custom drivers through the following steps:
+### Performance Impact
 
-1. Create a new directory in `netpulse/plugins/drivers/`
-2. Inherit `BaseDriver` class and implement required methods
-   ```python
-   class CustomDriver(BaseDriver):
-       driver_name = "custom"
+| Scenario | Without Persistence | With Persistence | Improvement |
+|----------|-------------------|-----------------|-------------|
+| First connection | 2-5s | 2-5s | — |
+| Subsequent operations | 2-5s | 0.5-0.9s | **60-80%** |
+| 10 operations on same device | 20-50s | 5-9s | **75-82%** |
 
-       def connect(self):
-       # ...
+### How It Works
 
-       # For specific methods, please refer to BaseDriver class
-   ```
-4. Register driver in `__init__.py`
-   ```python
-    __all__ = [CustomDriver]
-   ```
-
-For detailed introduction to the plugin system, please refer to [Plugin System](./plugin-system.md).
-
-## Netmiko
-
-Netmiko driver is a mature and stable driver in NetPulse, supporting 30+ network device types. Netmiko driver uses SSH and Telnet protocols to communicate with devices, supporting CLI command execution.
-
-When using [Pinned Worker](./architecture-overview.md) with Netmiko driver, the Worker will create a new SSH connection and periodically send keepalive commands and KeepAlive packets. This maintains connection activity at both TCP connection and application layer protocol levels, thereby avoiding delays caused by SSH connection disconnection and reconnection.
-
-Users can configure SSH keepalive time through the `keepalive` parameter. When SSH keepalive fails, Pinned Worker will automatically exit. When tasks are sent again, a new Pinned Worker will be created to connect to the device.
-
-## Paramiko
-
-Paramiko driver is used to manage Linux servers in NetPulse, implemented based on native SSH protocol. Paramiko driver supports command execution, file transfer, proxy connections, sudo, and other advanced features, suitable for system monitoring, configuration management, software deployment, and other scenarios.
-
-Paramiko driver defaults to FIFO queue strategy (short connection), suitable for long-running tasks and file transfer scenarios. Unlike Netmiko driver, Paramiko driver does not implement long connection reuse, and will disconnect after each task execution.
-
-## Long Connection Technology
-
-### Technology Overview
-
-Long connection technology refers to maintaining connection state after establishing SSH connection with network devices, rather than disconnecting after each command execution. This technology can:
-
-- **Reduce Connection Overhead**: Avoid overhead of repeated connection establishment, can improve response speed in frequent operation scenarios
-- **Improve Operation Efficiency**: When frequently operating the same device, can reduce connection establishment time
-- **Reduce Resource Consumption**: Reduce resource consumption related to connection establishment
-- **Improve Connection Stability**: Reduce connection failures that may be caused by frequent connections
+1. **First request** to a device → Node Worker creates a Pinned Worker → SSH connection established and persisted
+2. **Subsequent requests** → Routed to the existing Pinned Worker → Connection reused (no handshake)
+3. **Keepalive** — Dual mechanism maintains connection liveness:
+   - **SSH layer**: Netmiko `keepalive` parameter sends protocol-level keepalive packets
+   - **Application layer**: Monitor thread periodically sends RETURN to prevent device idle disconnect
+4. **Recovery** — If connection dies, the Pinned Worker exits ("suicide"). A new one is auto-created on the next request.
 
 ### Connection Lifecycle
 
-#### 1. Connection Establishment Phase
-
-When creating a Pinned Worker for a device for the first time, the Worker will establish SSH connection and persist the connection:
-
 ```mermaid
-sequenceDiagram
-    participant Client as API Client
-    participant API as Controller
-    participant Manager as Manager
-    participant NodeWorker as Node Worker
-    participant PinnedWorker as Pinned Worker
-    participant Device as Network Device
-    
-    Client->>API: Execute Command Request
-    API->>Manager: Schedule Task
-    Manager->>NodeWorker: Create Pinned Worker
-    NodeWorker->>PinnedWorker: Start Process
-    PinnedWorker->>Device: Establish SSH Connection
-    Device-->>PinnedWorker: Connection Success
-    PinnedWorker->>Device: Execute Command
-    Device-->>PinnedWorker: Return Result
-    PinnedWorker-->>API: Task Result
-    API-->>Client: Response Result
+stateDiagram-v2
+    [*] --> Established: First request creates Pinned Worker
+    Established --> Monitoring: Start keepalive thread
+    Monitoring --> Reusing: Task arrives, reuse connection
+    Reusing --> Monitoring: Task done, keep alive
+    Monitoring --> Disconnected: Health check or keepalive fails
+    Disconnected --> WorkerExit: Pinned Worker exits
+    WorkerExit --> [*]: Next request creates new worker
 ```
 
-#### 2. Connection Reuse Phase
+### Concurrency Safety
 
-Subsequent requests to the same device will reuse the existing Pinned Worker and its SSH connection:
+Netmiko's `BaseConnection` is not thread-safe. A `_monitor_lock` ensures the monitor thread and task execution never operate the connection simultaneously.
 
-```mermaid
-sequenceDiagram
-    participant Client as API Client
-    participant API as Controller
-    participant Manager as Manager
-    participant PinnedWorker as Pinned Worker (Existing)
-    participant Device as Network Device
-    
-    Client->>API: Execute Command Request
-    API->>Manager: Schedule Task
-    Manager->>PinnedWorker: Task Enqueue
-    Note over PinnedWorker: Reuse Existing SSH Connection
-    PinnedWorker->>Device: Execute Command
-    Device-->>PinnedWorker: Return Result
-    PinnedWorker-->>API: Task Result
-    API-->>Client: Response Result
+### When to Use
+
+**Good fit** — Frequent operations on the same device, config change sequences, real-time monitoring.
+
+**Not ideal** — One-off operations across many devices (use FIFO), long-running tasks, file transfers (use Paramiko with FIFO).
+
+### Keepalive Configuration
+
+```json
+{
+  "connection_args": {
+    "host": "192.168.1.1",
+    "keepalive": 30
+  }
+}
 ```
 
-#### 3. Connection Maintenance Phase
+- Default: 180s. Recommended: 30-60s.
+- Tune based on NAT/firewall timeouts and device SSH idle timeout.
 
-Pinned Worker maintains connection activity by periodically executing the following operations through monitoring thread:
+## Custom Driver Development
 
-- **Health Check**: Call `session.is_alive()` to check connection status
-- **Application Layer Keepalive**: Periodically send carriage return (RETURN) to keep session active
-- **Auto Recovery**: When connection is disconnected, Pinned Worker automatically exits, will be recreated on next request
+1. Create a directory in `netpulse/plugins/drivers/`
+2. Inherit `BaseDriver` and implement `connect()`, `send()`, `config()`, `disconnect()`
+3. Set `driver_name` class attribute
+4. Export via `__all__` in `__init__.py`
 
-When connection health check fails or keepalive fails, Pinned Worker will actively exit (suicide), ensuring that connection can be re-established on next request.
+```python
+class CustomDriver(BaseDriver):
+    driver_name = "custom"
 
-## Design Considerations
+    def connect(self):
+        ...
+```
 
-### Why Only Implement Long Connection in Pinned Worker?
-
-**Reasons**:
-1. **Device Binding**: Pinned Worker has one-to-one binding with device, connection can be reused long-term
-2. **Order Guarantee**: Serial execution ensures connection state consistency
-3. **Resource Efficiency**: Avoid overhead of establishing new connection for each task
-
-FIFO Worker doesn't implement long connection because:
-- No device binding, low connection reuse rate
-- Parallel execution, complex connection state management
-- "Connect on use" mode is simpler and more reliable
-
-### Keepalive Mechanism Design
-
-Keepalive mechanism works at two levels:
-1. **TCP Layer**: Keep TCP connection active through SSH KeepAlive option
-2. **Application Layer**: Periodically send carriage return (RETURN) to keep SSH session active
-
-This dual keepalive mechanism can handle timeout settings of network intermediate devices (such as NAT, firewalls), ensuring connections won't be disconnected due to idle.
-
-### Auto Recovery Mechanism
-
-When connection fails, Pinned Worker will actively exit (suicide), rather than attempting to reconnect. Reasons for this design:
-- **Simplify Logic**: Avoid complex reconnection logic and state management
-- **Fast Recovery**: New Worker will be created on next request, automatically establishing new connection
-- **State Consistency**: Ensure Worker state is consistent with connection state
+See [Plugin System](./plugin-system.md) for the full plugin development guide.

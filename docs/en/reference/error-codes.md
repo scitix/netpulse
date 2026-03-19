@@ -155,68 +155,9 @@ When task execution fails, error information is included in task result:
 - `AuthenticationError`: Device authentication failed
 - Other Python exception types
 
-## Error Handling Examples
+## Debugging
 
-### Python Example
-
-```python
-import requests
-
-def call_api(url, api_key, data=None):
-    headers = {"X-API-KEY": api_key}
-    
-    try:
-        if data:
-            response = requests.post(url, headers=headers, json=data)
-        else:
-            response = requests.get(url, headers=headers)
-        
-        result = response.json()
-        
-        # Check business error code
-        if result.get("code") == -1:
-            print(f"API Error: {result.get('message')}")
-            print(f"Error Details: {result.get('data')}")
-            return None
-        
-        return result.get("data")
-        
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 403:
-            print("API key error, please check configuration")
-        elif e.response.status_code == 400:
-            print("Request parameter error")
-        else:
-            print(f"HTTP Error: {e.response.status_code}")
-        return None
-```
-
-### Check Job Status
-
-```python
-def check_job_status(job_id, api_key):
-    url = f"http://localhost:9000/job?id={job_id}"
-    headers = {"X-API-KEY": api_key}
-    
-    response = requests.get(url, headers=headers)
-    result = response.json()
-    
-    if result.get("code") == 200:
-        job = result.get("data", [])[0]
-        
-        if job.get("status") == "failed":
-            error = job.get("result", {}).get("error", {})
-            print(f"Task Failed: {error.get('type')} - {error.get('message')}")
-            return False
-        
-        return True
-    
-    return False
-```
-
-## Debugging Recommendations
-
-1. **View Logs**: Use `docker compose logs` to view detailed error information
-2. **Verify Configuration**: Confirm configuration file and environment variable settings are correct
-3. **Test Connection**: Use `/device/test` endpoint to test device connection
-4. **Check Network**: Confirm network connection and device reachability
+- `docker compose logs controller` — server-side errors
+- `GET /job?id=<id>` — check job `result.error` for device-level failures
+- `POST /device/test` — validate connection before running jobs
+- Check `code` field first — HTTP 200 with `code: -1` means a business error

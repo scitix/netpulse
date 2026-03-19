@@ -1,5 +1,5 @@
-site_name: NetPulse 文档
-site_description: NetPulse 分布式网络设备管理API服务器文档
+site_name: NetPulse Documentation
+site_description: NetPulse distributed network device management API server
 site_author: NetPulse Team
 site_url: https://netpulse.readthedocs.io/
 
@@ -45,78 +45,27 @@ theme:
       accent: blue
       toggle:
         icon: material/brightness-auto
-        name: 切换到浅色模式
+        name: Switch to light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
       primary: blue
       accent: blue
       toggle:
         icon: material/brightness-7
-        name: 切换到深色模式
+        name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: blue
       accent: blue
       toggle:
         icon: material/brightness-4
-        name: 跟随系统设置
+        name: Follow system settings
   logo: assets/images/logo.svg
   favicon: assets/images/favicon.ico
 
 # Plugins
 plugins:
   - search
-  - i18n:
-      docs_structure: folder
-      languages:
-        - locale: en
-          name: English
-          build: true
-          default: true
-          link: /
-          site_name: NetPulse Documentation
-        - locale: zh
-          name: 中文
-          build: true
-          link: /zh/
-          site_name: NetPulse 文档
-          nav_translations:
-            Home: 首页
-            Getting Started: 快速开始
-            Quick Start: 快速开始
-            Basic Concepts: 基础概念
-            Deployment Guide: 部署指南
-            Postman Guide: Postman 使用
-            API Reference: API参考
-            API Overview: API概览
-            Device Operation API: 设备操作API
-            Template Operation API: 模板操作API
-            Job Management API: 任务管理API
-            API Examples: API示例
-            API Best Practices: API最佳实践
-            Driver Usage: 驱动使用
-            Driver Selection: 驱动选择
-            Netmiko Driver: Netmiko驱动
-            NAPALM Driver: NAPALM驱动
-            PyEAPI Driver: PyEAPI驱动
-            Paramiko Driver: Paramiko驱动
-            Technical Architecture: 技术架构
-            Architecture Overview: 架构概览
-            Plugin System: 插件系统
-            Driver System: 驱动系统
-            Long Connection Technology: 长连接技术
-            Template System: 模板系统
-            Scheduler System: 任务调度器
-            Webhook System: Webhook系统
-            Reference Manual: 参考手册
-            Credential Guide: 凭据配置指南
-            Configuration Guide: 配置指南
-            Environment Variables: 环境变量
-            Error Codes: 错误代码
-            Performance Tuning: 性能调优
-            Glossary: 术语表
-            Troubleshooting: 故障排查
-            Development Guide: 开发指南
 
 # Markdown extensions
 markdown_extensions:
@@ -142,12 +91,10 @@ markdown_extensions:
   # Only display 2 levels in the table of contents
   - toc:
       permalink: true
-      title: 目录
       baselevel: 1
       toc_depth: 2
 
 # Navigation
-# i18n plugin will handle pathes
 nav:
   - Home: en/index.md
   - Getting Started:
@@ -172,17 +119,14 @@ nav:
       - Architecture Overview: en/architecture/architecture-overview.md
       - Plugin System: en/architecture/plugin-system.md
       - Driver System: en/architecture/driver-system.md
-      - Long Connection Technology: en/architecture/long-connection.md
       - Template System: en/architecture/template-system.md
       - Scheduler System: en/architecture/scheduler-system.md
       - Webhook System: en/architecture/webhook-system.md
   - Reference Manual:
-      - Credential Guide: en/reference/credential-guide.md
       - Configuration Guide: en/reference/configuration-guide.md
       - Environment Variables: en/reference/environment-variables.md
+      - Credential Guide: en/reference/credential-guide.md
       - Error Codes: en/reference/error-codes.md
-      - Performance Tuning: en/reference/performance-tuning.md
-      - Glossary: en/reference/glossary.md
       - Troubleshooting: en/reference/troubleshooting.md
       - Development Guide: en/reference/development-guide.md
 

@@ -1,71 +1,45 @@
 # NetPulse Documentation
 
-NetPulse is a RESTful API server for network device management, providing a unified multi-vendor network device management interface.
+NetPulse is a distributed RESTful API server that turns network switches and Linux servers into programmable assets via persistent SSH connections.
 
 ![NetPulse Project Value Proposition](../assets/images/architecture/project-value-proposition-en.svg)
 
-## What is NetPulse?
-
-NetPulse acts as an intermediate layer proxy between clients and network devices, providing unified network device management services:
-
 ```mermaid
 flowchart LR
-    subgraph Clients[Client Layer<br/>]
+    subgraph Clients[Client Layer]
         direction TB
         API[API]
         CLI[CLI]
-        Web[Web]
         SDK[SDK]
     end
-    
-    NetPulse[NetPulse Server<br/>Centralized Management · Connection Reuse · Distributed<br/>FastAPI + Redis + Worker]
-    
-    subgraph Devices[Devices<br/>]
+
+    NetPulse[NetPulse Server<br/>Centralized · Connection Reuse · Distributed]
+
+    subgraph Devices[Devices]
         direction TB
-        Router1[Router]
-        Switch1[Switch]
-        RoCESwitch[RoCE Switch]
+        Switch[Switch]
+        Router[Router]
         Linux[Linux Server]
     end
-    
-    API -.->|API| NetPulse
-    CLI -.->|API| NetPulse
-    Web -.->|API| NetPulse
-    SDK -.->|API| NetPulse
-    
-    NetPulse ==>|SSH/API| Router1
-    NetPulse ==>|SSH/API| Switch1
-    NetPulse ==>|SSH/API| RoCESwitch
+
+    Clients -.->|REST/JSON| NetPulse
+    NetPulse ==>|SSH/API| Switch
+    NetPulse ==>|SSH/API| Router
     NetPulse ==>|SSH/API| Linux
-    
+
     style Clients fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
     style NetPulse fill:#C8E6C9,stroke:#388E3C,stroke-width:3px
     style Devices fill:#FFF3E0,stroke:#F57C00,stroke-width:2px
-    style Linux fill:#E1BEE7,stroke:#7B1FA2,stroke-width:2px
 ```
-
-NetPulse is a **server-side network automation controller** that provides a unified network device management interface through RESTful APIs. Unlike traditional client-side tools (such as Netmiko, NAPALM), NetPulse adopts a server-side architecture, centrally deployed on servers, and clients only need to make HTTP requests to complete device operations.
-
-### Why Server-Side Mode?
-
-Traditional client-side tools need to be installed on every machine, and each program must handle complex issues such as concurrent scheduling, connection management, and task queues. Server-side mode centralizes these complexities on the server:
-
-- **Simplified Client**: Clients don't need to handle concurrent scheduling, connection reuse, task queues, etc., just call APIs
-- **Centralized Management**: Unified management of all network devices, resource sharing, no need to install tools on each client
-- **High Availability**: High availability through distributed architecture, single point of failure does not affect service
-- **Easy Integration**: Easy integration into existing systems through standard RESTful APIs
-
-!!! info "About Similar Frameworks"
-    During the design process, we learned from the framework design ideas of [NetPalm](https://github.com/tbotnz/netpalm), reflecting the sharing and learning spirit of open source. Both use the same open source components at the **product level** (such as Netmiko, NAPALM, Redis + RQ), but there are significant differences in **code implementation logic**, especially in core components such as long connection management, scheduling algorithms, and Worker architecture, which have been independently designed and developed.
 
 ## Key Features
 
-- **RESTful API** - Unified asynchronous API interface supporting multi-vendor network devices
-- **Persistent Connections** - Improved operation efficiency through SSH long connection technology
-- **Distributed Architecture** - Supports multi-node deployment and horizontal scaling
-- **Multi-Driver Support** - Multiple drivers including Netmiko, NAPALM, PyEAPI, Paramiko
-- **Template Support** - Supports Jinja2, TextFSM, TTP template engines
-- **Batch Operations** - Supports large-scale device management and configuration
+- **RESTful API** — Unified async interface for multi-vendor network devices
+- **Persistent SSH Connections** — Reuse connections for 2-5x faster response
+- **Distributed Architecture** — Multi-node deployment with horizontal scaling
+- **Multi-Driver Support** — Netmiko, NAPALM, PyEAPI, Paramiko
+- **Template Engines** — Jinja2, TextFSM, TTP for rendering and parsing
+- **Batch Operations** — Large-scale device management
 
 ## Quick Start
 
@@ -78,65 +52,15 @@ bash ./scripts/docker_auto_deploy.sh
 !!! tip "Prerequisites"
     - Docker 20.10+ and Docker Compose 2.0+
     - At least 2GB available memory
-    - Port 9000 is not occupied
+    - Port 9000 available
 
-For detailed deployment instructions, see [Quick Start](getting-started/quick-start.md).
+See [Quick Start](getting-started/quick-start.md) for detailed instructions.
 
-## Learning Path for Beginners
+## Learning Path
 
-If you are using NetPulse for the first time, we recommend reading the documentation in the following order:
-
-1. **[Quick Start](getting-started/quick-start.md)** - Get started in 5 minutes and experience basic features
-2. **[Basic Concepts](getting-started/basic-concepts.md)** - Understand core concepts (drivers, queues, tasks, etc.)
-3. **[Driver Selection](drivers/index.md)** - Learn how to choose the right driver
-4. **[API Overview](api/api-overview.md)** - Learn about all API interfaces
-5. **Advanced Usage** - Read architecture documentation and reference manuals as needed
-
-## Documentation Navigation
-
-### Quick Start
-- [Quick Start](getting-started/quick-start.md) - Get started quickly
-- [Basic Concepts](getting-started/basic-concepts.md) - Core concepts
-- [Deployment Guide](getting-started/deployment-guide.md) - Deployment instructions
-
-### API Reference
-- [API Overview](api/api-overview.md) - API interface documentation
-- [Device Operation API](api/device-api.md) - Device operation interfaces
-- [API Examples](api/api-examples.md) - Usage examples
-- [Driver Selection](drivers/index.md) - Driver selection
-
-### Technical Architecture
-- [Architecture Overview](architecture/architecture-overview.md) - System architecture
-- [Task Scheduler](architecture/scheduler-system.md) - Scheduling algorithms
-- [Plugin System](architecture/plugin-system.md) - Plugin mechanism
-
-### Reference Manual
-- [Configuration Guide](reference/configuration-guide.md) - Configuration documentation
-- [Environment Variables](reference/environment-variables.md) - Environment variables
-- [Error Codes](reference/error-codes.md) - Error documentation
-- [Performance Tuning](reference/performance-tuning.md) - Performance recommendations
-- [Glossary](reference/glossary.md) - Terminology definitions
-- [Troubleshooting](reference/troubleshooting.md) - Problem troubleshooting
-- [Development Guide](reference/development-guide.md) - Development environment
-
-## Quick FAQ
-
-**Q: Are device operations synchronous or asynchronous?**  
-A: Device operations (`/device/exec`, `/device/bulk`) are asynchronous and require querying task status to get results. Only `/device/test` is synchronous.
-
-**Q: How to choose the right driver?**  
-A: Use Paramiko for Linux servers, PyEAPI for Arista devices, NAPALM if you need configuration rollback, and Netmiko for other scenarios (recommended).
-
-**Q: When to use FIFO queue, when to use Pinned queue?**  
-A: The system will automatically select based on the driver. Netmiko/NAPALM default to Pinned (connection reuse), PyEAPI/Paramiko default to FIFO. Usually no manual specification is needed.
-
-**Q: How to get command execution results?**  
-A: After submitting a task, you get a task ID, then query results through the `/job?id=xxx` interface.
-
-## Get Help
-
-- **Documentation Issues**: See [Troubleshooting](reference/troubleshooting.md)
-- **Technical Issues**: Submit [GitHub Issue](https://github.com/scitix/netpulse/issues)
-- **Contribute Documentation**: Welcome to submit Pull Request
+1. **[Quick Start](getting-started/quick-start.md)** — Deploy and make your first API call
+2. **[Basic Concepts](getting-started/basic-concepts.md)** — Understand drivers, queues, and jobs
+3. **[Driver Selection](drivers/index.md)** — Choose the right driver for your devices
+4. **[API Overview](api/api-overview.md)** — Explore all API endpoints
 
 ---
