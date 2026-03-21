@@ -43,6 +43,13 @@ def query_detached_task(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.delete("/detached-tasks")
+def clear_detached_tasks():
+    """Clear all detached tasks from the registry."""
+    count = g_mgr.clear_detached_tasks()
+    return {"status": "cleared", "count": count}
+
+
 @router.delete("/detached-tasks/{task_id}")
 def kill_detached_task(task_id: str):
     """

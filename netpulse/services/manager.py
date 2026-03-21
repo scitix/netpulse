@@ -907,6 +907,15 @@ class Manager:
             return {k: v for k, v in tasks.items() if v.get("status") == status}
         return tasks
 
+    def clear_detached_tasks(self) -> int:
+        """Remove all detached tasks from the registry."""
+        from .rediz import g_detached_task_registry
+
+        tasks = g_detached_task_registry.list_all()
+        for task_id in tasks:
+            g_detached_task_registry.unregister(task_id)
+        return len(tasks)
+
     def query_detached_task(self, task_id: str, offset: Optional[int] = None) -> dict:
         """
         Synchronously query detached task logs/status.
@@ -918,8 +927,8 @@ class Manager:
         if not meta:
             raise ValueError(f"Detached Task {task_id} not found in registry")
 
-        if offset is None:
-            offset = meta.get("last_offset", 0)
+        # If offset is None, let the worker determine the offset
+        # dynamically at execution time instead of hardcoding it.
 
         from ..models.common import DriverConnectionArgs
 

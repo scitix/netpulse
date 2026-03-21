@@ -1,9 +1,10 @@
 import logging
+from datetime import datetime, timezone
 from typing import Any
 
 import requests
 
-from netpulse.models.driver import DriverExecutionResult
+from netpulse.models.common import RESULT_TYPE_NAMES, WebhookPayload
 
 from .. import BaseWebHookCaller, WebHook
 
@@ -16,61 +17,48 @@ class BasicWebHookCaller(BaseWebHookCaller):
     def __init__(self, hook: WebHook):
         self.config = hook
 
-    def build_payload(self, req: Any, job: Any, result: Any, is_success: bool) -> dict:
-        """Build the JSON payload dict for webhook delivery."""
-        # If result is an exception tuple or JobAdditionalData (containing error)
-        if isinstance(result, tuple) and len(result) == 2:
-            is_success = False
-            result_payload = f"{result[0]}: {result[1]}"
-        elif hasattr(result, "error") and result.error:
-            is_success = False
-            exc_type, exc_msg = result.error
-            result_payload = f"{exc_type}: {exc_msg}"
-        elif isinstance(result, list):
-            result_payload = self._format_result(result)
-        else:
-            result_payload = str(result)
+    def build_payload(self, req: Any, job: Any, result: Any, is_success: bool, **kwargs) -> dict:
+        """Build the JSON payload dict for webhook delivery.
 
-        data = {
-            "id": job.id,
-            "status": "success" if is_success else "failed",
-            "result": result_payload,
-        }
+        The payload is aligned with JobInResponse but optimized for webhook consumers:
+        - result.type uses self-describing strings instead of integers
+        - Includes device connection info (host, device_type) from the request
+        - Includes event_type and timestamp for webhook-specific context
+        - Omits internal scheduling fields (queue, worker, enqueued_at)
+        """
+        event_type = kwargs.get("event_type") or ("job.completed" if is_success else "job.failed")
+        timestamp = datetime.now(timezone.utc).isoformat()
 
-        if req:
-            conn_args = getattr(req, "connection_args", None)
-            if conn_args:
-                device_info = {}
-                host = getattr(conn_args, "host", None)
-                if host:
-                    device_info["host"] = host
-                device_type = getattr(conn_args, "device_type", None)
-                if device_type:
-                    device_info["device_type"] = device_type
-                if device_info:
-                    data["device"] = device_info
+        # Build result dict with string type (aligned with JobResult but self-describing)
+        result_dict = self._build_result(job, result, is_success)
 
-            driver = getattr(req, "driver", None)
-            if driver:
-                data["driver"] = driver.value if hasattr(driver, "value") else str(driver)
+        # Build device info from request connection_args
+        device_info = self._build_device_info(req)
 
-            command = getattr(req, "command", None)
-            if command is not None:
-                if isinstance(command, list):
-                    data["command"] = "\n".join(command) if command else None
-                else:
-                    data["command"] = str(command)
-            else:
-                config = getattr(req, "config", None)
-                if config is not None:
-                    if isinstance(config, list):
-                        data["config"] = "\n".join(config) if config else None
-                    elif isinstance(config, dict):
-                        data["config"] = str(config)
-                    else:
-                        data["config"] = str(config)
+        # Extract timing from job (JobInResponse or compatible object)
+        started_at = self._serialize_dt(getattr(job, "started_at", None))
+        ended_at = self._serialize_dt(getattr(job, "ended_at", None))
+        duration = getattr(job, "duration", None)
 
-        return data
+        # final=True means no more events for this id (consumer can stop listening)
+        is_final = event_type != "detached.log_push"
+
+        payload = WebhookPayload(
+            id=getattr(job, "id", "unknown"),
+            status=getattr(job, "status", "failed" if not is_success else "finished"),
+            event_type=event_type,
+            final=is_final,
+            timestamp=timestamp,
+            started_at=started_at,
+            ended_at=ended_at,
+            duration=duration,
+            result=result_dict,
+            device=device_info,
+            task_id=getattr(job, "task_id", None),
+            device_name=getattr(job, "device_name", None),
+            command=getattr(job, "command", None),
+        )
+        return payload.model_dump(mode="json")
 
     def call(self, req: Any, job: Any, result: Any, **kwargs):
         is_success = kwargs.get("is_success")
@@ -82,7 +70,10 @@ class BasicWebHookCaller(BaseWebHookCaller):
             else:
                 is_success = getattr(job, "status", "unknown") == "finished"
 
-        data = self.build_payload(req, job, result, is_success)
+        # Extract event_type from kwargs, pass separately
+        # to avoid conflict with positional is_success
+        event_type = kwargs.get("event_type")
+        data = self.build_payload(req, job, result, is_success, event_type=event_type)
 
         resp = requests.request(
             method=self.config.method.value,
@@ -96,37 +87,54 @@ class BasicWebHookCaller(BaseWebHookCaller):
         resp.raise_for_status()
         log.debug(f"Webhook {self.config.url} called successfully")
 
-    def _format_result(self, result: list) -> str:
-        """
-        Format list result (multiple commands) into a readable string.
-        """
-        if not result:
-            return "[]"
+    def _build_result(self, job: Any, result: Any, is_success: bool) -> dict:
+        """Build result dict aligned with JobResult but with string type."""
+        # If job has a structured result (JobInResponse), use it
+        job_result = getattr(job, "result", None)
+        if job_result is not None and hasattr(job_result, "model_dump"):
+            result_dict = job_result.model_dump(mode="json")
+            # Convert integer type to string
+            if "type" in result_dict:
+                result_dict["type"] = RESULT_TYPE_NAMES.get(
+                    result_dict["type"], str(result_dict["type"])
+                )
+            return result_dict
 
-        lines = []
-        for res in result:
-            if isinstance(res, DriverExecutionResult):
-                lines.append(f"Command: {res.command}")
-                lines.append(f"Output:\n{res.stdout}")
-                if res.stderr:
-                    lines.append(f"Error: {res.stderr}")
-                lines.append(f"Exit Status: {res.exit_status}")
-            elif isinstance(res, dict):
-                cmd = res.get("command", "unknown")
-                lines.append(f"Command: {cmd}")
-                output = res.get("stdout")
-                if output is not None:
-                    lines.append(f"Output:\n{output}")
-                error = res.get("stderr")
-                if error:
-                    lines.append(f"Error: {error}")
-                if "exit_status" in res:
-                    lines.append(f"Exit Status: {res['exit_status']}")
-            else:
-                lines.append(str(res))
-            lines.append("")  # Empty line between commands
+        # Fallback: build from raw result (when job has no structured JobResult)
+        if isinstance(result, tuple) and len(result) >= 2:
+            return {
+                "type": "failed",
+                "retval": None,
+                "error": {"type": str(result[0]), "message": str(result[1])},
+            }
+        else:
+            type_str = "successful" if is_success else "failed"
+            return {"type": type_str, "retval": result, "error": None}
 
-        return "\n".join(lines).rstrip()
+    def _build_device_info(self, req: Any) -> dict | None:
+        """Extract device connection info from request."""
+        if req is None:
+            return None
+        conn_args = getattr(req, "connection_args", None)
+        if conn_args is None:
+            return None
+        device_info = {}
+        host = getattr(conn_args, "host", None)
+        if host:
+            device_info["host"] = host
+        device_type = getattr(conn_args, "device_type", None)
+        if device_type:
+            device_info["device_type"] = device_type
+        return device_info or None
+
+    @staticmethod
+    def _serialize_dt(dt) -> str | None:
+        """Serialize datetime to ISO format string."""
+        if dt is None:
+            return None
+        if hasattr(dt, "isoformat"):
+            return dt.isoformat()
+        return str(dt)
 
 
 __all__ = ["BasicWebHookCaller"]

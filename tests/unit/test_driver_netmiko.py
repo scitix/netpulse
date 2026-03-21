@@ -66,7 +66,7 @@ def test_netmiko_send_and_config_with_stub(monkeypatch):
             calls["disable"] += 1
 
     driver = NetmikoDriver(
-        args=NetmikoSendCommandArgs(cmd_verify=True),
+        args=NetmikoSendCommandArgs(),
         conn_args=NetmikoConnectionArgs(
             device_type="linux",
             host="stub",

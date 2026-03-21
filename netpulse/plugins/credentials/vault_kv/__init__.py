@@ -221,6 +221,14 @@ class VaultKvCredentialProvider(BaseCredentialProvider):
                 path=self.cfg.ref,
                 version=self.cfg.version,
             )
+        except hvac.exceptions.InvalidPath as exc:
+            msg = f"Secret not found at Vault path: {self.cfg.mount}/{self.cfg.ref}"
+            log.error(msg)
+            raise ValueError(msg) from exc
+        except hvac.exceptions.Forbidden as exc:
+            msg = f"Vault token lacks permission to read path: {self.cfg.mount}/{self.cfg.ref}"
+            log.error(msg)
+            raise ValueError(msg) from exc
         except Exception as exc:
             log.error(
                 "Failed to read secret from Vault (mount=%s, path=%s, version=%s): %s",
@@ -229,7 +237,8 @@ class VaultKvCredentialProvider(BaseCredentialProvider):
                 self.cfg.version,
                 exc,
             )
-            raise
+            # Propagate a ValueError so users see it in the API response cleanly
+            raise ValueError(f"Failed to read secret from Vault: {exc}") from exc
 
         data = response.get("data", {}).get("data", {})
         if not isinstance(data, dict) or not data:

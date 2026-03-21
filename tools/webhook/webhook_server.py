@@ -68,14 +68,26 @@ def parse_result_string(result_str: str) -> dict:
 
 
 def determine_success_status(body: Dict[str, Any]) -> Optional[bool]:
+    # New format: check event_type or result.type directly
+    event_type = body.get("event_type")
+    if event_type:
+        return event_type in ("job.completed", "detached.completed", "detached.log_push")
+
     result = body.get("result", "")
+    if isinstance(result, dict):
+        rtype = result.get("type")
+        if isinstance(rtype, str):
+            return rtype == "successful"
+        elif isinstance(rtype, int):
+            return rtype == 1  # SUCCESSFUL enum
+        return result.get("error") is None
+
+    # Legacy: flat string result
     if isinstance(result, str):
         parsed = parse_result_string(result)
         if "type" in parsed and "message" in parsed:
             return False
         return True
-    elif isinstance(result, dict):
-        return not bool(result.get("stderr"))
     return None
 
 

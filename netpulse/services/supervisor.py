@@ -2,15 +2,22 @@ import logging
 import time
 
 from .manager import g_mgr
-from .rediz import g_detached_task_registry
+from .rediz import g_detached_task_registry, g_rdb
 
 log = logging.getLogger(__name__)
+
+# Redis key for distributed supervisor lock
+_SUPERVISOR_LOCK_KEY = "netpulse:supervisor:lock"
+_SUPERVISOR_LOCK_TTL = 5  # seconds — must be > supervisor interval
 
 
 class DetachedTaskSupervisor:
     """
     Background supervisor that monitors the Detached Task Registry and triggers
     incremental log pushes via Webhooks based on the push_interval.
+
+    Only ONE supervisor instance is active across all Gunicorn workers,
+    coordinated via a Redis lock.
     """
 
     def __init__(self, interval: float = 1.0):
@@ -18,19 +25,31 @@ class DetachedTaskSupervisor:
         self.running = False
         self.staging_cleanup_interval = 3600  # Clean staging every hour
         self.last_staging_cleanup = 0
+        # Track last dispatch time locally to avoid race conditions with registry writes
+        self._last_dispatch: dict[str, float] = {}
 
     def start(self):
         self.running = True
         log.info("NetPulse Supervisor started.")
         while self.running:
             try:
-                now = time.time()
-                self._check_tasks()
+                # Only one supervisor instance runs across all Gunicorn workers.
+                # Acquire a Redis lock with TTL — if we can't acquire, another
+                # worker's supervisor is already handling it.
+                acquired = g_rdb.conn.set(
+                    _SUPERVISOR_LOCK_KEY, "1", nx=True, ex=_SUPERVISOR_LOCK_TTL
+                )
+                if acquired:
+                    now = time.time()
+                    self._check_tasks()
 
-                # Periodic cleaning of staging directory (24h TTL)
-                if now - self.last_staging_cleanup > self.staging_cleanup_interval:
-                    self._cleanup_staging()
-                    self.last_staging_cleanup = now
+                    # Periodic cleaning of staging directory (24h TTL)
+                    if now - self.last_staging_cleanup > self.staging_cleanup_interval:
+                        self._cleanup_staging()
+                        self.last_staging_cleanup = now
+                else:
+                    # Another supervisor holds the lock — sleep and retry
+                    pass
 
             except Exception as e:
                 log.error(f"Error in Supervisor loop: {e}")
@@ -106,20 +125,23 @@ class DetachedTaskSupervisor:
                 if now - last_sync > completed_stale_threshold:
                     log.info(f"Purging stale completed detached task {task_id}")
                     g_detached_task_registry.unregister(task_id)
+                    self._last_dispatch.pop(task_id, None)
                     continue
             elif status == "launching":
                 if now - created_at > launching_stale_threshold:
                     log.info(f"Purging stuck launching detached task {task_id}")
                     g_detached_task_registry.unregister(task_id)
+                    self._last_dispatch.pop(task_id, None)
                     continue
 
             # 2. Trigger push for active tasks with push_interval
             push_interval = meta.get("push_interval")
+            last_dispatch = self._last_dispatch.get(task_id, 0)
             if push_interval:
-                if status != "completed" and now - last_sync >= push_interval:
+                if status != "completed" and now - last_dispatch >= push_interval:
                     log.debug(f"Triggering push for task {task_id}")
                     self._trigger_push(task_id, meta)
-            elif status == "running" and now - last_sync >= running_auto_check_threshold:
+            elif status == "running" and now - last_dispatch >= running_auto_check_threshold:
                 # Even without push_interval, auto-sync "running" tasks occasionally
                 # to ensure they are still alive.
                 log.debug(f"Triggering auto-sync for running task {task_id}")
@@ -130,9 +152,11 @@ class DetachedTaskSupervisor:
     def _trigger_push(self, task_id: str, meta: dict, trigger_webhook: bool = True):
         """
         Dispatches a management job to read logs and trigger webhook/sync state.
-        """
-        last_offset = meta.get("last_offset", 0)
 
+        Important: This method does NOT write back to the registry to avoid
+        race conditions with manage_detached_task (which updates status and
+        last_offset). Dispatch throttling is handled via self._last_dispatch.
+        """
         try:
             from ..models.common import DriverConnectionArgs, QueueStrategy
             from ..services.rpc import manage_detached_task, rpc_webhook_callback
@@ -143,26 +167,41 @@ class DetachedTaskSupervisor:
 
             conn_arg = DriverConnectionArgs(**meta["connection_args"])
 
+            # Reconstruct a dummy ExecutionRequest so the webhook callback can find the config
+            from ..models.common import DriverName, WebHook
+            from ..models.request import ExecutionRequest
+
+            dummy_req = ExecutionRequest(
+                driver=meta.get("driver", DriverName.PARAMIKO),
+                connection_args=conn_arg,
+                command=meta.get("command", ""),
+                webhook=WebHook(**webhook_cfg) if webhook_cfg else None,
+                detach=True,
+            )
+
             # Dispatch job with the standard webhook callback (if requested)
-            job_resp = g_mgr.dispatch_rpc_job(
+            g_mgr.dispatch_rpc_job(
                 conn_arg=conn_arg,
                 q_strategy=QueueStrategy.PINNED,
                 func=manage_detached_task,
                 kwargs={
                     "task_id": task_id,
                     "action": "query",
-                    "params": {"offset": last_offset},
+                    "params": None,  # Let the worker fetch dynamic offset
                 },
                 on_success=on_success,
                 on_failure=None,
                 result_ttl=60,
-                meta={"task_id": task_id},
+                meta={
+                    "task_id": task_id,
+                    "req_payload": dummy_req.model_dump(mode="json"),
+                    "webhook_event_type": "detached.log_push",
+                },
             )
 
-            # Update last_sync AFTER successful dispatch to avoid skipping
-            # the next push interval when dispatch fails.
-            meta["last_sync"] = time.time()
-            g_detached_task_registry.register(task_id, meta, job_id=job_resp.id)
+            # Track dispatch time locally — don't write back to registry
+            # to avoid overwriting status/last_offset set by manage_detached_task
+            self._last_dispatch[task_id] = time.time()
 
         except Exception as e:
             log.error(f"Failed to trigger push for task {task_id}: {e}")

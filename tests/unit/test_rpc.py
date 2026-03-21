@@ -370,7 +370,7 @@ def test_webhook_retry_scheduled_on_failure(monkeypatch):
         def call(self, req, job, result, **kwargs):
             raise ConnectionError("target unreachable")
 
-        def build_payload(self, req, job, result, is_success):
+        def build_payload(self, req, job, result, is_success, **kwargs):
             return {"id": job.id, "status": "failed"}
 
     class DummyJob:

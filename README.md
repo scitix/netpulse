@@ -14,8 +14,10 @@ NetPulse abstracts the complexity of human-oriented CLI interactions into a stan
 ```mermaid
 graph LR
     subgraph Consumers[Modern Consumers]
+        direction TB
         A1[AI Agents]
         A2[Automation SDKs]
+        A1 ~~~ A2
     end
 
     subgraph NetPulse[NetPulse Connectivity API]
@@ -26,9 +28,11 @@ graph LR
     end
 
     subgraph Infrastructure[Hardware Infrastructure]
+        direction TB
         D1[Network Switches]
         D2[Linux Servers]
         Dn[AI / GPU Clusters]
+        D1 ~~~ D2 ~~~ Dn
     end
 
     Consumers -->|REST / JSON| C

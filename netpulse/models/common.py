@@ -76,6 +76,63 @@ class JobResult(BaseModel):
     )
 
 
+RESULT_TYPE_NAMES: Dict[int, str] = {
+    1: "successful",
+    2: "failed",
+    3: "stopped",
+    4: "retried",
+}
+
+
+class WebhookPayload(BaseModel):
+    """Webhook delivery payload — aligned with JobInResponse but optimized for webhook consumers."""
+
+    id: str
+    status: str
+    event_type: str
+    final: bool
+    timestamp: str  # ISO 8601
+    started_at: Optional[str] = None
+    ended_at: Optional[str] = None
+    duration: Optional[float] = None
+    result: Optional[dict] = None
+    device: Optional[Dict[str, str]] = None
+    task_id: Optional[str] = None
+    device_name: Optional[str] = None
+    command: Optional[List[str]] = None
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "job_123456",
+                "status": "finished",
+                "event_type": "job.completed",
+                "final": True,
+                "timestamp": "2024-02-23T10:00:01+08:00",
+                "started_at": "2024-02-23T10:00:00+08:00",
+                "ended_at": "2024-02-23T10:00:01+08:00",
+                "duration": 0.5,
+                "result": {
+                    "type": "successful",
+                    "retval": [
+                        {
+                            "command": "show version",
+                            "stdout": "Arista vEOS",
+                            "stderr": "",
+                            "exit_status": 0,
+                        }
+                    ],
+                    "error": None,
+                },
+                "device": {"host": "192.168.1.1", "device_type": "cisco_ios"},
+                "task_id": None,
+                "device_name": "switch-01",
+                "command": ["show version"],
+            }
+        }
+    )
+
+
 class NodeInfo(BaseModel):
     hostname: str
     count: int

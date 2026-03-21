@@ -48,7 +48,8 @@ def discover(device):
             "ttl": 300
         }, headers=HEADERS).json()
         job = wait_job(resp["data"]["id"])
-        info[cmd] = job["result"].get("output") if job["status"] == "finished" else job["result"].get("error")
+        retval = job["result"]["retval"] if job["result"] else []
+        info[cmd] = retval[0]["stdout"] if job["status"] == "finished" and retval else job["result"].get("error")
     return {"device": device, "info": info}
 ```
 
@@ -71,11 +72,13 @@ def backup_device(device, backup_dir="backups"):
     }, headers=HEADERS).json()
     job = wait_job(resp["data"]["id"])
     if job["status"] == "finished":
+        retval = job["result"]["retval"] if job["result"] else []
+        output = retval[0]["stdout"] if retval else ""
         path = os.path.join(backup_dir, f"{device['host']}.txt")
         with open(path, "w") as f:
-            f.write(job["result"]["output"])
+            f.write(output)
         return {"device": device["host"], "saved": path}
-    return {"device": device["host"], "error": job["result"].get("error")}
+    return {"device": device["host"], "error": job["result"].get("error") if job["result"] else None}
 ```
 
 ## Scenario 3: Safe config change with rollback

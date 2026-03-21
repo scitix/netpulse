@@ -36,8 +36,16 @@ curl "http://localhost:9000/job?host=192.168.1.1" -H "X-API-KEY: your_key"
     "ended_at": "2024-01-01T12:00:05+08:00",
     "worker": "worker_001",
     "result": {
-      "type": "success",
-      "retval": {"show version": "Cisco IOS Software..."},
+      "type": 1,
+      "retval": [
+        {
+          "command": "show version",
+          "stdout": "Cisco IOS Software...",
+          "stderr": "",
+          "exit_status": 0,
+          "metadata": {"host": "192.168.1.1", "duration_seconds": 0.5}
+        }
+      ],
       "error": null
     },
     "duration": 3.0,

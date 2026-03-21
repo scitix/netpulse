@@ -98,7 +98,7 @@ def test_template_source_ftp(monkeypatch: pytest.MonkeyPatch):
         def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
             return False
 
-    def fake_urlopen(url: str) -> DummyFTP:
+    def fake_urlopen(url: str, **kwargs) -> DummyFTP:
         return DummyFTP(read=lambda: b"from ftp")
 
     monkeypatch.setattr("netpulse.plugins.templates.urllib.request.urlopen", fake_urlopen)

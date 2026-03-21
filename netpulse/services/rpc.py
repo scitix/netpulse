@@ -37,6 +37,11 @@ def manage_detached_task(task_id: str, action: str, params: Optional[dict] = Non
     if not meta:
         raise ValueError(f"Task {task_id} not found in registry")
 
+    # Skip if task already completed — avoids redundant queries from queued jobs
+    if action == "query" and meta.get("status") == "completed":
+        log.debug(f"Task {task_id} already completed, skipping query")
+        return []
+
     # Reconstruct request to init driver
     req = ExecutionRequest(
         driver=meta["driver"],
@@ -50,8 +55,27 @@ def manage_detached_task(task_id: str, action: str, params: Optional[dict] = Non
     try:
         session = dobj.connect()
         if action == "query":
-            offset = params.get("offset", 0) if params else 0
-            return dobj._read_logs(session, task_id, offset)
+            offset = meta.get("last_offset", 0)
+            if params and "offset" in params and params["offset"] is not None:
+                offset = params["offset"]
+
+            import time
+
+            results = dobj._read_logs(session, task_id, offset)
+            if results and len(results) > 0:
+                res = results[0]
+                meta["last_offset"] = res.metadata.get("next_offset", offset)
+                meta["status"] = "running" if res.metadata.get("is_running") else "completed"
+            else:
+                # No results: process is gone or log file missing → mark completed
+                meta["status"] = "completed"
+
+            # Only update registry if task still exists (may have been cleared by user/API)
+            if g_detached_task_registry.get(task_id) is not None:
+                meta["last_sync"] = time.time()
+                g_detached_task_registry.register(task_id, meta)
+
+            return results
         elif action == "kill":
             return dobj.kill_task(session, task_id)
         else:
@@ -368,12 +392,12 @@ def dispatch_webhook(webhook_data: dict, payload: dict, attempt: int = 0):
             )
 
 
-def _dispatch_webhook_with_retry(wobj, req, job_obj, result, is_success, rq_job):
+def _dispatch_webhook_with_retry(wobj, req, job_obj, result, is_success, rq_job, event_type=None):
     """
     Attempt webhook delivery via the plugin. On failure, enqueue a retry via dispatch_webhook.
     """
     try:
-        wobj.call(req=req, job=job_obj, result=result, is_success=is_success)
+        wobj.call(req=req, job=job_obj, result=result, is_success=is_success, event_type=event_type)
     except Exception as e:
         webhook = req.webhook
         if not webhook or webhook.max_retries == 0:
@@ -382,7 +406,7 @@ def _dispatch_webhook_with_retry(wobj, req, job_obj, result, is_success, rq_job)
 
         # Build the payload independently so dispatch_webhook can re-deliver without req/job
         try:
-            payload = wobj.build_payload(req, job_obj, result, is_success)
+            payload = wobj.build_payload(req, job_obj, result, is_success, event_type=event_type)
         except Exception as build_err:
             log.warning(f"Could not build webhook payload for retry: {build_err}")
             return
@@ -446,29 +470,81 @@ def rpc_webhook_callback(*args):
         except Exception as e:
             log.warning(f"Error in audit callback: {e}")
 
-    # To cut down Redis memory usage, we get req from job.kwargs,
-    # which is not elegant, but it is a trade-off.
     req: ExecutionRequest = job.kwargs.get("req", None)
     if req is None:
-        log.warning("Webhook handler is called without `req` in job.kwargs.")
-        return
+        if job.meta and "req_payload" in job.meta:
+            req = ExecutionRequest(**job.meta["req_payload"])
+        else:
+            log.warning("Webhook handler is called without `req` in job.kwargs or job.meta.")
+            return
 
     if req.webhook is not None:
         try:
-            wobj = webhooks[req.webhook.name](req.webhook)
-            # For detached tasks, we want the Webhook ID to be the Task ID for consistency
-            if req.detach:
+            meta = job.meta if job.meta else {}
+
+            # For detached tasks, only the supervisor triggers webhooks.
+            # The launch job completing just means the background process was spawned,
+            # NOT that the task finished — so we skip the webhook here.
+            # Supervisor-triggered jobs carry "webhook_event_type" in meta.
+            if req.detach and "webhook_event_type" not in meta:
+                log.debug(f"Skipping webhook for detach launch job {job.id}")
+            else:
                 from ..models.response import JobInResponse
 
-                job_resp = JobInResponse.from_job(job)
+                wobj = webhooks[req.webhook.name](req.webhook)
 
-                # The task_id is stored in job.meta
-                task_id = job.meta.get("task_id") if job.meta else None
-                job_resp.id = task_id or job.id
+                # Build JobInResponse for all jobs (structured result + timestamps)
+                try:
+                    job_resp = JobInResponse.from_job(job)
+                except Exception:
+                    job_resp = job  # fallback to raw job if conversion fails
 
-                _dispatch_webhook_with_retry(wobj, req, job_resp, result, is_success, job)
-            else:
-                _dispatch_webhook_with_retry(wobj, req, job, result, is_success, job)
+                # Fix status: RQ on_success callback may fire before status transitions
+                if hasattr(job_resp, "status"):
+                    job_resp.status = "finished" if is_success else "failed"
+
+                if req.detach:
+                    task_id = meta.get("task_id")
+                    job_resp.id = task_id or job.id
+
+                    # Skip webhook if task was cleared or is a redundant query
+                    # for an already-completed task.
+                    from .rediz import g_detached_task_registry
+                    task_meta = g_detached_task_registry.get(task_id) if task_id else None
+                    if task_meta is None:
+                        # Task cleared from registry — skip
+                        log.debug(f"Skipping webhook for cleared task {task_id}")
+                        return
+                    if (
+                        task_meta.get("status") == "completed"
+                        and (not result or (isinstance(result, list) and len(result) == 0))
+                    ):
+                        # Task already completed AND this job returned empty
+                        # (redundant query) — skip
+                        log.debug(f"Skipping redundant webhook for completed task {task_id}")
+                        return
+
+                    # Determine event_type from supervisor hint
+                    event_type = meta.get("webhook_event_type", "detached.log_push")
+
+                    # If task actually completed, upgrade to detached.completed
+                    is_log_push = event_type == "detached.log_push"
+                    if is_log_push and is_success and isinstance(result, list):
+                        for res in result:
+                            completed = False
+                            if hasattr(res, "metadata"):
+                                completed = not res.metadata.get("is_running", True)
+                            elif isinstance(res, dict):
+                                completed = not res.get("metadata", {}).get("is_running", True)
+                            if completed:
+                                event_type = "detached.completed"
+                                break
+                else:
+                    event_type = "job.completed" if is_success else "job.failed"
+
+                _dispatch_webhook_with_retry(
+                    wobj, req, job_resp, result, is_success, job, event_type=event_type
+                )
         except Exception as e:
             log.warning(f"Error in webhook execution: {e}")
 
