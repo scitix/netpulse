@@ -71,7 +71,7 @@ class NetmikoSendCommandArgs(DriverArgs):
     """
 
     expect_string: Optional[str] = None
-    read_timeout: float = 10.0
+    read_timeout: float = 30.0
     delay_factor: Optional[float] = None
     max_loops: Optional[int] = None
     auto_find_prompt: bool = True

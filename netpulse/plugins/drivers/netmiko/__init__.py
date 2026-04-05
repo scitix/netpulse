@@ -3,6 +3,7 @@ import os
 import signal
 import sys
 import threading
+import time
 from typing import Any, Optional
 
 from netmiko import BaseConnection, ConnectHandler
@@ -118,6 +119,12 @@ class NetmikoDriver(BaseDriver):
                         if junk := session.clear_buffer():
                             log.debug(f"Detected junk data in keepalive: {junk}")
                         session.write_channel(session.RETURN)
+                        # Drain the device's prompt response to prevent buffer
+                        # contamination: without this, the prompt echoed back by
+                        # the device stays in the buffer and can be mistaken as a
+                        # prompt by the next send_command's auto_find_prompt call.
+                        time.sleep(0.5)
+                        session.clear_buffer()
                     except Exception as e:
                         log.warning(f"Error in sending keepalive to {host}: {e}")
                         suicide = True
@@ -229,10 +236,24 @@ class NetmikoDriver(BaseDriver):
                     log.info("Nested file transfer detected")
                     return self._handle_file_transfer(session, self.args.file_transfer)
 
+                # On reused sessions, stale output from the previous job (e.g. a
+                # trailing prompt or "#" section separator from a previous dis cu)
+                # can remain in the channel buffer.  clear_buffer() discards it so
+                # that auto_find_prompt's find_prompt() reads the real live prompt
+                # instead of mistaking that leftover data for the current prompt.
+                if self._session_reused:
+                    try:
+                        session.clear_buffer()
+                    except Exception:
+                        pass
+
                 result = []
                 for cmd in command:
                     start_time = time.perf_counter()
-                    cmd_args = {"cmd_verify": False}  # Default to False for exec mode
+                    cmd_args = {
+                        "cmd_verify": False,   # Don't verify command echo
+                        "read_timeout": 30.0,  # 10s default is too short for large outputs
+                    }
                     if self.args:
                         if isinstance(self.args, NetmikoSendCommandArgs):
                             user_args = self.args.model_dump()
