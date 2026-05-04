@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.3] - 2026-05-04
+
+### Added
+
+- Added per-request MongoDB audit modes: `full`, `metadata`, and `none`.
+- Added MongoDB audit retention controls for TTL and maximum document count.
+
+### Changed
+
+- MongoDB index and pruning setup is now best-effort so audit writes can continue with restricted MongoDB permissions.
+- Redis workers now wait for Redis readiness during startup instead of failing immediately while Redis is loading data.
+
 ## [0.4.2] - 2026-03-21
 
 ### Added

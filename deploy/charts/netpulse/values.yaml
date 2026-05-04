@@ -8,19 +8,19 @@ redis-operator:
 images:
   controller:
     repository: localhost/netpulse-controller
-    tag: "0.4.2"
+    tag: "0.4.3"
     pullPolicy: IfNotPresent
   nodeWorker:
     repository: localhost/netpulse-node-worker
-    tag: "0.4.2"
+    tag: "0.4.3"
     pullPolicy: IfNotPresent
   fifoWorker:
     repository: localhost/netpulse-fifo-worker
-    tag: "0.4.2"
+    tag: "0.4.3"
     pullPolicy: IfNotPresent
   archiverWorker:
     repository: localhost/netpulse-archiver-worker
-    tag: "0.4.2"
+    tag: "0.4.3"
     pullPolicy: IfNotPresent
   vault:
     repository: hashicorp/vault
