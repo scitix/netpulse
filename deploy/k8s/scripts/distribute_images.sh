@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# NetPulse 0.4.2 镜像离线分发脚本 (支持初始化部署与代码更新)
+# NetPulse 0.4.3 镜像离线分发脚本 (支持初始化部署与代码更新)
 
 set -e
 
@@ -10,7 +10,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # --- 配置区 ---
-VERSION="0.4.2"
+VERSION="0.4.3"
 # 自动获取当前 K8s 集群所有节点名称，确保新节点也能同步镜像
 NODES=($(kubectl get nodes -o jsonpath='{.items[*].metadata.name}'))
 
@@ -19,6 +19,7 @@ APP_IMAGES=(
     "netpulse-controller"
     "netpulse-node-worker"
     "netpulse-fifo-worker"
+    "netpulse-archiver-worker"
 )
 
 # K8s 基础依赖镜像 (仅初始化部署时需要拉取分发)

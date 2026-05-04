@@ -26,6 +26,15 @@ data:
   NETPULSE_CREDENTIAL__CACHE_TTL: "60" # Optimized cache for production
   NETPULSE_STORAGE__RETENTION_HOURS: "24"
   PYTHONUNBUFFERED: "1"                 # Ensure logs are not buffered
+  # MongoDB audit log settings (set NETPULSE_MONGODB__ENABLED=true to activate)
+  NETPULSE_MONGODB__ENABLED: "true"
+  NETPULSE_MONGODB__URI: "mongodb://netpulse-user:netpulse_password_6b85cc6c1e219b83@mongodb:27017/netrix?authSource=admin"
+  NETPULSE_MONGODB__DATABASE: "netrix"
+  NETPULSE_MONGODB__COLLECTION: "test_netpulse_jobs"
+  NETPULSE_MONGODB__DETACHED_COLLECTION: "test_netpulse_detached_tasks"
+  NETPULSE_MONGODB__RETENTION_DAYS: "30"
+  NETPULSE_MONGODB__DETACHED_RETENTION_DAYS: "30"
+  NETPULSE_MONGODB__MAX_DOCUMENTS: "1000000"
 ---
 # 02-netpulse/controller.deploy.yaml
 apiVersion: apps/v1
@@ -61,7 +70,7 @@ spec:
             topologyKey: kubernetes.io/hostname
       containers:
       - name: controller
-        image: localhost/netpulse-controller:0.4.2
+        image: localhost/netpulse-controller:0.4.3
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -156,7 +165,7 @@ spec:
               topologyKey: kubernetes.io/hostname
       containers:
       - name: node-worker
-        image: localhost/netpulse-node-worker:0.4.2
+        image: localhost/netpulse-node-worker:0.4.3
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -233,7 +242,7 @@ spec:
               topologyKey: kubernetes.io/hostname
       containers:
       - name: fifo-worker
-        image: localhost/netpulse-fifo-worker:0.4.2
+        image: localhost/netpulse-fifo-worker:0.4.3
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -273,6 +282,58 @@ spec:
       - name: netpulse-storage
         persistentVolumeClaim:
           claimName: netpulse-storage
+---
+---
+# 02-netpulse/archiver-worker.deploy.yaml
+# NOTE: Only apply this manifest when NETPULSE_MONGODB__ENABLED=true.
+# When MongoDB is disabled, the archiver-worker exits cleanly on startup.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netpulse-archiver-worker
+  namespace: netpulse
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: netpulse
+      component: archiver-worker
+  template:
+    metadata:
+      labels:
+        app: netpulse
+        component: archiver-worker
+    spec:
+      containers:
+      - name: archiver-worker
+        image: localhost/netpulse-archiver-worker:0.4.3
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        envFrom:
+        - configMapRef:
+            name: netpulse-config
+        env:
+        - name: NETPULSE_REDIS__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: netpulse-secrets
+              key: password
+        - name: NETPULSE_REDIS__SENTINEL__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: netpulse-secrets
+              key: password
 ---
 # 02-netpulse/service.yaml
 apiVersion: v1

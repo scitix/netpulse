@@ -71,6 +71,21 @@ kubectl logs job/vault-init -n netpulse
 kubectl apply -f deploy/k8s/06-netpulse-core.yaml \
               -f deploy/k8s/07-ingress.yaml \
               -f deploy/k8s/08-nodeport.yaml
+
+### [Step 6] (可选) 部署企业级 MongoDB 审计存储 (MongoDB Operator)
+如果你需要启用 0.4.3 版本新增的审计归档与 MongoDB 增强功能：
+```bash
+# 1. 安装 MongoDB Community Operator (仅首次)
+helm repo add mongodb https://mongodb.github.io/helm-charts
+helm install community-operator mongodb/community-operator --namespace mongodb --create-namespace
+
+# 2. 部署 3 节点高可用 MongoDB 副本集
+kubectl apply -f deploy/k8s/09-mongodb.yaml
+
+# 3. 开启业务审计状态
+kubectl patch configmap netpulse-config -n netpulse --type merge -p '{"data":{"NETPULSE_MONGODB__ENABLED":"true"}}'
+kubectl rollout restart deployment/netpulse-archiver-worker -n netpulse
+```
 ```
 
 ---

@@ -1,0 +1,82 @@
+# 09-mongodb.yaml
+# This manifest requires the MongoDB Community Operator to be installed.
+# Install via Helm:
+# helm repo add mongodb https://mongodb.github.io/helm-charts
+# helm install community-operator mongodb/community-operator --namespace mongodb --create-namespace
+
+apiVersion: mongodbcommunity.mongodb.com/v1
+kind: MongoDBCommunity
+metadata:
+  name: mongodb
+  namespace: netpulse
+spec:
+  members: 1
+  type: ReplicaSet
+  version: "7.0.5" # Match with your MongoDB requirement
+  security:
+    authentication:
+      modes: ["SCRAM"]
+  users:
+    - name: netpulse-user
+      db: admin
+      passwordSecretRef:
+        name: mongodb-user-password
+      roles:
+        - name: readWrite
+          db: netrix
+        - name: clusterAdmin
+          db: admin
+      scramCredentialsSecretName: mongodb-scram
+  additionalMongodConfig:
+    storage.wiredTiger.engineConfig.cacheSizeGB: 0.25
+  statefulSet:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: mongod
+              resources:
+                requests:
+                  cpu: "200m"
+                  memory: "512Mi"
+                limits:
+                  cpu: "1000m"
+                  memory: "2Gi"
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                    - cl-net01
+            podAntiAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+              - labelSelector:
+                  matchLabels:
+                    app: mongodb-svc
+                topologyKey: "kubernetes.io/hostname"
+      volumeClaimTemplates:
+        - metadata:
+            name: data-volume
+          spec:
+            accessModes: [ "ReadWriteOnce" ]
+            storageClassName: "longhorn" # Use the same storage class as netpulse
+            resources:
+              requests:
+                storage: 300Gi
+---
+# Service to expose MongoDB with the name used in Netpulse config
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: netpulse
+spec:
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017
+  selector:
+    app: mongodb-svc # Default label applied by operator
