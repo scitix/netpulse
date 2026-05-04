@@ -21,6 +21,9 @@ data:
   NETPULSE_MONGODB__DATABASE: {{ .Values.config.mongodb.database | quote }}
   NETPULSE_MONGODB__COLLECTION: {{ .Values.config.mongodb.collection | quote }}
   NETPULSE_MONGODB__DETACHED_COLLECTION: {{ .Values.config.mongodb.detachedCollection | quote }}
+  NETPULSE_MONGODB__RETENTION_DAYS: {{ .Values.config.mongodb.retentionDays | quote }}
+  NETPULSE_MONGODB__DETACHED_RETENTION_DAYS: {{ .Values.config.mongodb.detachedRetentionDays | quote }}
+  NETPULSE_MONGODB__MAX_DOCUMENTS: {{ .Values.config.mongodb.maxDocuments | quote }}
   PYTHONUNBUFFERED: "1"
 ---
 apiVersion: v1

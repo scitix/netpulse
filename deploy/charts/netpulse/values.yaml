@@ -93,6 +93,9 @@ config:
     database: "netpulse"
     collection: "audit_jobs"
     detachedCollection: "audit_detached_tasks"
+    retentionDays: "30"
+    detachedRetentionDays: "30"
+    maxDocuments: "1000000"
 
 secrets:
   # IMPORTANT: Override these with real values at deploy time.

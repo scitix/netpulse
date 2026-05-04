@@ -9,6 +9,20 @@ from ..utils import g_config
 log = logging.getLogger(__name__)
 
 
+def _get_job_audit_mode(job: Job) -> str:
+    req = job.kwargs.get("req") if getattr(job, "kwargs", None) else None
+    if req is not None:
+        return getattr(req, "audit_mode", "full")
+
+    meta = getattr(job, "meta", None)
+    if isinstance(meta, dict):
+        req_payload = meta.get("req_payload")
+        if isinstance(req_payload, dict):
+            return req_payload.get("audit_mode", "full")
+
+    return "full"
+
+
 def rpc_audit_callback(job: Job, connection: Any, *args, **kwargs):
     """
     Hook executed when an RPC job finishes (success or failure).
@@ -21,6 +35,11 @@ def rpc_audit_callback(job: Job, connection: Any, *args, **kwargs):
         return
 
     try:
+        audit_mode = _get_job_audit_mode(job)
+        if audit_mode == "none":
+            log.debug(f"Job {job.id} audit skipped by audit_mode=none")
+            return
+
         if len(args) == 1:
             # Success path — args[0] is the job return value
             raw_result = args[0]
@@ -55,6 +74,7 @@ def rpc_audit_callback(job: Job, connection: Any, *args, **kwargs):
             "netpulse.worker.archiver.process_audit_log",
             job.id,
             serialized_result,
+            audit_mode,
         )
         log.debug(f"Job {job.id} audit log enqueued to AuditLogQ (success={is_success})")
     except Exception as e:

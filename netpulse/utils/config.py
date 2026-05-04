@@ -107,6 +107,9 @@ class MongoDBConfig(BaseModel):
     database: str = "netpulse"
     collection: str = "audit_jobs"
     detached_collection: str = "audit_detached_tasks"
+    retention_days: int = 30
+    detached_retention_days: int = 30
+    max_documents: int = 1000000
 
 
 class StorageConfig(BaseModel):

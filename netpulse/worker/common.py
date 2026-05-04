@@ -1,6 +1,8 @@
 import logging
 import socket
+import time
 
+from redis.exceptions import BusyLoadingError, RedisError
 from rq import Queue
 from rq.worker import BaseWorker, SimpleWorker
 
@@ -43,5 +45,20 @@ class RedisWorker:
         self.listened_queue = q_name
 
         queue = Queue(q_name, connection=self.rdb)
-        self._worker = SimpleWorker(queue, name=self.name, connection=self.rdb, worker_ttl=self.ttl)
+        while True:
+            try:
+                self.rdb.ping()
+                self._worker = SimpleWorker(
+                    queue,
+                    name=self.name,
+                    connection=self.rdb,
+                    worker_ttl=self.ttl,
+                )
+                break
+            except BusyLoadingError:
+                log.warning("Redis is still loading its dataset; waiting before worker startup.")
+                time.sleep(5)
+            except RedisError as e:
+                log.warning(f"Redis is not ready for worker startup: {e!s}")
+                time.sleep(5)
         self._worker.work()

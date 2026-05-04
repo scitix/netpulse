@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -133,6 +133,14 @@ class ExecutionRequest(BaseModel):
         ),
         ge=60,
         le=604800,  # Max 7 days
+    )
+    audit_mode: Literal["full", "metadata", "none"] = Field(
+        default="full",
+        description=(
+            "MongoDB audit detail level when audit persistence is enabled: "
+            "full records the complete result, metadata records only job metadata, "
+            "none skips MongoDB audit persistence for this job."
+        ),
     )
 
     # Webhook callback
